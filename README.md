@@ -166,7 +166,7 @@ type BaseController struct {
 }
 
 ```
-* Database transaction manager (open, commit, rollback, close)
+* Controller manager database transaction in actions (open, commit, rollback, close)
 
 ### functions
 ```
