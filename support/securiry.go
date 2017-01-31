@@ -6,6 +6,10 @@ import (
   "encoding/base64"  
 )
 
+func func_name() {
+  
+}
+
 func TextToSha1(text string) string{
   bv := []byte(text) 
   hasher := sha1.New()

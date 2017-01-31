@@ -14,7 +14,7 @@ type Page struct {
   AndFilterColumns map[string]interface{}
 }
 
-func (this *Page) AddFilterColumn(columnName string, value interface{}) *Page{
+func (this *Page) AddFilter(columnName string, value interface{}) *Page{
 	
 	if this.FilterColumns == nil {
 		this.FilterColumns = make(map[string]interface{} )
@@ -25,11 +25,11 @@ func (this *Page) AddFilterColumn(columnName string, value interface{}) *Page{
 	return this
 }
 
-func (this *Page) AddDefaultFilter(columnName string) *Page{	
+func (this *Page) AddFilterDefault(columnName string) *Page{	
 	return this.AddFilterColumn(fmt.Sprintf("%v__icontains", columnName), this.Search)
 }
 
-func (this *Page) AddAndFilter(columnName string, value interface{}) *Page{	
+func (this *Page) AddFilterAnd(columnName string, value interface{}) *Page{	
 	if this.AndFilterColumns == nil {
 		this.AndFilterColumns = make(map[string]interface{} )
 	}	

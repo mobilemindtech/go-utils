@@ -8,7 +8,7 @@ import (
 )
 
 // Valid validates the cpf and return a boolean and the error if any
-func Valid(digits string) (bool, error) {
+func IsValid(digits string) (bool, error) {
 	return valid(digits)
 }
 
