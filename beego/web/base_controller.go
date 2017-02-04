@@ -21,23 +21,20 @@ var (
   datetimeLayout = "02/01/2006 10:25:32"
   dateLayout = "02/01/2006"
   dateZero = "01/01/0001"
-  jsonDateLayout = "2006-01-02T15:04:05-01:00"
+  jsonDateLayout = "2006-01-02T15:04:05-07:00"
 )
 
 type BaseController struct {
-  beego.Controller // Embed struct that has stub implementation of the interface.  
-  i18n.Locale      // For i18n usage when process data and render template.
-
-  ViewPath string
-
-  Flash *beego.FlashData  
-
-  support.JsonParser
-
   EntityValidator *validator.EntityValidator
-
+  beego.Controller
+  Flash *beego.FlashData  
   Session *db.Session
+  support.JsonParser
+  ViewPath string
   Db orm.Ormer
+  i18n.Locale
+
+  defaultPageLimit int64     
 }
 
 type NestPreparer interface {
@@ -128,7 +125,11 @@ func (this *BaseController) NestPrepareBase () {
   this.FlashRead()
 
   this.EntityValidator = validator.NewEntityValidator(this.Lang, this.ViewPath)
+
+  this.Log("use default time location America/Sao_Paulo")
+  this.DefaultLocation, _ = time.LoadLocation("America/Sao_Paulo")
   
+  this.defaultPageLimit = 25
 }
 
 func (this *BaseController) DisableXSRF(pathList []string) {
@@ -210,17 +211,17 @@ func (this *BaseController) OnResults(viewName string, results interface{}) {
 }
 
 func (this *BaseController) OnJsonResult(result interface{}) {
-  this.Data["json"] = support.JsonResult{ Result: result, Error: false, CurrentUnixTime: time.Now().Unix() }
+  this.Data["json"] = support.JsonResult{ Result: result, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix() }
   this.ServeJSON()
 }
 
 func (this *BaseController) OnJsonResultWithMessage(result interface{}, message string) {
-  this.Data["json"] = support.JsonResult{ Result: result, Error: false, Message: message, CurrentUnixTime: time.Now().Unix() }
+  this.Data["json"] = support.JsonResult{ Result: result, Error: false, Message: message, CurrentUnixTime: this.GetCurrentTimeUnix() }
   this.ServeJSON()
 }
 
 func (this *BaseController) OnJsonResults(results interface{}) {
-  this.Data["json"] = support.JsonResult{ Results: results, Error: false, CurrentUnixTime: time.Now().Unix() }
+  this.Data["json"] = support.JsonResult{ Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix() }
   this.ServeJSON()
 }
 
@@ -236,17 +237,17 @@ func (this *BaseController) OnJsonMap(jsonMap map[string]interface{}) {
 
 func (this *BaseController) OnJsonError(message string) {
   this.Rollback()
-  this.OnJson(support.JsonResult{ Message: message, Error: true, CurrentUnixTime: time.Now().Unix() })
+  this.OnJson(support.JsonResult{ Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix() })
 }
 
 func (this *BaseController) OnJsonOk(message string) {
-  this.OnJson(support.JsonResult{ Message: message, Error: false, CurrentUnixTime: time.Now().Unix() })
+  this.OnJson(support.JsonResult{ Message: message, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix() })
 }
 
 func (this *BaseController) OnJsonValidationError() {
   this.Rollback()
   errors := this.Data["errorsFields"].(map[string]string)
-  this.OnJson(support.JsonResult{  Message: this.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: time.Now().Unix() })
+  this.OnJson(support.JsonResult{  Message: this.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix() })
 }
 
 func (this *BaseController) OnTemplate(viewName string) {    
@@ -349,15 +350,15 @@ func (this *BaseController) GetDateByKey(key string) (time.Time, error){
 }
 
 func (this *BaseController) ParseDate(date string) (time.Time, error){  
-  return time.Parse(dateLayout, date)
+  return time.ParseInLocation(dateLayout, date, this.DefaultLocation)
 }
 
 func (this *BaseController) ParseDateTime(date string) (time.Time, error){  
-  return time.Parse(datetimeLayout, date)
+  return time.ParseInLocation(datetimeLayout, date, this.DefaultLocation)
 }
 
 func (this *BaseController) ParseJsonDate(date string) (time.Time, error){  
-  return time.Parse(jsonDateLayout, date)
+  return time.ParseInLocation(jsonDateLayout, date, this.DefaultLocation)
 }
 
 func (this *BaseController) GetToken() string{
@@ -365,21 +366,49 @@ func (this *BaseController) GetToken() string{
 }
 
 func (this *BaseController) IsZeroDate(date time.Time) bool{
-  return date.Format(dateLayout) == dateZero
+  return date.Format(dateLayout) == dateZero || date.IsZero()
 }
 
 func (this *BaseController) Log(format string, v ...interface{}) {
   beego.Debug(fmt.Sprintf(format, v...))
 }
 
-func (this *BaseController) GetLastUpdate() time.Time{
-  lastUpdateUnix, _ := this.GetInt64("lastUpdate")
-  var lastUpdate time.Time
-  this.Log("lastUpdateUnix=%v", lastUpdateUnix)
+func (this *BaseController) GetCurrentTimeUnix() int64 {
+  return this.GetCurrentTime().Unix()
+}
 
-  if lastUpdateUnix > 0 {
-    lastUpdate = time.Unix(lastUpdateUnix, 0)
-  }  
+func (this *BaseController) GetCurrentTime() time.Time {
+  return time.Now().In(this.DefaultLocation)
+}
 
-  return lastUpdate
+func (this *BaseController) GetPage() *db.Page{  
+  page := new(db.Page)
+
+  if this.IsJson() {
+    
+    jsonMap, _ := this.JsonToMap(this.Ctx)
+    
+    if _, ok := jsonMap["limit"]; ok {
+      page.Limit = this.GetJsonInt64(jsonMap, "limit")
+      page.Offset = this.GetJsonInt64(jsonMap, "offset")
+      page.Sort = this.GetJsonString(jsonMap, "order_column")
+      page.Order = this.GetJsonString(jsonMap, "order_sort")
+      page.Search = this.GetJsonString(jsonMap, "search")
+    }
+
+  } else {
+
+    page.Limit = this.GetIntByKey("limit")
+    page.Offset = this.GetIntByKey("offset")
+    page.Search = this.GetStringByKey("search")
+    page.Order = this.GetStringByKey("order_sort")
+    page.Sort = this.GetStringByKey("order_column")
+
+  }
+  
+  if page.Limit <= 0 {
+    page.Limit = this.defaultPageLimit
+  }
+
+  return page
 }

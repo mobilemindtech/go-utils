@@ -26,7 +26,7 @@ func (this *Page) AddFilter(columnName string, value interface{}) *Page{
 }
 
 func (this *Page) AddFilterDefault(columnName string) *Page{	
-	return this.AddFilterColumn(fmt.Sprintf("%v__icontains", columnName), this.Search)
+	return this.AddFilter(fmt.Sprintf("%v__icontains", columnName), this.Search)
 }
 
 func (this *Page) AddFilterAnd(columnName string, value interface{}) *Page{	
