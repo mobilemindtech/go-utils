@@ -38,6 +38,27 @@ func (c JsonParser) GetJsonObject(json map[string]interface{}, key string) map[s
    return nil  
 }
 
+func (c JsonParser) GetJsonArray(json map[string]interface{}, key string) []map[string]interface{} {
+   
+   if c.HasJsonKey(json, key) {
+    opt, _ := json[key]
+
+    items := new([]map[string]interface{})
+    
+    if array, ok := opt.([]interface{}); ok {
+      for _, it := range array {
+        if p, ok := it.(map[string]interface{}); ok {
+          *items = append(*items, p)
+        }
+      }
+    }
+
+    return *items
+   }
+
+   return nil  
+}
+
 func (c JsonParser) GetJsonInt(json map[string]interface{}, key string) int{
   var val int 
 
@@ -67,6 +88,21 @@ func (c JsonParser) GetJsonInt64(json map[string]interface{}, key string) int64{
   }
 
   return int64(val)
+}
+
+func (c JsonParser) GetJsonBool(json map[string]interface{}, key string) bool{
+
+  var val bool 
+
+  if c.HasJsonKey(json, key) {
+    if _, ok := json[key].(bool); ok {
+      val = json[key].(bool)
+    } else {
+      val, _ = strconv.ParseBool(c.GetJsonString(json, key))
+    }
+  }
+
+  return val
 }
 
 func (c JsonParser) GetJsonString(json map[string]interface{}, key string) string{
