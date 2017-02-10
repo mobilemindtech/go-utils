@@ -51,10 +51,25 @@ parser := new(support.JsonParser)
 // convert body request to string map
 jsonMap, err = parser.JsonToMap(this.Ctx)
 
-// convert form to map
+// convert form to json map.. so you can use at form
+// input(name="Id") 
+// input(name="Name") 
+// input(name="Adreess.Id") 
+// input(name="Adreess.Street")
+// input(name="Adreess.Country.Id")
+// result of parse is a map like this
+// json = { Id: "", Name: "", Adrress: { Id: "", Street:"", Country: { Id: "" } } }
 jsonMap = parser.FormToJson(this.Ctx) 
 
-// convert form to map to json to model
+// convert form to map to json to model.. so you can use at form
+// input(name="Id") 
+// input(name="Name") 
+// input(name="Adreess.Id") 
+// input(name="Adreess.Street")
+// input(name="Adreess.Country.Id")
+// result of parse is a json like this:
+// json = { Id: "", Name: "", Adrress: { Id: "", Street:"", Country: { Id: "" } } }
+// so the parse of json to model is did
 err := jsonMap = parser.FormToModel(this.Ctx, model) 
 
 // get map in map
