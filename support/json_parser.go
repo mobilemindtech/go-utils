@@ -4,8 +4,10 @@ import (
   "github.com/astaxie/beego/context"
   "encoding/json"  
   "strconv"
+  "strings"
+  "errors"
   "time"
-  _"fmt"
+  "fmt"
   
 )
 
@@ -25,7 +27,75 @@ func (c JsonParser) JsonToMap(ctx *context.Context) (map[string]interface{}, err
 func (c JsonParser) JsonToModel(ctx *context.Context, model interface{}) error { 
 	//fmt.Println("### %s", string(ctx.Input.RequestBody))
   err := json.Unmarshal(ctx.Input.RequestBody, &model)      
-  return err
+
+  if err != nil {
+    return errors.New(fmt.Sprintf("error on JsonToModel.json.Unmarshal: %v", err.Error()))
+  }
+
+  return nil
+}
+
+func (c JsonParser) FormToJson(ctx *context.Context) map[string]interface{} {
+
+
+  jsonMap := make(map[string]interface{})
+  
+  data := ctx.Request.Form  
+
+  for k, v := range  data{
+    
+    //this.Log("key %v, value = %v", k, v)
+
+    if len(v) == 0 {
+      continue
+    }
+
+    if strings.Contains(k, ".") {
+      keys := strings.Split(k, ".")
+
+      parent := jsonMap
+
+      for i, key := range keys {
+
+        if _, ok := parent[key].(map[string]interface{}); !ok {
+          parent[key] = make(map[string]interface{})
+        }
+        
+        if i < len(keys) -1 {
+          parent = parent[key].(map[string]interface{})
+        } else {
+          parent[key] = v[0]
+        }
+      }
+
+
+
+    } else {
+      jsonMap[k] = v[0]
+    }
+  }
+
+  return jsonMap
+}
+
+func (c JsonParser) FormToModel(ctx *context.Context, model interface{}) error {
+
+  jsonMap := c.FormToJson(ctx)
+
+  jsonData, err := json.Marshal(jsonMap)
+
+  if err != nil {
+    return errors.New(fmt.Sprintf("error on FormToModel.json.Marshal: %v", err.Error()))
+  }
+    
+  err = json.Unmarshal(jsonData, model) 
+
+  if err != nil {
+    return errors.New(fmt.Sprintf("error on FormToModel.json.Unmarshal: %v", err.Error()))
+  }
+
+  return nil
+
 }
 
 func (c JsonParser) GetJsonObject(json map[string]interface{}, key string) map[string]interface{} {
@@ -131,7 +201,7 @@ func (c JsonParser) GetJsonDate(json map[string]interface{}, key string, layout 
 }
 
 
-func (C JsonParser) HasJsonKey(json map[string]interface{}, key string) bool{
+func (c JsonParser) HasJsonKey(json map[string]interface{}, key string) bool{
   if _, ok := json[key]; ok {
     return true
   }

@@ -246,7 +246,7 @@ func (this *BaseController) OnJsonOk(message string) {
 
 func (this *BaseController) OnJsonValidationError() {
   this.Rollback()
-  errors := this.Data["errorsFields"].(map[string]string)
+  errors := this.Data["errors"].(map[string]string)
   this.OnJson(support.JsonResult{  Message: this.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix() })
 }
 
@@ -278,6 +278,7 @@ func (this *BaseController) OnFlash(store bool) {
     this.Flash.Store(&this.Controller)    
   } else {
     this.Data["Flash"] = this.Flash.Data
+    this.Data["flash"] = this.Flash.Data
   }  
 }
 
@@ -307,6 +308,19 @@ func (this *BaseController) OnParseForm(entity interface{}) {
   //beego.Debug(fmt.Sprintf("## on parse form success %+v", entity))
   //beego.Debug(fmt.Sprintf("################################################"))
 }
+
+func (this *BaseController) OnJsonParseForm(entity interface{}) {
+  if err := this.FormToModel(this.Ctx, entity)  ; err != nil {
+    beego.Error("## error on parse form ", err.Error())
+    panic(err)
+  }
+
+  //beego.Debug(fmt.Sprintf("################################################"))
+  //beego.Debug(fmt.Sprintf("## on parse form success %+v", entity))
+  //beego.Debug(fmt.Sprintf("################################################"))
+}
+
+
 
 func (this *BaseController) OnParseJson(entity interface{}) {
 

@@ -2,7 +2,7 @@ package validator
 
 import (  
   "github.com/astaxie/beego/validation"
-  "github.com/beego/i18n"
+  "github.com/beego/i18n"  
   "fmt" 
 )
 
@@ -54,6 +54,8 @@ func (this *EntityValidator) IsValid(entity interface{}, action func(validator *
 
       result.ErrorsFields[err.Field] = err.Message
 
+      //fmt.Println("## ViewPath %v", this.ViewPath)
+      //fmt.Println("## lebel %v", label)
       fmt.Println("## validator error field %v error %v", err.Field, err)
     }
 
@@ -100,3 +102,5 @@ func (this *EntityValidator) CopyErrorsToView(result *EntityValidatorResult, dat
 func (this *EntityValidator) GetMessage(key string, args ...interface{}) string{
   return i18n.Tr(this.Lang, key, args)
 }
+
+

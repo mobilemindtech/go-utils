@@ -4,7 +4,6 @@ import (
 	"errors"
 	"strconv"
 	"strings"
-	"regexp"
 )
 
 // Valid validates the cpf and return a boolean and the error if any
@@ -83,13 +82,3 @@ func checkEach(data string, n int) bool {
 	return final == x
 }
 
-func FilterNumber(text string) string{
-	re := regexp.MustCompile("[0-9]+")
-	result := re.FindAllString(text, -1)
-	number := ""
-	for _, s := range result {
-		number += s
-	}
-
-	return number
-}

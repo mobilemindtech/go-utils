@@ -2,6 +2,8 @@ package db
 
 import (
   "github.com/astaxie/beego/orm"
+  "reflect"
+  "strings"
   "errors"
   "fmt" 
 )
@@ -21,16 +23,22 @@ type Model interface {
 type Session struct {
   Db orm.Ormer
   State SessionState
-  TenantId int64
+  Tenant interface{}
+  Debug bool
+
+  deepSetDefault map[string]int
+  deepSaveOrUpdate map[string]int
+  deepEager map[string]int
+  deepRemove map[string]int
 }
 
 
 func NewSession() *Session{
-  return &Session{ State: SessionStateOk }
+  return &Session{ State: SessionStateOk, Debug: false }
 }
 
-func NewSessionWithTenantId(tenantId int64) *Session{
-  return &Session{ State: SessionStateOk, TenantId: tenantId }
+func NewSessionWithTenant(tenant interface{}) *Session{
+  return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false }
 }
 
 func (this *Session) OnError() *Session {
@@ -47,7 +55,7 @@ func (this *Session) Close() {
     this.Commit()
   } else {
     this.Rollback()
-  }
+  }  
 }
 
 func (this *Session) Begin() orm.Ormer{
@@ -64,7 +72,10 @@ func (this *Session) Begin() orm.Ormer{
 }
 
 func (this *Session) Commit() {
-  fmt.Println("## session commit ")
+  
+  if this.Debug {
+    fmt.Println("## session commit ")
+  }
 
   if this.Db != nil{
     err := this.Db.Commit()
@@ -78,7 +89,10 @@ func (this *Session) Commit() {
 }
 
 func (this *Session) Rollback() {
-  fmt.Println("## session rollback ")
+
+  if this.Debug {
+    fmt.Println("## session rollback ")
+  }
 
   if this.Db != nil{
     err := this.Db.Rollback() 
@@ -91,25 +105,38 @@ func (this *Session) Rollback() {
 }
 
 func (this *Session) Save(entity interface{}) error {  
-  num, err := this.Db.Insert(entity)
+
+
+  if this.Tenant != nil {
+    this.setTenant(entity)
+  }
+
+  _, err := this.Db.Insert(entity)
   
+  if this.Debug {
+    fmt.Println("## save data: %+v", entity)
+  }
+
   if err != nil {
     fmt.Println("## Session: error on save: %v", err.Error())
     this.OnError()
     return err
   }
 
-  if num == 0 {
-    this.OnError()
-    return errors.New("save row count is zero")
-  }
-
-
   return nil
 }
 
 func (this *Session) Update(entity interface{}) error {
-  num, err := this.Db.Update(entity)
+
+  if this.Tenant != nil {
+    this.setTenant(entity)
+  }
+
+  _, err := this.Db.Update(entity)
+
+  if this.Debug {
+    fmt.Println("## update data: %+v", entity)
+  }
 
   if err != nil {
     fmt.Println("## Session: error on update: %v", err.Error())
@@ -117,30 +144,18 @@ func (this *Session) Update(entity interface{}) error {
     return err
   }
 
-  if num == 0 {
-    this.OnError()
-    return errors.New("update row count is zero")
-  }
-
-
   return nil
 }
 
 func (this *Session) Remove(entity interface{}) error {
   
-  num, err := this.Db.Delete(entity)
+  _, err := this.Db.Delete(entity)
 
   if err != nil {
     fmt.Println("## Session: error on remove: %v", err.Error())
     this.OnError()
     return err
   }
-
-  if num == 0 {
-    this.OnError()
-    return errors.New("update row count is zero")
-  }
-
 
   return nil
 }
@@ -157,7 +172,7 @@ func (this *Session) Load(entity interface{}) error {
 func (this *Session) Count(entity interface{}) (int64, error){  
   
   if model, ok := entity.(Model); ok {
-    fmt.Println("## count by table %v", model.TableName())
+
     num, err := this.Db.QueryTable(model.TableName()).Count()
     if err != nil {
       fmt.Println("## Session: error on count: %v", err.Error())
@@ -220,8 +235,8 @@ func (this *Session) List(entity interface{}, entities interface{}) error {
 
     query := this.Db.QueryTable(model.TableName())
     
-    if this.TenantId > 0 {
-      query.Filter("Tenant__Id", this.TenantId)
+    if this.Tenant != nil {
+      query.Filter("Tenant", this.Tenant)
     }
 
     if _, err := query.All(entities); err != nil {
@@ -255,8 +270,7 @@ func (this *Session) Page(entity interface{}, entities interface{}, page *Page) 
       } else {
         cond := orm.NewCondition()
         for k, v := range page.FilterColumns {
-          cond = cond.Or(k, v)
-          fmt.Println("### cond %v=%v", k, v)
+          cond = cond.Or(k, v)          
         }        
         query = query.SetCond(orm.NewCondition().AndCond(cond))
       }
@@ -269,8 +283,8 @@ func (this *Session) Page(entity interface{}, entities interface{}, page *Page) 
       }      
     }
 
-    if this.TenantId > 0 {
-      query.Filter("Tenant__Id", this.TenantId)
+    if this.Tenant != nil {
+      query.Filter("Tenant", this.Tenant)
     }    
  
     if _, err := query.All(entities); err != nil {
@@ -291,8 +305,8 @@ func (this *Session) Query(entity interface{}) (orm.QuerySeter, error) {
   if model, ok := entity.(Model); ok {
     query := this.Db.QueryTable(model.TableName())
     
-    if this.TenantId > 0 {
-      query.Filter("Tenant__Id", this.TenantId)
+    if this.Tenant != nil {
+      query.Filter("Tenant", this.Tenant)
     }
 
     return query, nil
@@ -330,3 +344,421 @@ func (this *Session) ToPage(querySeter orm.QuerySeter, entities interface{}, pag
   }
   return nil
 }
+
+func (this *Session) Eager(reply interface{}) error{  
+  this.deepEager = map[string]int{}
+  return this.eagerDeep(reply, false)
+}
+
+func (this *Session) EagerForce(reply interface{}) error{
+  this.deepEager = map[string]int{}
+  return this.eagerDeep(reply, true)
+}
+
+func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
+
+  if reply == nil {
+    return nil
+  }
+  
+  // value e type of pointer
+  refValue := reflect.ValueOf(reply)
+  //refType := reflect.TypeOf(reply)
+  
+ 
+  // value e type of instance
+  fullValue := refValue.Elem()
+  fullType := fullValue.Type()
+   
+  for i := 0; i < fullType.NumField(); i++ {
+    field := fullType.Field(i)
+    
+    fieldStruct := fullValue.FieldByName(field.Name)
+    fieldValue := fieldStruct.Interface()
+    //fieldType := fieldStruct.Type()  
+
+    tags := this.getTags(field)
+    
+    if tags == nil && len(tags) == 0 && !ignoreTag{
+      continue
+    }
+      
+    if tags == nil && !this.hasTag(tags, "eager") && !ignoreTag{
+      continue
+    }      
+    
+
+    if tags != nil && this.hasTag(tags, "ignore_eager"){
+      continue
+    }
+
+    zero := reflect.Zero(reflect.TypeOf(fieldValue)).Interface() == fieldValue
+    model, ok := fieldValue.(Model)
+    
+    if zero {
+
+      if this.Debug {
+        fmt.Println("## no eager zero field: ", field.Name)
+      }
+
+    } else if !ok {
+
+      if this.Debug {
+        fmt.Println("## no eager. field does not implemente model: ", field.Name)
+      }
+
+    } else {
+      
+      if model.IsPersisted() {
+
+        if this.Debug {
+          fmt.Println("## eager field: ", field.Name, fieldValue)
+        }
+
+        if _, err := this.Db.LoadRelated(reply, field.Name); err != nil {
+          fmt.Println("********* eager field error ", fullType, field.Name, err.Error())          
+        } else {
+          // reload loaded value of field reference
+          refValue = reflect.ValueOf(reply)
+          fullValue = refValue.Elem()
+          fullType = fullValue.Type()
+          field = fullType.Field(i)
+          fieldStruct = fullValue.FieldByName(field.Name)
+          fieldValue = fieldStruct.Interface()
+
+          key := fmt.Sprintf("%v.%v", strings.Split(fullType.String(), ".")[1], field.Name)
+          if count, ok := this.deepEager[key]; ok {
+
+            if count >= 5 {
+              continue
+            }
+
+            this.deepEager[key] = count + 1
+          } else {
+            this.deepEager[key] = 1
+          }          
+
+          if this.Debug {
+            fmt.Println("## eager field success: ", field.Name, fieldValue)
+          }
+
+        }
+      } else {
+        if this.Debug {
+          fmt.Println("## not eager field not persisted: ", field.Name)
+        }
+      }
+
+      if tags != nil && this.hasTag(tags, "ignore_eager_child"){
+        continue
+      }
+
+      this.eagerDeep(fieldValue, ignoreTag)
+    }
+    
+  }   
+
+  return nil
+}
+
+func (this *Session) SaveOrUpdateCascade(reply interface{}) error{
+  this.deepSaveOrUpdate = map[string]int{}
+  return this.saveOrUpdateCascadeDeep(reply)
+}
+
+func (this *Session) saveOrUpdateCascadeDeep(reply interface{}) error{
+
+  // value e type of pointer
+  refValue := reflect.ValueOf(reply)
+  //refType := reflect.TypeOf(reply)
+  
+ 
+  // value e type of instance
+  fullValue := refValue.Elem()
+  fullType := fullValue.Type()
+   
+  for i := 0; i < fullType.NumField(); i++ {
+    field := fullType.Field(i)
+    
+    fieldStruct := fullValue.FieldByName(field.Name)
+    fieldValue := fieldStruct.Interface()
+    //fieldType := fieldStruct.Type()    
+
+    tags := this.getTags(field)
+    
+    if tags == nil && len(tags) == 0 {
+      continue
+    }
+      
+    if tags == nil && !this.hasTag(tags, "save_or_update_cascade"){
+      continue
+    }
+
+    zero := reflect.Zero(reflect.TypeOf(fieldValue)).Interface() == fieldValue
+    _, ok := fieldValue.(Model)
+    
+    if zero {
+
+      if this.Debug {
+        fmt.Println("## no cascade zero field: ", field.Name)
+      }
+
+    } else if !ok {
+
+      if this.Debug {
+        fmt.Println("## no cascade. field does not implemente model: ", field.Name)
+      }
+
+    } else {
+
+      if this.Debug {
+        fmt.Println("## cascade field: ", field.Name)
+      }
+
+      key := fmt.Sprintf("%v.%v", strings.Split(fullType.String(), ".")[1], field.Name)
+      if count, ok := this.deepSaveOrUpdate[key]; ok {
+
+        if count >= 5 {
+          continue
+        }
+
+        this.deepSaveOrUpdate[key] = count + 1
+      } else {
+        this.deepSaveOrUpdate[key] = 1
+      }
+
+      if err := this.saveOrUpdateCascadeDeep(fieldValue); err != nil {
+        return err
+      }
+    }
+    
+  } 
+
+  if this.Debug {
+    fmt.Println("## save or update: ", fullType)
+  }
+
+  return this.SaveOrUpdate(reply)
+}
+
+func (this *Session) RemoveCascade(reply interface{}) error{
+  this.deepRemove = map[string]int{}
+  return this.RemoveCascadeDeep(reply)
+}
+
+func (this *Session) RemoveCascadeDeep(reply interface{}) error{
+
+  // value e type of pointer
+  refValue := reflect.ValueOf(reply)
+  //refType := reflect.TypeOf(reply)
+  
+ 
+  // value e type of instance
+  fullValue := refValue.Elem()
+  fullType := fullValue.Type()
+   
+  for i := 0; i < fullType.NumField(); i++ {
+    field := fullType.Field(i)
+    
+    fieldStruct := fullValue.FieldByName(field.Name)
+    fieldValue := fieldStruct.Interface()
+    //fieldType := fieldStruct.Type()    
+
+    tags := this.getTags(field)
+    
+    if tags == nil && len(tags) == 0 {
+      continue
+    }
+      
+    if tags == nil && !this.hasTag(tags, "remove_cascade"){
+      continue
+    }
+
+    zero := reflect.Zero(reflect.TypeOf(fieldValue)).Interface() == fieldValue
+    _, ok := fieldValue.(Model)
+    
+    if zero {
+
+      if this.Debug {
+        fmt.Println("## no cascade remove zero field: ", field.Name)
+      }
+
+    } else if !ok {
+
+      if this.Debug {
+        fmt.Println("## no cascade remove. field does not implemente model: ", field.Name)
+      }
+
+    } else {
+
+      //fieldFullType := reflect.TypeOf(fieldValue).Elem()
+      
+      key := fmt.Sprintf("%v.%v", strings.Split(fullType.String(), ".")[1], field.Name)    
+
+      if count, ok := this.deepRemove[key]; ok {
+
+        if count >= 5 {
+          continue
+        }
+
+        this.deepRemove[key] = count + 1
+      } else {
+        this.deepRemove[key] = 1
+      }
+
+      if this.Debug {
+        fmt.Println("## cascade remove field: ", field.Name)
+      }
+
+      if err := this.RemoveCascadeDeep(fieldValue); err != nil {
+        return err
+      }
+    }
+    
+  } 
+
+  if this.Debug {
+    fmt.Println("## remove : ", fullType)
+  }
+
+  return this.RemoveCascade(reply)
+}
+
+
+func (this *Session) SetDefaults(reply interface{}) error{
+
+  this.deepSetDefault = map[string]int{}
+
+  return this.setDefaultsDeep(reply)
+}
+
+func (this *Session) setDefaultsDeep(reply interface{}) error{
+
+  if reply == nil {
+    return nil
+  }
+
+  // value e type of pointer
+  refValue := reflect.ValueOf(reply)
+  //refType := reflect.TypeOf(reply)
+  
+ 
+  // value e type of instance
+  fullValue := refValue.Elem()
+  fullType := fullValue.Type()
+   
+  for i := 0; i < fullType.NumField(); i++ {
+    field := fullType.Field(i)
+    
+    fieldStruct := fullValue.FieldByName(field.Name)
+    fieldValue := fieldStruct.Interface()
+    //fieldType := fieldStruct.Type()  
+
+    
+    tags := this.getTags(field)
+
+    if tags != nil && this.hasTag(tags, "ignore_set_default"){
+      continue
+    }            
+    
+
+    zero := reflect.Zero(reflect.TypeOf(fieldValue)).Interface() == fieldValue
+    _, ok := fieldValue.(Model)
+
+    if ok {
+
+      if this.Debug {
+        fmt.Println("set defaults to ", fullValue, field.Name)
+      }
+
+      if zero { 
+        fieldFullType := reflect.TypeOf(fieldValue).Elem()
+        newRefValue := reflect.New(fieldFullType)
+        fieldStruct.Set(newRefValue)
+        fieldValue = fieldStruct.Interface()
+      }
+
+      key := fmt.Sprintf("%v.%v", strings.Split(fullType.String(), ".")[1], field.Name)
+      
+      if count, ok := this.deepSetDefault[key]; ok {
+
+        if count >= 5 {
+          continue
+        }
+
+        this.deepSetDefault[key] = count + 1
+      } else {
+        this.deepSetDefault[key] = 1
+      }
+
+      if tags != nil && this.hasTag(tags, "ignore_set_default_child"){
+        continue
+      }        
+
+      this.setDefaultsDeep(fieldValue)
+    }  
+    
+  }   
+
+  return nil
+}
+
+func (this *Session) hasTag(tags []string, tagName string) bool{
+  
+  for _, tag := range tags {
+    if tag == tagName {
+      return true
+    }
+  }
+
+  return false
+}
+
+func (this *Session) setTenant(reply interface{}){
+ 
+  // value e type of pointer
+  refValue := reflect.ValueOf(reply)
+  //refType := reflect.TypeOf(reply)
+  
+ 
+  // value e type of instance
+  fullValue := refValue.Elem()
+  fullType := fullValue.Type()
+   
+  for i := 0; i < fullType.NumField(); i++ {
+    field := fullType.Field(i)
+    
+    fieldStruct := fullValue.FieldByName(field.Name)
+    fieldValue := fieldStruct.Interface()
+    //fieldType := fieldStruct.Type()  
+    
+
+    tags := this.getTags(field)
+
+    if this.hasTag(tags, "tenant") {
+      
+      zero := reflect.Zero(reflect.TypeOf(fieldValue)).Interface() == fieldValue
+
+      value := reflect.ValueOf(this.Tenant)
+      if zero {
+        fieldStruct.Set(value)
+      }
+      
+    } 
+
+  }
+
+}
+
+func (this *Session) getTags(field reflect.StructField) []string{
+  
+  tag := field.Tag.Get("goutils")
+  var tags []string
+
+  if len(strings.TrimSpace(tag)) > 0 {
+    tags = strings.Split(tag, ";")
+  }
+
+  return tags
+}
+
