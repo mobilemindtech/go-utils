@@ -9,9 +9,11 @@ validator/
   cnpj - CPF validator
   
 support/
+  document_converter - converter document base64 to file
   json_parser - json parser functions
   json_result - default json result model
   security - create and compare hash
+  utils - utils
  
 beego
   db
@@ -21,6 +23,7 @@ beego
     filter_method - enable beego put support
   validator
     entity_validator - beegoo entity validator
+    validator - beego validator defaults configure
   web
     base_controller - beego controller base
     
@@ -48,8 +51,32 @@ parser := new(support.JsonParser)
 // convert body request to string map
 jsonMap, err = parser.JsonToMap(this.Ctx)
 
+// convert form to json map.. so you can use at form
+// input(name="Id") 
+// input(name="Name") 
+// input(name="Adreess.Id") 
+// input(name="Adreess.Street")
+// input(name="Adreess.Country.Id")
+// result of parse is a map like this
+// json = { Id: "", Name: "", Adrress: { Id: "", Street:"", Country: { Id: "" } } }
+jsonMap = parser.FormToJson(this.Ctx) 
+
+// convert form to map to json to model.. so you can use at form
+// input(name="Id") 
+// input(name="Name") 
+// input(name="Adreess.Id") 
+// input(name="Adreess.Street")
+// input(name="Adreess.Country.Id")
+// result of parse is a json like this:
+// json = { Id: "", Name: "", Adrress: { Id: "", Street:"", Country: { Id: "" } } }
+// so the parse of json to model is did
+err := jsonMap = parser.FormToModel(this.Ctx, model) 
+
 // get map in map
 parser.GetJsonObject(jsonMap, "Foo")
+
+// get array of json map.. return []map[string]interface{}
+arrayOfMap := parser.GetJsonArray(jsomMap, "fones")
 
 // get int in map
 parser.GetJsonInt(jsonMap, "Id")
@@ -60,6 +87,9 @@ parser.GetJsonInt64(jsonMap, "Id")
 // get string in map
 parser.GetJsonString(jsonMap, "Name")
 
+// get bool in map
+parser.GetJsonBool(jsonMap, "Enabled")
+
 // get date in map
 parser.GetJsonDate(jsonMap, "Date", dateLayout)
 
@@ -69,6 +99,14 @@ err = parser.JsonToModel(entity)
 
 ```
 
+## use utils
+```
+import "github.com/mobilemindtec/go-utils/support"
+
+result := support.FilterNumber("aa13") // rerutn 13
+result := support.IsEmpty("") // rerutn true
+
+```
 ## use security
 
 ```
@@ -116,6 +154,11 @@ if result.HasError {
   this.EntityValidator.CopyErrorsToView(result, this.Data)
 }
 
+
+validator.SetDefaultMessages() // set default validator messages pt-br
+validator.AddCnpjValidator() // add custom func to CPF validator
+validator.AddCpfValidator() // add custom func to CNPJ validator
+validator.AddRelationValidator() // // add custom func to valid relations.. uses IsPersisted method of db.Model
 
 ```
 
@@ -180,6 +223,7 @@ OnJsonResultWithMessage(result interface{}, message string)
 OnJsonResults(results interface{})
 OnJson(json support.JsonResult)
 OnJsonMap(jsonMap map[string]interface{})
+OnJsonParseForm(entity interface{})
 OnJsonError(message string)
 OnJsonOk(message string)
 OnJsonValidationError()
@@ -274,4 +318,29 @@ Query(entity interface{}) (orm.QuerySeter, error)
 ToList(querySeter orm.QuerySeter, entities interface{}) error 
 ToOne(querySeter orm.QuerySeter, entity interface{}) error 
 ToPage(querySeter orm.QuerySeter, entities interface{}, page *Page) error 
+
+// set all default Relations (FK) values (implements db.Model)
+// use tag model `goutils:"ignore_set_default;ignore_set_default_child"`
+// ignore_set_default: ignore relation
+// ignore_set_default_child: ignore relation chields (fields)
+// by default set all relations default value
+SetDefaults(reply interface{}) error
+
+// remove all relation that has tag `goutils:"remove_cascade"`
+// bydefault not remove the relation without tag
+RemoveCascade(reply interface{}) error
+
+// saver or update relations that has tag `goutils:"save_or_update_cascade"`
+// bydefault not save or update the relation without tag
+SaveOrUpdateCascade(reply interface{}) error
+
+// load all relations calling db.LoadRelated when relation has tag `goutils:"eager"`
+// bydefault not load the relation without tag
+Eager(reply interface{}) error
+
+// load all relations calling db.LoadRelated and ignore the tag `goutils:"eager"`
+// but look for tag `goutils:"ignore_eager;ignore_eager_child"`
+// ignore_eager: ignore relation
+// ignore_eager_child: ignore relation chields (fields)
+EagerForce(reply interface{}) error
 ```
