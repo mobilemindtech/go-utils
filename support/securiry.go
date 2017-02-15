@@ -14,7 +14,7 @@ func TextToSha1(text string) string{
   return sha
 }
 
-func IsSomeHash(hash string , text string) bool {
+func IsSameHash(hash string , text string) bool {
 	newHash := TextToSha1(text)
 	return newHash == hash
 }
@@ -27,7 +27,7 @@ func TextToSha256(text string) string{
   return sha
 }
 
-func IsSomeHashSha256(hash string , text string) bool {
+func IsSameHashSha256(hash string , text string) bool {
 	newHash := TextToSha256(text)
 	return newHash == hash
 }

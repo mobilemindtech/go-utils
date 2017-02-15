@@ -198,6 +198,13 @@ func (this *BaseController) OnEntities(viewName string, entities interface{}) {
   this.OnFlash(false)
 }
 
+func (this *BaseController) OnEntitiesWithTotalCount(viewName string, entities interface{}, totalCount int64) {  
+  this.Data["entities"] = entities
+  this.Data["totalCount"] = totalCount
+  this.OnTemplate(viewName)
+  this.OnFlash(false)
+}
+
 func (this *BaseController) OnResult(viewName string, result interface{}) {  
   this.Data["result"] = result
   this.OnTemplate(viewName)
@@ -215,6 +222,11 @@ func (this *BaseController) OnJsonResult(result interface{}) {
   this.ServeJSON()
 }
 
+func (this *BaseController) OnJsonResultError(result interface{}, message string) {
+  this.Data["json"] = support.JsonResult{ Result: result, Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix() }
+  this.ServeJSON()
+}
+
 func (this *BaseController) OnJsonResultWithMessage(result interface{}, message string) {
   this.Data["json"] = support.JsonResult{ Result: result, Error: false, Message: message, CurrentUnixTime: this.GetCurrentTimeUnix() }
   this.ServeJSON()
@@ -222,6 +234,16 @@ func (this *BaseController) OnJsonResultWithMessage(result interface{}, message 
 
 func (this *BaseController) OnJsonResults(results interface{}) {
   this.Data["json"] = support.JsonResult{ Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix() }
+  this.ServeJSON()
+}
+
+func (this *BaseController) OnJsonResultsWithTotalCount(results interface{}, totalCount int64) {
+  this.Data["json"] = support.JsonResult{ Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix(), TotalCount: totalCount }
+  this.ServeJSON()
+}
+
+func (this *BaseController) OnJsonResultsError(results interface{}, message string) {
+  this.Data["json"] = support.JsonResult{ Results: results, Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix() }
   this.ServeJSON()
 }
 

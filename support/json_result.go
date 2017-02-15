@@ -8,5 +8,7 @@ type JsonResult struct {
 
   Errors map[string]string
 
+  TotalCount int64
+
   CurrentUnixTime int64
 }

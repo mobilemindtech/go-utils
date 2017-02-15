@@ -345,6 +345,19 @@ func (this *Session) ToPage(querySeter orm.QuerySeter, entities interface{}, pag
   return nil
 }
 
+func (this *Session) ToCount(querySeter orm.QuerySeter) (int64, error) {
+
+  var count int64
+  var err error
+
+  if count, err = querySeter.Count(); err != nil {
+    fmt.Println("## Session: error on to count: %v", err.Error())
+    //this.OnError()
+    return count, err
+  }
+  return count, err
+}
+
 func (this *Session) Eager(reply interface{}) error{  
   this.deepEager = map[string]int{}
   return this.eagerDeep(reply, false)
@@ -379,11 +392,11 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
 
     tags := this.getTags(field)
     
-    if tags == nil && len(tags) == 0 && !ignoreTag{
+    if tags == nil || len(tags) == 0 && !ignoreTag{
       continue
     }
       
-    if tags == nil && !this.hasTag(tags, "eager") && !ignoreTag{
+    if tags == nil || !this.hasTag(tags, "eager") && !ignoreTag{
       continue
     }      
     
@@ -416,7 +429,7 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
         }
 
         if _, err := this.Db.LoadRelated(reply, field.Name); err != nil {
-          fmt.Println("********* eager field error ", fullType, field.Name, err.Error())          
+          fmt.Println("********* eager field error ", fullType, field.Name, fieldValue, err.Error())          
         } else {
           // reload loaded value of field reference
           refValue = reflect.ValueOf(reply)
@@ -486,11 +499,11 @@ func (this *Session) saveOrUpdateCascadeDeep(reply interface{}) error{
 
     tags := this.getTags(field)
     
-    if tags == nil && len(tags) == 0 {
+    if tags == nil || len(tags) == 0 {
       continue
     }
       
-    if tags == nil && !this.hasTag(tags, "save_or_update_cascade"){
+    if tags == nil || !this.hasTag(tags, "save_or_update_cascade"){
       continue
     }
 
