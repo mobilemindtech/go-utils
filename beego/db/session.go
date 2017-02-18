@@ -200,6 +200,10 @@ func (this *Session) FindById(entity interface{}, id int64) (interface{}, error)
   if model, ok := entity.(Model); ok {
     err := this.Db.QueryTable(model.TableName()).Filter("id", id).One(entity)
 
+    if err == orm.ErrNoRows {
+      return nil, nil
+    }
+
     if err != nil{
       fmt.Println("## Session: error on find by id: %v", err.Error())
       //this.OnError()
@@ -212,7 +216,7 @@ func (this *Session) FindById(entity interface{}, id int64) (interface{}, error)
 
     return entity, nil
   }
-  
+
   this.OnError()
   return false, errors.New("entity does not implements of Model")
 }
@@ -252,8 +256,15 @@ func (this *Session) List(entity interface{}, entities interface{}) error {
 }
 
 func (this *Session) Page(entity interface{}, entities interface{}, page *Page) error { 
+  return this.PageQuery(nil, entity, entities, page)
+}
+
+func (this *Session) PageQuery(query orm.QuerySeter, entity interface{}, entities interface{}, page *Page) error { 
   if model, ok := entity.(Model); ok {
-    query := this.Db.QueryTable(model.TableName())
+
+    if query == nil {
+      query = this.Db.QueryTable(model.TableName())
+    }
     
     query = query.Limit(page.Limit).Offset(page.Offset)   
 
@@ -300,6 +311,7 @@ func (this *Session) Page(entity interface{}, entities interface{}, page *Page) 
   this.OnError()
   return errors.New("entity does not implements of Model")
 }
+
 
 func (this *Session) Query(entity interface{}) (orm.QuerySeter, error) { 
   if model, ok := entity.(Model); ok {
