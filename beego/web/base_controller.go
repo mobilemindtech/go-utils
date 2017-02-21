@@ -376,6 +376,12 @@ func (this *BaseController) GetIntByKey(key string) int64{
   return intid
 }
 
+func (this *BaseController) GetBoolByKey(key string) bool{
+  val := this.Ctx.Input.Query(key)
+  boolean, _ := strconv.ParseBool(val)
+  return boolean
+}
+
 func (this *BaseController) GetStringByKey(key string) string{
   return this.Ctx.Input.Query(key)
 }

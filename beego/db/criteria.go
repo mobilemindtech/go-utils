@@ -3,6 +3,7 @@ package db
 import (
 	"github.com/astaxie/beego/orm"
 	"errors"
+	"reflect"
 	"fmt"
 )
 
@@ -63,7 +64,7 @@ type Criteria struct {
 	orderBy []*CriteriaOrder
 
 	Result interface{}
-	Results []interface{}
+	Results interface{}
 
 	Page *Page
 
@@ -80,9 +81,11 @@ type Criteria struct {
 	query orm.QuerySeter
 
 	Tenant interface{}
+
+	Any bool
 }
 
-func NewCriteria(session *Session, entity interface{}, entities []interface{}) *Criteria {
+func NewCriteria(session *Session, entity interface{}, entities interface{}) *Criteria {
 	return &Criteria{ criaterias: []*Criteria{}, Session: session, Result: entity, Results: entities, Tenant: session.Tenant  }
 }
 
@@ -192,7 +195,7 @@ func (this *Criteria) OrderDesc(path string) *Criteria{
 	return this
 }
 
-func (this *Criteria) Build(query orm.QuerySeter) {
+func (this *Criteria) Build(query orm.QuerySeter) orm.QuerySeter {
 	
 
 	for _, criteria := range this.criaterias {
@@ -247,6 +250,8 @@ func (this *Criteria) Build(query orm.QuerySeter) {
 		}
 		
 	}
+
+	return query
 
 }
 
@@ -322,7 +327,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
     query.Filter("Tenant", this.Tenant)
   }    
 
-  this.Build(query)
+  query = this.Build(query)
 
   switch resultType {    	
 
@@ -336,19 +341,35 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   			}
   		}
 
+  		if this.Results == nil {
+  			this.Error = errors.New("Results can't be nil")
+  			return this
+  		}
+
   		this.Error = this.Session.ToList(query, this.Results)
+
+  		s := reflect.ValueOf(this.Results).Elem()
+
+  		this.Any = s.Len() > 0
+
   	case CriteriaOne:
   		this.Error = this.Session.ToOne(query, this.Result)
 
   		if this.Error == orm.ErrNoRows {
       	this.Error = nil
       	this.Result = nil
+    	} else {
+    		this.Any = true
     	}
 
   	case CriteriaCount:    		
   		this.Count64, this.Error = this.Session.ToCount(query)
   		this.Count32 = int(this.Count64) 
+
+  		this.Any = this.Count32 > 0
   }
+
+  this.query = nil
 
   return this
     

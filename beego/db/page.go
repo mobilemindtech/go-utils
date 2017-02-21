@@ -39,6 +39,16 @@ func (this *Page) AddFilterAnd(columnName string, value interface{}) *Page{
 	return this
 }
 
+func (this *Page) AddFilterDefaults(columnName ...string) *Page{	
+
+	for _, s := range columnName {
+		this.AddFilter(fmt.Sprintf("%v__icontains", s), this.Search)		
+	}
+
+	return this
+}
+
+
 func (this *Page) MakeDefaultSort() {
 	if this.Order == "asc" {
 		this.Order = ""
