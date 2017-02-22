@@ -386,7 +386,9 @@ func (this *Session) EagerForce(reply interface{}) error{
 func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
 
   if reply == nil {
-    fmt.Println("## reply is nil")
+    if this.Debug {
+      fmt.Println("## reply is nil")
+    }
     return nil
   }
   
@@ -423,13 +425,13 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
     
     if zero {
 
-      if true {
+      if this.Debug {
         fmt.Println("## no eager zero field: ", field.Name)
       }
 
     } else if !ok {
 
-      if true {
+      if this.Debug {
         fmt.Println("## no eager. field does not implemente model: ", field.Name)
       }
 
@@ -437,7 +439,7 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
       
       if model.IsPersisted() {
 
-        if true {
+        if this.Debug {
           fmt.Println("## eager field: ", field.Name, fieldValue)
         }
 
@@ -464,13 +466,13 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
             this.deepEager[key] = 1
           }          
 
-          if true {
+          if this.Debug {
             fmt.Println("## eager field success: ", field.Name, fieldValue)
           }
 
         }
       } else {
-        if true {
+        if this.Debug {
           fmt.Println("## not eager field not persisted: ", field.Name)
         }
       }
