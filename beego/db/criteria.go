@@ -2,8 +2,9 @@ package db
 
 import (
 	"github.com/astaxie/beego/orm"
-	"errors"
 	"reflect"
+	"strings"
+	"errors"
 	"fmt"
 )
 
@@ -25,6 +26,8 @@ const (
 	IsNotNull
 	In
 	NotIn
+	Or
+	AndOr
 )
 
 const (
@@ -63,6 +66,10 @@ type Criteria struct {
 	criaterias []*Criteria
 	orderBy []*CriteriaOrder
 
+	criateriasOr []*Criteria
+	criateriasAndOr []*Criteria
+	criateriasAnd []*Criteria
+
 	Result interface{}
 	Results interface{}
 
@@ -83,10 +90,17 @@ type Criteria struct {
 	Tenant interface{}
 
 	Any bool
+	HasError bool
+
+	Debug bool
 }
 
 func NewCriteria(session *Session, entity interface{}, entities interface{}) *Criteria {
-	return &Criteria{ criaterias: []*Criteria{}, Session: session, Result: entity, Results: entities, Tenant: session.Tenant  }
+	return &Criteria{ criaterias: []*Criteria{}, criateriasOr: []*Criteria{}, criateriasAnd: []*Criteria{}, criateriasAndOr: []*Criteria{}, Session: session, Result: entity, Results: entities, Tenant: session.Tenant  }
+}
+
+func NewCondition() *Criteria{
+	return &Criteria{ criaterias: []*Criteria{}  }	
 }
 
 func (this *Criteria) add(path string, value interface{}, expression CriteriaExpression) *Criteria{
@@ -148,6 +162,21 @@ func (this *Criteria) Gt(path string, value interface{}) *Criteria {
 	return this.add(path, value, Gt)	
 }
 
+func (this *Criteria) Or(criteria *Criteria) *Criteria {		
+	this.criateriasOr = append(this.criateriasOr, criteria)
+	return this
+}
+
+func (this *Criteria) And(criteria *Criteria) *Criteria {		
+	this.criateriasAnd = append(this.criateriasAnd, criteria)
+	return this
+}
+
+func (this *Criteria) AndOr(criteria *Criteria) *Criteria {		
+	this.criateriasAndOr = append(this.criateriasAndOr, criteria)
+	return this
+}
+
 func (this *Criteria) Like(path string, value interface{}) *Criteria {		
 	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Value: value, Expression: Like, Match: IAnywhare } )
 	return this
@@ -195,66 +224,6 @@ func (this *Criteria) OrderDesc(path string) *Criteria{
 	return this
 }
 
-func (this *Criteria) Build(query orm.QuerySeter) orm.QuerySeter {
-	
-
-	for _, criteria := range this.criaterias {
-
-		switch criteria.Expression {
-
-			case Eq:
-				query = query.Filter(criteria.Path, criteria.Value)
-			case Ne:
-				query = query.Exclude(criteria.Path, criteria.Value)
-			case Le:
-				query = query.Filter(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value)
-			case Lt:
-				query = query.Filter(fmt.Sprintf("%v__lt", criteria.Path), criteria.Value)
-			case Ge:
-				query = query.Filter(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
-			case Gt:
-				query = query.Filter(fmt.Sprintf("%v__gt", criteria.Path), criteria.Value)
-			case Like:
-
-				switch criteria.Match {
-					case Exact:
-						query = query.Filter(fmt.Sprintf("%v__exact", criteria.Path), criteria.Value)
-					case IExact:
-						query = query.Filter(fmt.Sprintf("%v__iexact", criteria.Path), criteria.Value)
-					case StartsWith:
-						query = query.Filter(fmt.Sprintf("%v__startswith", criteria.Path), criteria.Value)
-					case IStartsWith:
-						query = query.Filter(fmt.Sprintf("%v__istartswith", criteria.Path), criteria.Value)
-					case EndsWith:
-						query = query.Filter(fmt.Sprintf("%v__endswith", criteria.Path), criteria.Value)
-					case IEndsWith:
-						query = query.Filter(fmt.Sprintf("%v__iendswith", criteria.Path), criteria.Value)
-					case Anywhare:
-						query = query.Filter(fmt.Sprintf("%v__contains", criteria.Path), criteria.Value)
-					case IAnywhare:
-						query = query.Filter(fmt.Sprintf("%v__icontains", criteria.Path), criteria.Value)
-				}
-
-			case IsNull:
-				query = query.Filter(fmt.Sprintf("%v__isnull", criteria.Path), criteria.Value)			
-			case IsNotNull:
-				query = query.Exclude(fmt.Sprintf("%v__isnull", criteria.Path), criteria.Value)
-			case Between:
-				query = query.Filter(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
-				query = query.Filter(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
-			case In:
-				query = query.Filter(fmt.Sprintf("%v__in", criteria.Path), criteria.InValues)
-			case NotIn:
-				query = query.Filter(fmt.Sprintf("%v__in", criteria.Path), criteria.InValues)
-
-		}
-		
-	}
-
-	return query
-
-}
-
 func (this *Criteria) List() *Criteria {
 	return this.execute(CriteriaList)
 }
@@ -267,6 +236,11 @@ func (this *Criteria) Count() *Criteria {
 	return this.execute(CriteriaCount)
 }
 
+func (this *Criteria) Get(id int64) *Criteria {
+	this.Eq("Id", id)
+	return this.execute(CriteriaOne)
+}
+
 func (this *Criteria) Query() orm.QuerySeter {
 	
 	if this.query == nil {
@@ -274,17 +248,251 @@ func (this *Criteria) Query() orm.QuerySeter {
 	  entity := this.Result
 
 	  if model, ok := entity.(Model); ok {
-
 	    this.query = this.Session.Db.QueryTable(model.TableName())			
-
 		} else {
-
-			this.Error = errors.New("entity does not implements of Model")	
-
+			this.setError(errors.New("entity does not implements of Model")	)
 		}
 	}	
 
 	return this.query
+}
+
+func (this *Criteria) SetDebug(debug bool) *Criteria {
+	this.Debug = debug
+	return this.execute(CriteriaOne)
+}
+
+func (this *Criteria) buildPage() {
+	
+	if this.Page != nil {
+    
+		switch this.Page.Sort {
+			case "asc":
+    		this.OrderAsc(this.Page.Sort)
+    	case "desc":
+    		this.OrderDesc(this.Page.Sort)
+		}
+
+    if this.Page.FilterColumns != nil && len(this.Page.FilterColumns) > 0 {
+        
+      if len(this.Page.FilterColumns) == 1 {
+        
+        for k, v := range this.Page.FilterColumns {
+          this.Eq(k, v)
+        }
+
+      } else {
+
+        cond := NewCondition()
+        for k, v := range this.Page.FilterColumns {
+          cond.Eq(k, v)          
+        }        
+        this.AndOr(cond)
+
+      }
+
+    }
+
+    if this.Page.AndFilterColumns != nil && len(this.Page.AndFilterColumns) > 0 {      
+      for k, v := range this.Page.AndFilterColumns {
+        this.Eq(k, v)
+      }      
+    }
+	}
+
+}
+
+func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
+	
+
+	condition := orm.NewCondition()
+
+	for _, criteria := range this.criaterias {
+
+		pathName := this.getPathName(criteria)
+		
+		cond := orm.NewCondition()
+		
+		switch criteria.Expression {
+
+			case Ne, IsNotNull, NotIn:
+				//query = query.Exclude(pathName, criteria.Value)
+				cond = cond.AndNot(pathName, criteria.Value)
+			case Between:
+				b := orm.NewCondition()
+				b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
+				b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
+				cond = cond.AndCond(b)
+			default:
+				cond = cond.And(pathName, criteria.Value)
+				//query = query.Filter(pathName, criteria.Value)
+
+		}
+
+		if this.Debug {
+			fmt.Println("*********************************************************")
+			fmt.Println("** set condition default %v ", pathName)
+			fmt.Println("*********************************************************")
+		}
+
+		condition = condition.AndCond(cond)
+		
+	}
+
+
+	for _, c := range this.criateriasOr {
+		
+		cond := orm.NewCondition()
+
+		for _, criteria := range c.criaterias {
+			pathName := this.getPathName(criteria)
+
+			switch criteria.Expression {
+				case Ne, IsNotNull, NotIn:
+					cond = cond.OrNot(pathName, criteria.Value)
+				case Between:
+					b := orm.NewCondition()
+					b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
+					b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
+					cond = cond.OrCond(b)
+				default:
+					cond = cond.Or(pathName, criteria.Value)
+			}
+
+			if this.Debug {
+				fmt.Println("*********************************************************")
+				fmt.Println("** set condition or %v ", pathName)
+				fmt.Println("*********************************************************")		
+			}
+		}
+
+
+		condition = condition.OrCond(cond)
+
+	}
+
+	for _, c := range this.criateriasAnd {
+		
+		cond := orm.NewCondition()
+
+		for _, criteria := range c.criaterias {
+			pathName := this.getPathName(criteria)
+
+			switch criteria.Expression {
+				case Ne, IsNotNull, NotIn:
+					cond = cond.AndNot(pathName, criteria.Value)
+				case Between:
+					cond = cond.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
+					cond = cond.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
+				default:
+					cond = cond.And(pathName, criteria.Value)
+			}
+			if this.Debug {
+				fmt.Println("*********************************************************")
+				fmt.Println("** set condition and %v ", pathName)
+				fmt.Println("*********************************************************")
+			}
+		}
+
+
+		condition = condition.AndCond(cond)
+
+	}
+
+	for _, c := range this.criateriasAndOr {
+		
+		cond := orm.NewCondition()
+
+		for _, criteria := range c.criaterias {
+			pathName := this.getPathName(criteria)
+
+			switch criteria.Expression {
+				case Ne, IsNotNull, NotIn:
+					cond = cond.OrNot(pathName, criteria.Value)
+				case Between:
+					b := orm.NewCondition()
+					b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
+					b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
+					cond = cond.OrCond(b)
+				default:
+					cond = cond.Or(pathName, criteria.Value)
+			}
+
+			if this.Debug {
+				fmt.Println("*********************************************************")
+				fmt.Println("** set condition and or %v ", pathName)
+				fmt.Println("*********************************************************")		
+			}
+
+		}
+
+		condition = condition.AndCond(cond)
+
+	}	
+
+	query = query.SetCond(condition)
+	
+
+	return query
+
+}
+
+func (this *Criteria) getPathName(criteria *Criteria) string {
+		pathName := criteria.Path
+
+		if strings.Contains(criteria.Path, "icontains") {
+			return pathName
+		}
+		
+		switch criteria.Expression {
+
+			case Eq:
+
+			case Ne:
+
+			case Le:
+				pathName = fmt.Sprintf("%v__lte", criteria.Path)
+			case Lt:
+				pathName = fmt.Sprintf("%v__lt", criteria.Path)
+			case Ge:
+				pathName = fmt.Sprintf("%v__gte", criteria.Path)
+			case Gt:
+				pathName = fmt.Sprintf("%v__gt", criteria.Path)
+			case Like:
+
+				switch criteria.Match {
+					case Exact:
+						pathName = fmt.Sprintf("%v__exact", criteria.Path)
+					case IExact:
+						pathName = fmt.Sprintf("%v__iexact", criteria.Path)
+					case StartsWith:
+						pathName = fmt.Sprintf("%v__startswith", criteria.Path)
+					case IStartsWith:
+						pathName = fmt.Sprintf("%v__istartswith", criteria.Path)
+					case EndsWith:
+						pathName = fmt.Sprintf("%v__endswith", criteria.Path)
+					case IEndsWith:
+						pathName = fmt.Sprintf("%v__iendswith", criteria.Path)
+					case Anywhare:
+						pathName = fmt.Sprintf("%v__contains", criteria.Path)
+					case IAnywhare:
+						pathName = fmt.Sprintf("%v__icontains", criteria.Path)
+				}
+
+			case IsNull:
+				pathName = fmt.Sprintf("%v__isnull", criteria.Path)
+			case IsNotNull:
+				pathName = fmt.Sprintf("%v__isnull", criteria.Path)
+			case Between:
+
+			case In:
+				pathName = fmt.Sprintf("%v__in", criteria.Path)
+			case NotIn:
+				pathName = fmt.Sprintf("%v__in", criteria.Path)
+
+		}	
+
+		return pathName
 }
 
 func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
@@ -295,39 +503,12 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   	query = query.Limit(this.Limit).Offset(this.Offset)   
 	}
 
-	if this.Page != nil {
-    if this.Page.Sort != "" { 
-      query = query.OrderBy(fmt.Sprintf("%v%v", this.Page.Order, this.Page.Sort))
-    }
-
-    if this.Page.FilterColumns != nil && len(this.Page.FilterColumns) > 0 {
-        
-      if len(this.Page.FilterColumns) == 1 {
-        for k, v := range this.Page.FilterColumns {
-          query = query.Filter(k, v)
-        }
-      } else {
-        cond := orm.NewCondition()
-        for k, v := range this.Page.FilterColumns {
-          cond = cond.Or(k, v)          
-        }        
-        query = query.SetCond(orm.NewCondition().AndCond(cond))
-      }
-
-    }
-
-    if this.Page.AndFilterColumns != nil && len(this.Page.AndFilterColumns) > 0 {      
-      for k, v := range this.Page.AndFilterColumns {
-        query = query.Filter(k, v)
-      }      
-    }
-	}
-
   if this.Tenant != nil {
-    query.Filter("Tenant", this.Tenant)
+    query = query.Filter("Tenant", this.Tenant)
   }    
 
-  query = this.Build(query)
+  this.buildPage()
+  query = this.build(query)
 
   switch resultType {    	
 
@@ -341,36 +522,52 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   			}
   		}
 
-  		if this.Results == nil {
-  			this.Error = errors.New("Results can't be nil")
+  		if this.Results == nil {  			  			
+  			this.setError(errors.New("Results can't be nil"))
   			return this
   		}
 
-  		this.Error = this.Session.ToList(query, this.Results)
+  		err := this.Session.ToList(query, this.Results)
 
-  		s := reflect.ValueOf(this.Results).Elem()
+  		this.setError(err)
 
-  		this.Any = s.Len() > 0
+  		this.Any = reflect.ValueOf(this.Results).Elem().Len() > 0
 
   	case CriteriaOne:
-  		this.Error = this.Session.ToOne(query, this.Result)
 
-  		if this.Error == orm.ErrNoRows {
-      	this.Error = nil
-      	this.Result = nil
+  		err := this.Session.ToOne(query, this.Result)
+
+  		if err != orm.ErrNoRows {
+	  		this.setError(err)
     	} else {
-    		this.Any = true
+    		this.setError(nil)
     	}
 
-  	case CriteriaCount:    		
-  		this.Count64, this.Error = this.Session.ToCount(query)
-  		this.Count32 = int(this.Count64) 
+			if model, ok := this.Result.(Model); ok {
+				this.Any = model.IsPersisted()
+			}
 
-  		this.Any = this.Count32 > 0
+  	case CriteriaCount:  
+
+  		count, err := this.Session.ToCount(query)
+
+  		this.Count64 = count
+  		this.Count32 = int(count) 
+
+  		this.Any = count > 0
+
+  		this.setError(err)
   }
-
-  this.query = nil
 
   return this
     
+}
+
+func (this *Criteria) setError(err error) {
+	if err != nil && this.Error == nil{
+		this.HasError = true
+		this.Error = err
+	}
+
+	this.query = nil
 }

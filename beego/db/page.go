@@ -7,13 +7,14 @@ import (
 type Page struct {
   Offset int64
   Limit int64
-  Search string
+  Search	 string
   Order string
   Sort string  
   FilterColumns map[string]interface{} 
   AndFilterColumns map[string]interface{}
 }
 
+/* deprecated */
 func (this *Page) AddFilter(columnName string, value interface{}) *Page{
 	
 	if this.FilterColumns == nil {
@@ -25,10 +26,12 @@ func (this *Page) AddFilter(columnName string, value interface{}) *Page{
 	return this
 }
 
+/* deprecated */
 func (this *Page) AddFilterDefault(columnName string) *Page{	
 	return this.AddFilter(fmt.Sprintf("%v__icontains", columnName), this.Search)
 }
 
+/* deprecated */
 func (this *Page) AddFilterAnd(columnName string, value interface{}) *Page{	
 	if this.AndFilterColumns == nil {
 		this.AndFilterColumns = make(map[string]interface{} )
@@ -39,6 +42,7 @@ func (this *Page) AddFilterAnd(columnName string, value interface{}) *Page{
 	return this
 }
 
+/* deprecated */
 func (this *Page) AddFilterDefaults(columnName ...string) *Page{	
 
 	for _, s := range columnName {
@@ -48,11 +52,7 @@ func (this *Page) AddFilterDefaults(columnName ...string) *Page{
 	return this
 }
 
-
+/* deprecated */
 func (this *Page) MakeDefaultSort() {
-	if this.Order == "asc" {
-		this.Order = ""
-	} else {
-		this.Order = "-"
-	}	
+
 }

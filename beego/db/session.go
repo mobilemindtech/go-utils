@@ -268,9 +268,12 @@ func (this *Session) PageQuery(query orm.QuerySeter, entity interface{}, entitie
     
     query = query.Limit(page.Limit).Offset(page.Offset)   
 
-    if page.Sort != "" { 
-      query = query.OrderBy(fmt.Sprintf("%v%v", page.Order, page.Sort))
-    }
+    switch page.Sort {
+      case "asc":
+        query = query.OrderBy(fmt.Sprintf("%v", page.Sort))
+      case "desc":
+        query = query.OrderBy(fmt.Sprintf("-%v", page.Sort))        
+    }  
 
     if page.FilterColumns != nil && len(page.FilterColumns) > 0 {
         
