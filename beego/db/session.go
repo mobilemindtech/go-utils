@@ -386,6 +386,7 @@ func (this *Session) EagerForce(reply interface{}) error{
 func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
 
   if reply == nil {
+    fmt.Println("## reply is nil")
     return nil
   }
   
@@ -407,15 +408,12 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
 
     tags := this.getTags(field)
     
-    if tags == nil || len(tags) == 0 && !ignoreTag{
-      continue
+    if !ignoreTag{
+      if tags == nil || len(tags) == 0 || !this.hasTag(tags, "eager"){
+        continue
+      }
     }
-      
-    if tags == nil || !this.hasTag(tags, "eager") && !ignoreTag{
-      continue
-    }      
-    
-
+          
     if tags != nil && this.hasTag(tags, "ignore_eager"){
       continue
     }
@@ -425,13 +423,13 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
     
     if zero {
 
-      if this.Debug {
+      if true {
         fmt.Println("## no eager zero field: ", field.Name)
       }
 
     } else if !ok {
 
-      if this.Debug {
+      if true {
         fmt.Println("## no eager. field does not implemente model: ", field.Name)
       }
 
@@ -439,7 +437,7 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
       
       if model.IsPersisted() {
 
-        if this.Debug {
+        if true {
           fmt.Println("## eager field: ", field.Name, fieldValue)
         }
 
@@ -466,13 +464,13 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
             this.deepEager[key] = 1
           }          
 
-          if this.Debug {
+          if true {
             fmt.Println("## eager field success: ", field.Name, fieldValue)
           }
 
         }
       } else {
-        if this.Debug {
+        if true {
           fmt.Println("## not eager field not persisted: ", field.Name)
         }
       }
@@ -481,7 +479,11 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
         continue
       }
 
-      this.eagerDeep(fieldValue, ignoreTag)
+      fmt.Println("## eager next field: ", field.Name)
+      if err := this.eagerDeep(fieldValue, ignoreTag); err != nil {
+        fmt.Println("## eager next field %v: %v", field.Name, err.Error())
+        return err
+      }
     }
     
   }   
@@ -649,7 +651,7 @@ func (this *Session) RemoveCascadeDeep(reply interface{}) error{
     fmt.Println("## remove : ", fullType)
   }
 
-  return this.RemoveCascade(reply)
+  return this.Remove(reply)
 }
 
 
