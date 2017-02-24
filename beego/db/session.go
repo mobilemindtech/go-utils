@@ -481,7 +481,10 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
         continue
       }
 
-      fmt.Println("## eager next field: ", field.Name)
+      if this.Debug {
+        fmt.Println("## eager next field: ", field.Name)
+      }
+      
       if err := this.eagerDeep(fieldValue, ignoreTag); err != nil {
         fmt.Println("## eager next field %v: %v", field.Name, err.Error())
         return err

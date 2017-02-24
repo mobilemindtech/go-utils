@@ -135,7 +135,7 @@ func (this *BaseController) NestPrepareBase () {
 func (this *BaseController) DisableXSRF(pathList []string) {
 
   for _, url := range pathList {
-    if this.Ctx.Input.URL() == url {
+    if strings.HasPrefix(this.Ctx.Input.URL(), url) {
       this.EnableXSRF = false   
     }    
   }  
