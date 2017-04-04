@@ -427,8 +427,11 @@ func (this *BaseController) GetPage() *db.Page{
   page := new(db.Page)
 
   if this.IsJson() {
+
     
     jsonMap, _ := this.JsonToMap(this.Ctx)
+    
+    this.Log("BaseController.GetPage JSON %v", jsonMap)
     
     if _, ok := jsonMap["limit"]; ok {
       page.Limit = this.GetJsonInt64(jsonMap, "limit")
@@ -439,6 +442,8 @@ func (this *BaseController) GetPage() *db.Page{
     }
 
   } else {
+
+    this.Log("BaseController.GetPage FORM")
 
     page.Limit = this.GetIntByKey("limit")
     page.Offset = this.GetIntByKey("offset")

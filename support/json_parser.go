@@ -2,7 +2,7 @@ package support
 
 import (
   "github.com/astaxie/beego/context"
-  "encoding/json"  
+  "encoding/json"    
   "strconv"
   "strings"
   "errors"
@@ -146,7 +146,7 @@ func (c JsonParser) GetJsonInt(json map[string]interface{}, key string) int{
 func (c JsonParser) GetJsonInt64(json map[string]interface{}, key string) int64{
 
   var val int 
-
+  
   if c.HasJsonKey(json, key) {
     if _, ok := json[key].(int); ok {
       val = json[key].(int)
@@ -155,6 +155,8 @@ func (c JsonParser) GetJsonInt64(json map[string]interface{}, key string) int64{
     } else {
       val, _ = strconv.Atoi(c.GetJsonString(json, key))
     }
+  } else {
+    fmt.Println("not has int key %v", key)
   }
 
   return int64(val)
