@@ -315,9 +315,13 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 		
 		switch criteria.Expression {
 
-			case Ne, IsNotNull, NotIn:
+			case Ne, NotIn:
 				//query = query.Exclude(pathName, criteria.Value)
 				cond = cond.AndNot(pathName, criteria.Value)
+			case IsNull:
+				cond = cond.AndNot(pathName, true)
+			case IsNotNull:
+				cond = cond.AndNot(pathName, false)
 			case Between:
 				b := orm.NewCondition()
 				b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
@@ -348,8 +352,12 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 			pathName := this.getPathName(criteria)
 
 			switch criteria.Expression {
-				case Ne, IsNotNull, NotIn:
+				case Ne, NotIn:
 					cond = cond.OrNot(pathName, criteria.Value)
+				case IsNull:
+					cond = cond.OrNot(pathName, true)
+				case IsNotNull:
+					cond = cond.OrNot(pathName, false)
 				case Between:
 					b := orm.NewCondition()
 					b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
@@ -379,8 +387,12 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 			pathName := this.getPathName(criteria)
 
 			switch criteria.Expression {
-				case Ne, IsNotNull, NotIn:
+				case Ne, NotIn:
 					cond = cond.AndNot(pathName, criteria.Value)
+				case IsNull:
+					cond = cond.AndNot(pathName, true)
+				case IsNotNull:
+					cond = cond.AndNot(pathName, false)
 				case Between:
 					cond = cond.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
 					cond = cond.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
@@ -407,8 +419,12 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 			pathName := this.getPathName(criteria)
 
 			switch criteria.Expression {
-				case Ne, IsNotNull, NotIn:
+				case Ne, NotIn:
 					cond = cond.OrNot(pathName, criteria.Value)
+				case IsNull:
+					cond = cond.OrNot(pathName, true)
+				case IsNotNull:
+					cond = cond.OrNot(pathName, false)
 				case Between:
 					b := orm.NewCondition()
 					b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
