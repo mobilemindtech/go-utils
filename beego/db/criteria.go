@@ -319,9 +319,9 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 				//query = query.Exclude(pathName, criteria.Value)
 				cond = cond.AndNot(pathName, criteria.Value)
 			case IsNull:
-				cond = cond.AndNot(pathName, true)
+				cond = cond.And(pathName, true)
 			case IsNotNull:
-				cond = cond.AndNot(pathName, false)
+				cond = cond.And(pathName, false)
 			case Between:
 				b := orm.NewCondition()
 				b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
@@ -355,9 +355,9 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 				case Ne, NotIn:
 					cond = cond.OrNot(pathName, criteria.Value)
 				case IsNull:
-					cond = cond.OrNot(pathName, true)
+					cond = cond.Or(pathName, true)
 				case IsNotNull:
-					cond = cond.OrNot(pathName, false)
+					cond = cond.Or(pathName, false)
 				case Between:
 					b := orm.NewCondition()
 					b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
@@ -390,9 +390,9 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 				case Ne, NotIn:
 					cond = cond.AndNot(pathName, criteria.Value)
 				case IsNull:
-					cond = cond.AndNot(pathName, true)
+					cond = cond.And(pathName, true)
 				case IsNotNull:
-					cond = cond.AndNot(pathName, false)
+					cond = cond.And(pathName, false)
 				case Between:
 					cond = cond.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
 					cond = cond.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
@@ -422,9 +422,9 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 				case Ne, NotIn:
 					cond = cond.OrNot(pathName, criteria.Value)
 				case IsNull:
-					cond = cond.OrNot(pathName, true)
+					cond = cond.Or(pathName, true)
 				case IsNotNull:
-					cond = cond.OrNot(pathName, false)
+					cond = cond.Or(pathName, false)
 				case Between:
 					b := orm.NewCondition()
 					b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
