@@ -108,6 +108,9 @@ func (this *Session) Save(entity interface{}) error {
 
 
   if this.Tenant != nil {
+    if this.Debug {
+      fmt.Println("## Save set tenant")
+    }
     this.setTenant(entity)
   }
 
@@ -129,6 +132,9 @@ func (this *Session) Save(entity interface{}) error {
 func (this *Session) Update(entity interface{}) error {
 
   if this.Tenant != nil {
+    if this.Debug {
+      fmt.Println("## Update set tenant")
+    }    
     this.setTenant(entity)
   }
 
@@ -759,12 +765,17 @@ func (this *Session) setTenant(reply interface{}){
   // value e type of instance
   fullValue := refValue.Elem()
   fullType := fullValue.Type()
+
+  if this.Debug {
+    fmt.Println("## set Tenant to ", fullType)
+  }
+
    
   for i := 0; i < fullType.NumField(); i++ {
     field := fullType.Field(i)
     
     fieldStruct := fullValue.FieldByName(field.Name)
-    fieldValue := fieldStruct.Interface()
+    //fieldValue := fieldStruct.Interface()
     //fieldType := fieldStruct.Type()  
     
 
@@ -772,13 +783,19 @@ func (this *Session) setTenant(reply interface{}){
 
     if this.hasTag(tags, "tenant") {
       
-      zero := reflect.Zero(reflect.TypeOf(fieldValue)).Interface() == fieldValue
 
       value := reflect.ValueOf(this.Tenant)
-      if zero {
-        fieldStruct.Set(value)
+
+      if this.Debug {
+        fmt.Println("## field %v is tenant set tenant %v", field.Name, value)
       }
+
+      fieldStruct.Set(value)
       
+    } else {
+      if this.Debug {
+        fmt.Println("## field %v not is tenant ", field.Name)
+      }
     } 
 
   }

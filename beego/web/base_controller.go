@@ -357,7 +357,12 @@ func (this *BaseController) OnParseJson(entity interface{}) {
 }
 
 func (this *BaseController) IsJson() bool{
-  return this.Ctx.Request.Header.Get("Content-Type") == "application/json" || this.Ctx.Request.Header.Get("contentType") == "application/json"
+  //this.Ctx.Request.Header.Get("Content-Type") == "application/json" || this.Ctx.Request.Header.Get("contentType") == "application/json" ||
+  return  this.Ctx.Input.AcceptsJSON()
+}
+
+func (this *BaseController) IsAjax() bool{
+  return  this.Ctx.Input.IsAjax()
 }
 
 func (this *BaseController) GetId() int64 {
