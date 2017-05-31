@@ -1,23 +1,23 @@
 package db
 
 import (
-  "github.com/astaxie/beego/orm"
+  "github.com/mobilemindtec/beego/orm"
   "reflect"
   "strings"
   "errors"
-  "fmt" 
+  "fmt"
 )
 
 type SessionState int
 
 const (
-  SessionStateOk SessionState = iota + 1  
+  SessionStateOk SessionState = iota + 1
   SessionStateError
 )
 
 type Model interface {
   IsPersisted() bool
-  TableName() string  
+  TableName() string
 }
 
 type Session struct {
@@ -55,12 +55,12 @@ func (this *Session) Close() {
     this.Commit()
   } else {
     this.Rollback()
-  }  
+  }
 }
 
 func (this *Session) Begin() orm.Ormer{
   this.Db = orm.NewOrm()
-  this.Db.Using("default")    
+  this.Db.Using("default")
 
   err := this.Db.Begin()
   if err != nil {
@@ -72,7 +72,7 @@ func (this *Session) Begin() orm.Ormer{
 }
 
 func (this *Session) Commit() {
-  
+
   if this.Debug {
     fmt.Println("## session commit ")
   }
@@ -95,7 +95,7 @@ func (this *Session) Rollback() {
   }
 
   if this.Db != nil{
-    err := this.Db.Rollback() 
+    err := this.Db.Rollback()
     if err != nil {
       fmt.Println("## db rollback error: %v", err.Error())
       panic(err)
@@ -104,7 +104,7 @@ func (this *Session) Rollback() {
   }
 }
 
-func (this *Session) Save(entity interface{}) error {  
+func (this *Session) Save(entity interface{}) error {
 
 
   if this.Tenant != nil {
@@ -115,7 +115,7 @@ func (this *Session) Save(entity interface{}) error {
   }
 
   _, err := this.Db.Insert(entity)
-  
+
   if this.Debug {
     fmt.Println("## save data: %+v", entity)
   }
@@ -134,7 +134,7 @@ func (this *Session) Update(entity interface{}) error {
   if this.Tenant != nil {
     if this.Debug {
       fmt.Println("## Update set tenant")
-    }    
+    }
     this.setTenant(entity)
   }
 
@@ -154,7 +154,7 @@ func (this *Session) Update(entity interface{}) error {
 }
 
 func (this *Session) Remove(entity interface{}) error {
-  
+
   _, err := this.Db.Delete(entity)
 
   if err != nil {
@@ -175,8 +175,8 @@ func (this *Session) Load(entity interface{}) error {
   return nil
 }
 
-func (this *Session) Count(entity interface{}) (int64, error){  
-  
+func (this *Session) Count(entity interface{}) (int64, error){
+
   if model, ok := entity.(Model); ok {
 
     num, err := this.Db.QueryTable(model.TableName()).Count()
@@ -191,18 +191,18 @@ func (this *Session) Count(entity interface{}) (int64, error){
   return 0, errors.New("entity does not implements of Model")
 }
 
-func (this *Session) HasById(entity interface{}, id int64) (bool, error) {  
-  
+func (this *Session) HasById(entity interface{}, id int64) (bool, error) {
+
   if model, ok := entity.(Model); ok {
     return this.Db.QueryTable(model.TableName()).Filter("id", id).Exist(), nil
   }
-  
+
   this.OnError()
   return false, errors.New("entity does not implements of Model")
 }
 
-func (this *Session) FindById(entity interface{}, id int64) (interface{}, error) {  
-  
+func (this *Session) FindById(entity interface{}, id int64) (interface{}, error) {
+
   if model, ok := entity.(Model); ok {
     err := this.Db.QueryTable(model.TableName()).Filter("id", id).One(entity)
 
@@ -240,11 +240,11 @@ func (this *Session) SaveOrUpdate(entity interface{}) error{
   return errors.New("entity does not implements of Model")
 }
 
-func (this *Session) List(entity interface{}, entities interface{}) error { 
+func (this *Session) List(entity interface{}, entities interface{}) error {
   if model, ok := entity.(Model); ok {
 
     query := this.Db.QueryTable(model.TableName())
-    
+
     if this.Tenant != nil {
       query.Filter("Tenant", this.Tenant)
     }
@@ -261,28 +261,28 @@ func (this *Session) List(entity interface{}, entities interface{}) error {
   return errors.New("entity does not implements of Model 1")
 }
 
-func (this *Session) Page(entity interface{}, entities interface{}, page *Page) error { 
+func (this *Session) Page(entity interface{}, entities interface{}, page *Page) error {
   return this.PageQuery(nil, entity, entities, page)
 }
 
-func (this *Session) PageQuery(query orm.QuerySeter, entity interface{}, entities interface{}, page *Page) error { 
+func (this *Session) PageQuery(query orm.QuerySeter, entity interface{}, entities interface{}, page *Page) error {
   if model, ok := entity.(Model); ok {
 
     if query == nil {
       query = this.Db.QueryTable(model.TableName())
     }
-    
-    query = query.Limit(page.Limit).Offset(page.Offset)   
+
+    query = query.Limit(page.Limit).Offset(page.Offset)
 
     switch page.Sort {
       case "asc":
         query = query.OrderBy(fmt.Sprintf("%v", page.Sort))
       case "desc":
-        query = query.OrderBy(fmt.Sprintf("-%v", page.Sort))        
-    }  
+        query = query.OrderBy(fmt.Sprintf("-%v", page.Sort))
+    }
 
     if page.FilterColumns != nil && len(page.FilterColumns) > 0 {
-        
+
       if len(page.FilterColumns) == 1 {
         for k, v := range page.FilterColumns {
           query = query.Filter(k, v)
@@ -290,23 +290,23 @@ func (this *Session) PageQuery(query orm.QuerySeter, entity interface{}, entitie
       } else {
         cond := orm.NewCondition()
         for k, v := range page.FilterColumns {
-          cond = cond.Or(k, v)          
-        }        
+          cond = cond.Or(k, v)
+        }
         query = query.SetCond(orm.NewCondition().AndCond(cond))
       }
 
     }
 
-    if page.AndFilterColumns != nil && len(page.AndFilterColumns) > 0 {      
+    if page.AndFilterColumns != nil && len(page.AndFilterColumns) > 0 {
       for k, v := range page.AndFilterColumns {
         query = query.Filter(k, v)
-      }      
+      }
     }
 
     if this.Tenant != nil {
       query.Filter("Tenant", this.Tenant)
-    }    
- 
+    }
+
     if _, err := query.All(entities); err != nil {
       fmt.Println("## Session: error on page: %v", err.Error())
       //this.OnError()
@@ -322,10 +322,10 @@ func (this *Session) PageQuery(query orm.QuerySeter, entity interface{}, entitie
 }
 
 
-func (this *Session) Query(entity interface{}) (orm.QuerySeter, error) { 
+func (this *Session) Query(entity interface{}) (orm.QuerySeter, error) {
   if model, ok := entity.(Model); ok {
     query := this.Db.QueryTable(model.TableName())
-    
+
     if this.Tenant != nil {
       query.Filter("Tenant", this.Tenant)
     }
@@ -357,7 +357,7 @@ func (this *Session) ToOne(querySeter orm.QuerySeter, entity interface{}) error 
 
 func (this *Session) ToPage(querySeter orm.QuerySeter, entities interface{}, page *Page) error {
   querySeter.Limit(page.Limit)
-  querySeter.Offset(page.Offset)  
+  querySeter.Offset(page.Offset)
   if _, err := querySeter.All(entities); err != nil {
     fmt.Println("## Session: error on to page: %v", err.Error())
     //this.OnError()
@@ -379,7 +379,7 @@ func (this *Session) ToCount(querySeter orm.QuerySeter) (int64, error) {
   return count, err
 }
 
-func (this *Session) Eager(reply interface{}) error{  
+func (this *Session) Eager(reply interface{}) error{
   this.deepEager = map[string]int{}
   return this.eagerDeep(reply, false)
 }
@@ -397,38 +397,38 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
     }
     return nil
   }
-  
+
   // value e type of pointer
   refValue := reflect.ValueOf(reply)
   //refType := reflect.TypeOf(reply)
-  
- 
+
+
   // value e type of instance
   fullValue := refValue.Elem()
   fullType := fullValue.Type()
-   
+
   for i := 0; i < fullType.NumField(); i++ {
     field := fullType.Field(i)
-    
+
     fieldStruct := fullValue.FieldByName(field.Name)
     fieldValue := fieldStruct.Interface()
-    //fieldType := fieldStruct.Type()  
+    //fieldType := fieldStruct.Type()
 
     tags := this.getTags(field)
-    
+
     if !ignoreTag{
       if tags == nil || len(tags) == 0 || !this.hasTag(tags, "eager"){
         continue
       }
     }
-          
+
     if tags != nil && this.hasTag(tags, "ignore_eager"){
       continue
     }
 
     zero := reflect.Zero(reflect.TypeOf(fieldValue)).Interface() == fieldValue
     model, ok := fieldValue.(Model)
-    
+
     if zero {
 
       if this.Debug {
@@ -442,7 +442,7 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
       }
 
     } else {
-      
+
       if model.IsPersisted() {
 
         if this.Debug {
@@ -450,7 +450,7 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
         }
 
         if _, err := this.Db.LoadRelated(reply, field.Name); err != nil {
-          fmt.Println("********* eager field error ", fullType, field.Name, fieldValue, err.Error())          
+          fmt.Println("********* eager field error ", fullType, field.Name, fieldValue, err.Error())
         } else {
           // reload loaded value of field reference
           refValue = reflect.ValueOf(reply)
@@ -470,7 +470,7 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
             this.deepEager[key] = count + 1
           } else {
             this.deepEager[key] = 1
-          }          
+          }
 
           if this.Debug {
             fmt.Println("## eager field success: ", field.Name, fieldValue)
@@ -490,14 +490,14 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
       if this.Debug {
         fmt.Println("## eager next field: ", field.Name)
       }
-      
+
       if err := this.eagerDeep(fieldValue, ignoreTag); err != nil {
         fmt.Println("## eager next field %v: %v", field.Name, err.Error())
         return err
       }
     }
-    
-  }   
+
+  }
 
   return nil
 }
@@ -512,32 +512,32 @@ func (this *Session) saveOrUpdateCascadeDeep(reply interface{}) error{
   // value e type of pointer
   refValue := reflect.ValueOf(reply)
   //refType := reflect.TypeOf(reply)
-  
- 
+
+
   // value e type of instance
   fullValue := refValue.Elem()
   fullType := fullValue.Type()
-   
+
   for i := 0; i < fullType.NumField(); i++ {
     field := fullType.Field(i)
-    
+
     fieldStruct := fullValue.FieldByName(field.Name)
     fieldValue := fieldStruct.Interface()
-    //fieldType := fieldStruct.Type()    
+    //fieldType := fieldStruct.Type()
 
     tags := this.getTags(field)
-    
+
     if tags == nil || len(tags) == 0 {
       continue
     }
-      
+
     if tags == nil || !this.hasTag(tags, "save_or_update_cascade"){
       continue
     }
 
     zero := reflect.Zero(reflect.TypeOf(fieldValue)).Interface() == fieldValue
     _, ok := fieldValue.(Model)
-    
+
     if zero {
 
       if this.Debug {
@@ -572,8 +572,8 @@ func (this *Session) saveOrUpdateCascadeDeep(reply interface{}) error{
         return err
       }
     }
-    
-  } 
+
+  }
 
   if this.Debug {
     fmt.Println("## save or update: ", fullType)
@@ -592,32 +592,32 @@ func (this *Session) RemoveCascadeDeep(reply interface{}) error{
   // value e type of pointer
   refValue := reflect.ValueOf(reply)
   //refType := reflect.TypeOf(reply)
-  
- 
+
+
   // value e type of instance
   fullValue := refValue.Elem()
   fullType := fullValue.Type()
-   
+
   for i := 0; i < fullType.NumField(); i++ {
     field := fullType.Field(i)
-    
+
     fieldStruct := fullValue.FieldByName(field.Name)
     fieldValue := fieldStruct.Interface()
-    //fieldType := fieldStruct.Type()    
+    //fieldType := fieldStruct.Type()
 
     tags := this.getTags(field)
-    
+
     if tags == nil && len(tags) == 0 {
       continue
     }
-      
+
     if tags == nil && !this.hasTag(tags, "remove_cascade"){
       continue
     }
 
     zero := reflect.Zero(reflect.TypeOf(fieldValue)).Interface() == fieldValue
     _, ok := fieldValue.(Model)
-    
+
     if zero {
 
       if this.Debug {
@@ -633,8 +633,8 @@ func (this *Session) RemoveCascadeDeep(reply interface{}) error{
     } else {
 
       //fieldFullType := reflect.TypeOf(fieldValue).Elem()
-      
-      key := fmt.Sprintf("%v.%v", strings.Split(fullType.String(), ".")[1], field.Name)    
+
+      key := fmt.Sprintf("%v.%v", strings.Split(fullType.String(), ".")[1], field.Name)
 
       if count, ok := this.deepRemove[key]; ok {
 
@@ -655,8 +655,8 @@ func (this *Session) RemoveCascadeDeep(reply interface{}) error{
         return err
       }
     }
-    
-  } 
+
+  }
 
   if this.Debug {
     fmt.Println("## remove : ", fullType)
@@ -682,26 +682,26 @@ func (this *Session) setDefaultsDeep(reply interface{}) error{
   // value e type of pointer
   refValue := reflect.ValueOf(reply)
   //refType := reflect.TypeOf(reply)
-  
- 
+
+
   // value e type of instance
   fullValue := refValue.Elem()
   fullType := fullValue.Type()
-   
+
   for i := 0; i < fullType.NumField(); i++ {
     field := fullType.Field(i)
-    
+
     fieldStruct := fullValue.FieldByName(field.Name)
     fieldValue := fieldStruct.Interface()
-    //fieldType := fieldStruct.Type()  
+    //fieldType := fieldStruct.Type()
 
-    
+
     tags := this.getTags(field)
 
     if tags != nil && this.hasTag(tags, "ignore_set_default"){
       continue
-    }            
-    
+    }
+
 
     zero := reflect.Zero(reflect.TypeOf(fieldValue)).Interface() == fieldValue
     _, ok := fieldValue.(Model)
@@ -712,7 +712,7 @@ func (this *Session) setDefaultsDeep(reply interface{}) error{
         fmt.Println("set defaults to ", fullValue, field.Name)
       }
 
-      if zero { 
+      if zero {
         fieldFullType := reflect.TypeOf(fieldValue).Elem()
         newRefValue := reflect.New(fieldFullType)
         fieldStruct.Set(newRefValue)
@@ -720,7 +720,7 @@ func (this *Session) setDefaultsDeep(reply interface{}) error{
       }
 
       key := fmt.Sprintf("%v.%v", strings.Split(fullType.String(), ".")[1], field.Name)
-      
+
       if count, ok := this.deepSetDefault[key]; ok {
 
         if count >= 5 {
@@ -734,18 +734,18 @@ func (this *Session) setDefaultsDeep(reply interface{}) error{
 
       if tags != nil && this.hasTag(tags, "ignore_set_default_child"){
         continue
-      }        
+      }
 
       this.setDefaultsDeep(fieldValue)
-    }  
-    
-  }   
+    }
+
+  }
 
   return nil
 }
 
 func (this *Session) hasTag(tags []string, tagName string) bool{
-  
+
   for _, tag := range tags {
     if tag == tagName {
       return true
@@ -756,12 +756,12 @@ func (this *Session) hasTag(tags []string, tagName string) bool{
 }
 
 func (this *Session) setTenant(reply interface{}){
- 
+
   // value e type of pointer
   refValue := reflect.ValueOf(reply)
   //refType := reflect.TypeOf(reply)
-  
- 
+
+
   // value e type of instance
   fullValue := refValue.Elem()
   fullType := fullValue.Type()
@@ -770,19 +770,19 @@ func (this *Session) setTenant(reply interface{}){
     fmt.Println("## set Tenant to ", fullType)
   }
 
-   
+
   for i := 0; i < fullType.NumField(); i++ {
     field := fullType.Field(i)
-    
+
     fieldStruct := fullValue.FieldByName(field.Name)
     //fieldValue := fieldStruct.Interface()
-    //fieldType := fieldStruct.Type()  
-    
+    //fieldType := fieldStruct.Type()
+
 
     tags := this.getTags(field)
 
     if this.hasTag(tags, "tenant") {
-      
+
 
       value := reflect.ValueOf(this.Tenant)
 
@@ -791,19 +791,19 @@ func (this *Session) setTenant(reply interface{}){
       }
 
       fieldStruct.Set(value)
-      
+
     } else {
       if this.Debug {
         fmt.Println("## field %v not is tenant ", field.Name)
       }
-    } 
+    }
 
   }
 
 }
 
 func (this *Session) getTags(field reflect.StructField) []string{
-  
+
   tag := field.Tag.Get("goutils")
   var tags []string
 
@@ -813,4 +813,3 @@ func (this *Session) getTags(field reflect.StructField) []string{
 
   return tags
 }
-

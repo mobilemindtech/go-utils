@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/astaxie/beego/orm"
+	"github.com/mobilemindtec/beego/orm"
 	"reflect"
 	"strings"
 	"errors"
@@ -76,7 +76,7 @@ type Criteria struct {
 	Page *Page
 
 	Error error
-	
+
 	Count32 int
 	Count64 int64
 
@@ -100,13 +100,13 @@ func NewCriteria(session *Session, entity interface{}, entities interface{}) *Cr
 }
 
 func NewCondition() *Criteria{
-	return &Criteria{ criaterias: []*Criteria{}  }	
+	return &Criteria{ criaterias: []*Criteria{}  }
 }
 
 func (this *Criteria) add(path string, value interface{}, expression CriteriaExpression) *Criteria{
 	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Value: value, Expression: expression } )
 	return this
-}	
+}
 
 func (this *Criteria) SetEntity(entity interface{}) *Criteria {
 	this.Result = entity
@@ -138,78 +138,78 @@ func (this *Criteria) SetTenant(tenant interface{}) *Criteria {
 }
 
 
-func (this *Criteria) Eq(path string, value interface{}) *Criteria {		
+func (this *Criteria) Eq(path string, value interface{}) *Criteria {
 	return this.add(path, value, Eq)
 }
 
-func (this *Criteria) Ne(path string, value interface{}) *Criteria {		
-	return this.add(path, value, Ne)	
+func (this *Criteria) Ne(path string, value interface{}) *Criteria {
+	return this.add(path, value, Ne)
 }
 
-func (this *Criteria) Le(path string, value interface{}) *Criteria {		
-	return this.add(path, value, Le)	
+func (this *Criteria) Le(path string, value interface{}) *Criteria {
+	return this.add(path, value, Le)
 }
 
-func (this *Criteria) Lt(path string, value interface{}) *Criteria {		
-	return this.add(path, value, Lt)	
+func (this *Criteria) Lt(path string, value interface{}) *Criteria {
+	return this.add(path, value, Lt)
 }
 
-func (this *Criteria) Ge(path string, value interface{}) *Criteria {		
-	return this.add(path, value, Ge)	
+func (this *Criteria) Ge(path string, value interface{}) *Criteria {
+	return this.add(path, value, Ge)
 }
 
-func (this *Criteria) Gt(path string, value interface{}) *Criteria {		
-	return this.add(path, value, Gt)	
+func (this *Criteria) Gt(path string, value interface{}) *Criteria {
+	return this.add(path, value, Gt)
 }
 
-func (this *Criteria) Or(criteria *Criteria) *Criteria {		
+func (this *Criteria) Or(criteria *Criteria) *Criteria {
 	this.criateriasOr = append(this.criateriasOr, criteria)
 	return this
 }
 
-func (this *Criteria) And(criteria *Criteria) *Criteria {		
+func (this *Criteria) And(criteria *Criteria) *Criteria {
 	this.criateriasAnd = append(this.criateriasAnd, criteria)
 	return this
 }
 
-func (this *Criteria) AndOr(criteria *Criteria) *Criteria {		
+func (this *Criteria) AndOr(criteria *Criteria) *Criteria {
 	this.criateriasAndOr = append(this.criateriasAndOr, criteria)
 	return this
 }
 
-func (this *Criteria) Like(path string, value interface{}) *Criteria {		
+func (this *Criteria) Like(path string, value interface{}) *Criteria {
 	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Value: value, Expression: Like, Match: IAnywhare } )
 	return this
 }
 
-func (this *Criteria) LikeMatch(path string, value interface{}, likeMatch CriteriaLikeMatch) *Criteria {		
+func (this *Criteria) LikeMatch(path string, value interface{}, likeMatch CriteriaLikeMatch) *Criteria {
 	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Value: value, Expression: Like, Match: likeMatch } )
 	return this
 }
 
 
-func (this *Criteria) Between(path string, value interface{}, value2 interface{}) *Criteria {		
+func (this *Criteria) Between(path string, value interface{}, value2 interface{}) *Criteria {
 	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Value: value, Value2: value2, Expression: Between } )
 	return this
 }
 
 
-func (this *Criteria) IsNull(path string) *Criteria {		
+func (this *Criteria) IsNull(path string) *Criteria {
 	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Expression: IsNull } )
 	return this
 }
 
-func (this *Criteria) IsNotNull(path string) *Criteria {		
+func (this *Criteria) IsNotNull(path string) *Criteria {
 	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Expression: IsNotNull } )
 	return this
 }
 
-func (this *Criteria) In(path string, values ...interface{}) *Criteria {		
+func (this *Criteria) In(path string, values ...interface{}) *Criteria {
 	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Expression: In, InValues: values } )
 	return this
 }
 
-func (this *Criteria) NotIn(path string, values ...interface{}) *Criteria {		
+func (this *Criteria) NotIn(path string, values ...interface{}) *Criteria {
 	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Expression: NotIn, InValues: values } )
 	return this
 }
@@ -242,17 +242,17 @@ func (this *Criteria) Get(id int64) *Criteria {
 }
 
 func (this *Criteria) Query() orm.QuerySeter {
-	
+
 	if this.query == nil {
 
 	  entity := this.Result
 
 	  if model, ok := entity.(Model); ok {
-	    this.query = this.Session.Db.QueryTable(model.TableName())			
+	    this.query = this.Session.Db.QueryTable(model.TableName())
 		} else {
 			this.setError(errors.New("entity does not implements of Model")	)
 		}
-	}	
+	}
 
 	return this.query
 }
@@ -263,10 +263,10 @@ func (this *Criteria) SetDebug(debug bool) *Criteria {
 }
 
 func (this *Criteria) buildPage() {
-	
+
 	if this.Page != nil {
-    
-		switch this.Page.Sort {
+
+		switch this.Page.Order {
 			case "asc":
     		this.OrderAsc(this.Page.Sort)
     	case "desc":
@@ -274,9 +274,9 @@ func (this *Criteria) buildPage() {
 		}
 
     if this.Page.FilterColumns != nil && len(this.Page.FilterColumns) > 0 {
-        
+
       if len(this.Page.FilterColumns) == 1 {
-        
+
         for k, v := range this.Page.FilterColumns {
           this.Eq(k, v)
         }
@@ -285,34 +285,34 @@ func (this *Criteria) buildPage() {
 
         cond := NewCondition()
         for k, v := range this.Page.FilterColumns {
-          cond.Eq(k, v)          
-        }        
+          cond.Eq(k, v)
+        }
         this.AndOr(cond)
 
       }
 
     }
 
-    if this.Page.AndFilterColumns != nil && len(this.Page.AndFilterColumns) > 0 {      
+    if this.Page.AndFilterColumns != nil && len(this.Page.AndFilterColumns) > 0 {
       for k, v := range this.Page.AndFilterColumns {
         this.Eq(k, v)
-      }      
+      }
     }
 	}
 
 }
 
 func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
-	
+
 
 	condition := orm.NewCondition()
 
 	for _, criteria := range this.criaterias {
 
 		pathName := this.getPathName(criteria)
-		
+
 		cond := orm.NewCondition()
-		
+
 		switch criteria.Expression {
 
 			case Ne, NotIn:
@@ -340,12 +340,12 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 		}
 
 		condition = condition.AndCond(cond)
-		
+
 	}
 
 
 	for _, c := range this.criateriasOr {
-		
+
 		cond := orm.NewCondition()
 
 		for _, criteria := range c.criaterias {
@@ -370,7 +370,7 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 			if this.Debug {
 				fmt.Println("*********************************************************")
 				fmt.Println("** set condition or %v ", pathName)
-				fmt.Println("*********************************************************")		
+				fmt.Println("*********************************************************")
 			}
 		}
 
@@ -380,7 +380,7 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 	}
 
 	for _, c := range this.criateriasAnd {
-		
+
 		cond := orm.NewCondition()
 
 		for _, criteria := range c.criaterias {
@@ -412,7 +412,7 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 	}
 
 	for _, c := range this.criateriasAndOr {
-		
+
 		cond := orm.NewCondition()
 
 		for _, criteria := range c.criaterias {
@@ -437,17 +437,17 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 			if this.Debug {
 				fmt.Println("*********************************************************")
 				fmt.Println("** set condition and or %v ", pathName)
-				fmt.Println("*********************************************************")		
+				fmt.Println("*********************************************************")
 			}
 
 		}
 
 		condition = condition.AndCond(cond)
 
-	}	
+	}
 
 	query = query.SetCond(condition)
-	
+
 
 	return query
 
@@ -459,7 +459,7 @@ func (this *Criteria) getPathName(criteria *Criteria) string {
 		if strings.Contains(criteria.Path, "icontains") {
 			return pathName
 		}
-		
+
 		switch criteria.Expression {
 
 			case Eq:
@@ -506,7 +506,7 @@ func (this *Criteria) getPathName(criteria *Criteria) string {
 			case NotIn:
 				pathName = fmt.Sprintf("%v__in", criteria.Path)
 
-		}	
+		}
 
 		return pathName
 }
@@ -514,31 +514,31 @@ func (this *Criteria) getPathName(criteria *Criteria) string {
 func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
 
   query := this.Query()
-  
+
   if this.Limit > 0 {
-  	query = query.Limit(this.Limit).Offset(this.Offset)   
+  	query = query.Limit(this.Limit).Offset(this.Offset)
 	}
 
   if this.Tenant != nil {
     query = query.Filter("Tenant", this.Tenant)
-  }    
+  }
 
   this.buildPage()
   query = this.build(query)
 
-  switch resultType {    	
+  switch resultType {
 
   	case CriteriaList:
 
   		for _, order := range this.orderBy {
   			if order.Desc {
-  				query = query.OrderBy(fmt.Sprintf("-%v", order.Path))    				
+  				query = query.OrderBy(fmt.Sprintf("-%v", order.Path))
   			} else {
   				query = query.OrderBy(fmt.Sprintf(order.Path))
   			}
   		}
 
-  		if this.Results == nil {  			  			
+  		if this.Results == nil {
   			this.setError(errors.New("Results can't be nil"))
   			return this
   		}
@@ -563,12 +563,12 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
 				this.Any = model.IsPersisted()
 			}
 
-  	case CriteriaCount:  
+  	case CriteriaCount:
 
   		count, err := this.Session.ToCount(query)
 
   		this.Count64 = count
-  		this.Count32 = int(count) 
+  		this.Count32 = int(count)
 
   		this.Any = count > 0
 
@@ -576,7 +576,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   }
 
   return this
-    
+
 }
 
 func (this *Criteria) setError(err error) {

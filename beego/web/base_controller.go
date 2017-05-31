@@ -5,19 +5,19 @@ import (
   "github.com/mobilemindtec/go-utils/beego/filters"
   "github.com/mobilemindtec/go-utils/beego/db"
   "github.com/mobilemindtec/go-utils/support"
-  "github.com/astaxie/beego/validation"
-  "github.com/astaxie/beego/orm"
-  "github.com/astaxie/beego"
+  "github.com/mobilemindtec/beego/validation"
+  "github.com/mobilemindtec/beego/orm"
+  "github.com/mobilemindtec/beego"
   "github.com/beego/i18n"
   "html/template"
-  "strings"  
+  "strings"
   "strconv"
   "time"
-  "fmt" 
+  "fmt"
 )
 
 var (
-  langTypes []string // Languages that are supported.  
+  langTypes []string // Languages that are supported.
   datetimeLayout = "02/01/2006 10:25:32"
   dateLayout = "02/01/2006"
   dateZero = "01/01/0001"
@@ -27,14 +27,14 @@ var (
 type BaseController struct {
   EntityValidator *validator.EntityValidator
   beego.Controller
-  Flash *beego.FlashData  
+  Flash *beego.FlashData
   Session *db.Session
   support.JsonParser
   ViewPath string
   Db orm.Ormer
   i18n.Locale
 
-  defaultPageLimit int64     
+  defaultPageLimit int64
 }
 
 type NestPreparer interface {
@@ -51,14 +51,14 @@ func init() {
 }
 
 func LoadFuncs(controller *BaseController) {
-  hasError := func(args map[string]string, key string) string{    
+  hasError := func(args map[string]string, key string) string{
     if args[key] != "" {
-      return "has-error"      
+      return "has-error"
     }
     return ""
   }
 
-  errorMsg := func(args map[string]string, key string) string{    
+  errorMsg := func(args map[string]string, key string) string{
     return args[key]
   }
 
@@ -67,9 +67,9 @@ func LoadFuncs(controller *BaseController) {
   }
 
   beego.AddFuncMap("has_error", hasError)
-  beego.AddFuncMap("error_msg", errorMsg)  
+  beego.AddFuncMap("error_msg", errorMsg)
   beego.AddFuncMap("current_yaer", currentYaer)
-  beego.InsertFilter("*", beego.BeforeRouter, filters.FilterMethod) // enable put 
+  beego.InsertFilter("*", beego.BeforeRouter, filters.FilterMethod) // enable put
 }
 
 func LoadIl8n() {
@@ -80,12 +80,12 @@ func LoadIl8n() {
   langTypes = strings.Split(beego.AppConfig.String("lang_types"), "|")
 
   // Load locale files according to language types.
-  for _, lang := range langTypes {    
+  for _, lang := range langTypes {
     if err := i18n.SetMessage(lang, "conf/i18n/"+"locale_" + lang + ".ini"); err != nil {
       beego.Error("Fail to set message file:", err)
       return
-    }  
-  }  
+    }
+  }
 }
 
 // Prepare implemented Prepare() method for baseController.
@@ -93,7 +93,7 @@ func LoadIl8n() {
 func (this *BaseController) NestPrepareBase () {
   // Reset language option.
   this.Lang = "" // This field is from i18n.Locale.
-  
+
   // 1. Get language information from 'Accept-Language'.
   al := this.Ctx.Request.Header.Get("Accept-Language")
   if len(al) > 4 {
@@ -109,7 +109,7 @@ func (this *BaseController) NestPrepareBase () {
   if len(this.Lang) == 0 {
     this.Lang = "pt-BR"
   }
-  
+
   this.Flash = beego.NewFlash()
 
   // Set template level language option.
@@ -128,7 +128,7 @@ func (this *BaseController) NestPrepareBase () {
 
   this.Log("use default time location America/Sao_Paulo")
   this.DefaultLocation, _ = time.LoadLocation("America/Sao_Paulo")
-  
+
   this.defaultPageLimit = 25
 }
 
@@ -136,10 +136,10 @@ func (this *BaseController) DisableXSRF(pathList []string) {
 
   for _, url := range pathList {
     if strings.HasPrefix(this.Ctx.Input.URL(), url) {
-      this.EnableXSRF = false   
-    }    
-  }  
-  
+      this.EnableXSRF = false
+    }
+  }
+
 }
 
 func (this *BaseController) FlashRead() {
@@ -159,16 +159,16 @@ func (this *BaseController) FlashRead() {
 
   if n, ok := Flash.Data["success"]; ok {
     this.Flash.Success(n)
-  }  
+  }
 }
 
-func (this *BaseController) Finish() {  
-  
+func (this *BaseController) Finish() {
+
   this.Session.Close()
 
   if app, ok := this.AppController.(NestFinisher); ok {
     app.NestFinish()
-  }  
+  }
 }
 
 func (this *BaseController) Finally(){
@@ -179,39 +179,39 @@ func (this *BaseController) Rollback() {
   this.Session.OnError()
 }
 
-func (this *BaseController) OnEntity(viewName string, entity interface{}) {  
+func (this *BaseController) OnEntity(viewName string, entity interface{}) {
   this.Data["entity"] = entity
   this.OnTemplate(viewName)
   this.OnFlash(false)
 }
 
-func (this *BaseController) OnEntityError(viewName string, entity interface{}, message string) {  
+func (this *BaseController) OnEntityError(viewName string, entity interface{}, message string) {
   this.Flash.Error(message)
   this.Data["entity"] = entity
   this.OnTemplate(viewName)
   this.OnFlash(false)
 }
 
-func (this *BaseController) OnEntities(viewName string, entities interface{}) {  
+func (this *BaseController) OnEntities(viewName string, entities interface{}) {
   this.Data["entities"] = entities
   this.OnTemplate(viewName)
   this.OnFlash(false)
 }
 
-func (this *BaseController) OnEntitiesWithTotalCount(viewName string, entities interface{}, totalCount int64) {  
+func (this *BaseController) OnEntitiesWithTotalCount(viewName string, entities interface{}, totalCount int64) {
   this.Data["entities"] = entities
   this.Data["totalCount"] = totalCount
   this.OnTemplate(viewName)
   this.OnFlash(false)
 }
 
-func (this *BaseController) OnResult(viewName string, result interface{}) {  
+func (this *BaseController) OnResult(viewName string, result interface{}) {
   this.Data["result"] = result
   this.OnTemplate(viewName)
   this.OnFlash(false)
 }
 
-func (this *BaseController) OnResults(viewName string, results interface{}) {  
+func (this *BaseController) OnResults(viewName string, results interface{}) {
   this.Data["result"] = results
   this.OnTemplate(viewName)
   this.OnFlash(false)
@@ -272,36 +272,36 @@ func (this *BaseController) OnJsonValidationError() {
   this.OnJson(support.JsonResult{  Message: this.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix() })
 }
 
-func (this *BaseController) OnTemplate(viewName string) {    
+func (this *BaseController) OnTemplate(viewName string) {
   this.TplName = fmt.Sprintf("%s/%s.tpl", this.ViewPath, viewName)
   this.OnFlash(false)
 }
 
 func (this *BaseController) OnRedirect(action string) {
   this.OnFlash(true)
-  this.Redirect(action, 302)  
+  this.Redirect(action, 302)
 }
 
 func (this *BaseController) OnRedirectError(action string, message string) {
   this.Rollback()
   this.Flash.Error(message)
   this.OnFlash(true)
-  this.Redirect(action, 302)  
+  this.Redirect(action, 302)
 }
 
 func (this *BaseController) OnRedirectSuccess(action string, message string) {
   this.Flash.Success(message)
   this.OnFlash(true)
-  this.Redirect(action, 302)  
+  this.Redirect(action, 302)
 }
 
 func (this *BaseController) OnFlash(store bool) {
   if store {
-    this.Flash.Store(&this.Controller)    
+    this.Flash.Store(&this.Controller)
   } else {
     this.Data["Flash"] = this.Flash.Data
     this.Data["flash"] = this.Flash.Data
-  }  
+  }
 }
 
 func (this *BaseController) GetMessage(key string, args ...interface{}) string{
@@ -309,14 +309,14 @@ func (this *BaseController) GetMessage(key string, args ...interface{}) string{
 }
 
 func (this *BaseController) OnValidate(entity interface{}, plus func(validator *validation.Validation)) bool {
-  
+
   result, _ := this.EntityValidator.IsValid(entity, plus)
 
   if result.HasError {
     this.Flash.Error(this.GetMessage("cadastros.validacao"))
     this.EntityValidator.CopyErrorsToView(result, this.Data)
   }
-  
+
   return result.HasError == false
 }
 
@@ -371,13 +371,13 @@ func (this *BaseController) GetId() int64 {
 
 func (this *BaseController) GetIntParam(key string) int64 {
   id := this.Ctx.Input.Param(key)
-  intid, _ := strconv.ParseInt(id, 10, 64)  
+  intid, _ := strconv.ParseInt(id, 10, 64)
   return intid
 }
 
 func (this *BaseController) GetIntByKey(key string) int64{
   val := this.Ctx.Input.Query(key)
-  intid, _ := strconv.ParseInt(val, 10, 64)  
+  intid, _ := strconv.ParseInt(val, 10, 64)
   return intid
 }
 
@@ -396,15 +396,15 @@ func (this *BaseController) GetDateByKey(key string) (time.Time, error){
   return this.ParseDate(date)
 }
 
-func (this *BaseController) ParseDate(date string) (time.Time, error){  
+func (this *BaseController) ParseDate(date string) (time.Time, error){
   return time.ParseInLocation(dateLayout, date, this.DefaultLocation)
 }
 
-func (this *BaseController) ParseDateTime(date string) (time.Time, error){  
+func (this *BaseController) ParseDateTime(date string) (time.Time, error){
   return time.ParseInLocation(datetimeLayout, date, this.DefaultLocation)
 }
 
-func (this *BaseController) ParseJsonDate(date string) (time.Time, error){  
+func (this *BaseController) ParseJsonDate(date string) (time.Time, error){
   return time.ParseInLocation(jsonDateLayout, date, this.DefaultLocation)
 }
 
@@ -428,16 +428,16 @@ func (this *BaseController) GetCurrentTime() time.Time {
   return time.Now().In(this.DefaultLocation)
 }
 
-func (this *BaseController) GetPage() *db.Page{  
+func (this *BaseController) GetPage() *db.Page{
   page := new(db.Page)
 
   if this.IsJson() {
 
-    
+
     jsonMap, _ := this.JsonToMap(this.Ctx)
-    
+
     this.Log("BaseController.GetPage JSON %v", jsonMap)
-    
+
     if _, ok := jsonMap["limit"]; ok {
       page.Limit = this.GetJsonInt64(jsonMap, "limit")
       page.Offset = this.GetJsonInt64(jsonMap, "offset")
@@ -457,7 +457,7 @@ func (this *BaseController) GetPage() *db.Page{
     page.Sort = this.GetStringByKey("order_column")
 
   }
-  
+
   if page.Limit <= 0 {
     page.Limit = this.defaultPageLimit
   }

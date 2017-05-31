@@ -1,12 +1,12 @@
 package validator
 
-import (  
-  "github.com/mobilemindtec/go-utils/validator/cnpj"   
+import (
+  "github.com/mobilemindtec/go-utils/validator/cnpj"
   "github.com/mobilemindtec/go-utils/validator/cpf"
   "github.com/mobilemindtec/go-utils/beego/db"
-  "github.com/astaxie/beego/validation"  
+  "github.com/mobilemindtec/beego/validation"  
   "strings"
-  _"fmt" 
+  _"fmt"
 )
 
 func SetDefaultMessages() {
@@ -39,7 +39,7 @@ func SetDefaultMessages() {
 }
 
 func AddCnpjValidator() {
-  validation.AddCustomFunc("Cnpj", func(v *validation.Validation, obj interface{}, key string){ 
+  validation.AddCustomFunc("Cnpj", func(v *validation.Validation, obj interface{}, key string){
 
     key = strings.Split(key, ".")[0]
 
@@ -55,7 +55,7 @@ func AddCnpjValidator() {
 }
 
 func AddCpfValidator() {
-  validation.AddCustomFunc("Cpf", func(v *validation.Validation, obj interface{}, key string){ 
+  validation.AddCustomFunc("Cpf", func(v *validation.Validation, obj interface{}, key string){
 
     key = strings.Split(key, ".")[0]
 
@@ -73,7 +73,7 @@ func AddCpfValidator() {
 
 func AddRelationValidator() {
 
-  validation.AddCustomFunc("RequiredRel", func(v *validation.Validation, obj interface{}, key string){ 
+  validation.AddCustomFunc("RequiredRel", func(v *validation.Validation, obj interface{}, key string){
 
 
     key = strings.Split(key, ".")[0]
@@ -88,7 +88,7 @@ func AddRelationValidator() {
           isSatisfied = false
         }
       } else {
-        v.SetError(key, "relation does not implements db.Model")  
+        v.SetError(key, "relation does not implements db.Model")
       }
     }
 
@@ -98,5 +98,5 @@ func AddRelationValidator() {
     }
 
 
-  })    
+  })
 }

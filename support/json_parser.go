@@ -1,14 +1,14 @@
 package support
 
 import (
-  "github.com/astaxie/beego/context"
-  "encoding/json"    
+  "github.com/mobilemindtec/beego/context"
+  "encoding/json"
   "strconv"
   "strings"
   "errors"
   "time"
   "fmt"
-  
+
 )
 
 
@@ -20,13 +20,13 @@ type JsonParser struct {
 
 func (c JsonParser) JsonToMap(ctx *context.Context) (map[string]interface{}, error) {
   data := make(map[string]interface{})
-  err := json.Unmarshal(ctx.Input.RequestBody, &data) 
-  return data, err 
+  err := json.Unmarshal(ctx.Input.RequestBody, &data)
+  return data, err
 }
 
-func (c JsonParser) JsonToModel(ctx *context.Context, model interface{}) error { 
+func (c JsonParser) JsonToModel(ctx *context.Context, model interface{}) error {
 	//fmt.Println("### %s", string(ctx.Input.RequestBody))
-  err := json.Unmarshal(ctx.Input.RequestBody, &model)      
+  err := json.Unmarshal(ctx.Input.RequestBody, &model)
 
   if err != nil {
     return errors.New(fmt.Sprintf("error on JsonToModel.json.Unmarshal: %v", err.Error()))
@@ -39,11 +39,11 @@ func (c JsonParser) FormToJson(ctx *context.Context) map[string]interface{} {
 
 
   jsonMap := make(map[string]interface{})
-  
-  data := ctx.Request.Form  
+
+  data := ctx.Request.Form
 
   for k, v := range  data{
-    
+
     //this.Log("key %v, value = %v", k, v)
 
     if len(v) == 0 {
@@ -60,7 +60,7 @@ func (c JsonParser) FormToJson(ctx *context.Context) map[string]interface{} {
         if _, ok := parent[key].(map[string]interface{}); !ok {
           parent[key] = make(map[string]interface{})
         }
-        
+
         if i < len(keys) -1 {
           parent = parent[key].(map[string]interface{})
         } else {
@@ -87,8 +87,8 @@ func (c JsonParser) FormToModel(ctx *context.Context, model interface{}) error {
   if err != nil {
     return errors.New(fmt.Sprintf("error on FormToModel.json.Marshal: %v", err.Error()))
   }
-    
-  err = json.Unmarshal(jsonData, model) 
+
+  err = json.Unmarshal(jsonData, model)
 
   if err != nil {
     return errors.New(fmt.Sprintf("error on FormToModel.json.Unmarshal: %v", err.Error()))
@@ -99,22 +99,22 @@ func (c JsonParser) FormToModel(ctx *context.Context, model interface{}) error {
 }
 
 func (c JsonParser) GetJsonObject(json map[string]interface{}, key string) map[string]interface{} {
-   
+
    if c.HasJsonKey(json, key) {
     opt, _ := json[key]
     return opt.(map[string]interface{})
    }
 
-   return nil  
+   return nil
 }
 
 func (c JsonParser) GetJsonArray(json map[string]interface{}, key string) []map[string]interface{} {
-   
+
    if c.HasJsonKey(json, key) {
     opt, _ := json[key]
 
     items := new([]map[string]interface{})
-    
+
     if array, ok := opt.([]interface{}); ok {
       for _, it := range array {
         if p, ok := it.(map[string]interface{}); ok {
@@ -126,11 +126,11 @@ func (c JsonParser) GetJsonArray(json map[string]interface{}, key string) []map[
     return *items
    }
 
-   return nil  
+   return nil
 }
 
 func (c JsonParser) GetJsonInt(json map[string]interface{}, key string) int{
-  var val int 
+  var val int
 
   if c.HasJsonKey(json, key) {
     if _, ok := json[key].(int); ok {
@@ -145,8 +145,8 @@ func (c JsonParser) GetJsonInt(json map[string]interface{}, key string) int{
 
 func (c JsonParser) GetJsonInt64(json map[string]interface{}, key string) int64{
 
-  var val int 
-  
+  var val int
+
   if c.HasJsonKey(json, key) {
     if _, ok := json[key].(int); ok {
       val = json[key].(int)
@@ -164,7 +164,7 @@ func (c JsonParser) GetJsonInt64(json map[string]interface{}, key string) int64{
 
 func (c JsonParser) GetJsonBool(json map[string]interface{}, key string) bool{
 
-  var val bool 
+  var val bool
 
   if c.HasJsonKey(json, key) {
     if _, ok := json[key].(bool); ok {
@@ -178,14 +178,14 @@ func (c JsonParser) GetJsonBool(json map[string]interface{}, key string) bool{
 }
 
 func (c JsonParser) GetJsonString(json map[string]interface{}, key string) string{
-  
+
   var val string
 
   if !c.HasJsonKey(json, key) {
     return val
   }
 
-  if _, ok := json[key].(string); ok {  
+  if _, ok := json[key].(string); ok {
 
     val = json[key].(string)
 
