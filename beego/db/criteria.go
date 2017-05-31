@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/mobilemindtec/beego/orm"
+	"github.com/astaxie/beego/orm"
 	"reflect"
 	"strings"
 	"errors"

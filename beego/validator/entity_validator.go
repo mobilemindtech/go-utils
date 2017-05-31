@@ -1,7 +1,7 @@
 package validator
 
 import (
-  "github.com/mobilemindtec/beego/validation"
+  "github.com/astaxie/beego/validation"
   "github.com/beego/i18n"
   "fmt"
 )

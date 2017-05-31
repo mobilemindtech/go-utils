@@ -1,7 +1,7 @@
 package support
 
 import (
-  "github.com/mobilemindtec/beego/context"
+  "github.com/astaxie/beego/context"
   "encoding/json"
   "strconv"
   "strings"

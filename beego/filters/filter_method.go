@@ -1,7 +1,7 @@
 package filters
 
 import (
-  "github.com/mobilemindtec/beego/context"
+  "github.com/astaxie/beego/context"
 )
 
 var FilterMethod = func(ctx *context.Context) {
