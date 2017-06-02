@@ -519,8 +519,8 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   	query = query.Limit(this.Limit).Offset(this.Offset)
 	}
 
-  if this.Tenant != nil {
-    query = query.Filter("Tenant", this.Tenant)
+  if this.Tenant != nil && this.hasTenant(this.Result) {
+		this.Eq("Tenant", this.Tenant)
   }
 
   this.buildPage()
@@ -586,4 +586,32 @@ func (this *Criteria) setError(err error) {
 	}
 
 	this.query = nil
+}
+
+func (this *Criteria) hasTenant(reply interface{}) bool{
+
+  // value e type of pointer
+  refValue := reflect.ValueOf(reply)
+  //refType := reflect.TypeOf(reply)
+
+
+  // value e type of instance
+  fullValue := refValue.Elem()
+  fullType := fullValue.Type()
+
+  if this.Debug {
+    fmt.Println("## set Tenant to ", fullType)
+  }
+
+
+  for i := 0; i < fullType.NumField(); i++ {
+    field := fullType.Field(i)
+
+		if field.Name == "Tenant" {
+			return true
+		}
+
+	}
+
+	return false
 }
