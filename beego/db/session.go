@@ -107,7 +107,7 @@ func (this *Session) Rollback() {
 func (this *Session) Save(entity interface{}) error {
 
 
-  if this.Tenant != nil {
+  if !this.isTenantNil() && this.isSetTenant(entity) {
     if this.Debug {
       fmt.Println("## Save set tenant")
     }
@@ -131,7 +131,7 @@ func (this *Session) Save(entity interface{}) error {
 
 func (this *Session) Update(entity interface{}) error {
 
-  if this.Tenant != nil {
+  if !this.isTenantNil() && this.isSetTenant(entity) {
     if this.Debug {
       fmt.Println("## Update set tenant")
     }
@@ -179,7 +179,12 @@ func (this *Session) Count(entity interface{}) (int64, error){
 
   if model, ok := entity.(Model); ok {
 
-    num, err := this.Db.QueryTable(model.TableName()).Count()
+    query := this.Db.QueryTable(model.TableName())
+
+    query = this.setTenantFilter(entity, query)
+
+    num, err := query.Count()
+
     if err != nil {
       fmt.Println("## Session: error on count: %v", err.Error())
       //this.OnError()
@@ -194,7 +199,11 @@ func (this *Session) Count(entity interface{}) (int64, error){
 func (this *Session) HasById(entity interface{}, id int64) (bool, error) {
 
   if model, ok := entity.(Model); ok {
-    return this.Db.QueryTable(model.TableName()).Filter("id", id).Exist(), nil
+    query := this.Db.QueryTable(model.TableName()).Filter("id", id)
+
+    query = this.setTenantFilter(entity, query)
+
+    return query.Exist(), nil
   }
 
   this.OnError()
@@ -204,7 +213,11 @@ func (this *Session) HasById(entity interface{}, id int64) (bool, error) {
 func (this *Session) FindById(entity interface{}, id int64) (interface{}, error) {
 
   if model, ok := entity.(Model); ok {
-    err := this.Db.QueryTable(model.TableName()).Filter("id", id).One(entity)
+    query := this.Db.QueryTable(model.TableName()).Filter("id", id)
+
+    query = this.setTenantFilter(entity, query)
+
+    err := query.One(entity)
 
     if err == orm.ErrNoRows {
       return nil, nil
@@ -245,9 +258,7 @@ func (this *Session) List(entity interface{}, entities interface{}) error {
 
     query := this.Db.QueryTable(model.TableName())
 
-    if this.Tenant != nil {
-      query.Filter("Tenant", this.Tenant)
-    }
+    query = this.setTenantFilter(entity, query)
 
     if _, err := query.All(entities); err != nil {
       fmt.Println("## Session: error on list: %v", err.Error())
@@ -303,9 +314,7 @@ func (this *Session) PageQuery(query orm.QuerySeter, entity interface{}, entitie
       }
     }
 
-    if this.Tenant != nil {
-      query.Filter("Tenant", this.Tenant)
-    }
+    query = this.setTenantFilter(entity, query)
 
     if _, err := query.All(entities); err != nil {
       fmt.Println("## Session: error on page: %v", err.Error())
@@ -326,9 +335,7 @@ func (this *Session) Query(entity interface{}) (orm.QuerySeter, error) {
   if model, ok := entity.(Model); ok {
     query := this.Db.QueryTable(model.TableName())
 
-    if this.Tenant != nil {
-      query.Filter("Tenant", this.Tenant)
-    }
+    query = this.setTenantFilter(entity, query)
 
     return query, nil
   }
@@ -812,4 +819,104 @@ func (this *Session) getTags(field reflect.StructField) []string{
   }
 
   return tags
+}
+
+func (this *Session) setTenantFilter(entity interface{}, query orm.QuerySeter) orm.QuerySeter {
+
+
+  if !this.isTenantNil() && this.HasFilterTenant(entity) {
+    if model, ok := this.Tenant.(Model); ok {
+      if model.IsPersisted() {
+        query = query.Filter("Tenant", this.Tenant)
+      }
+    }
+  }
+
+  return query
+}
+
+func (this *Session) isTenantNil() bool{
+  if this.Tenant != nil {
+    value := reflect.ValueOf(this.Tenant)
+
+    return value.IsNil()
+  }
+
+  return true
+}
+
+func (this *Session) isSetTenant(reply interface{}) bool{
+
+  // value e type of pointer
+  refValue := reflect.ValueOf(reply)
+  //refType := reflect.TypeOf(reply)
+
+
+  // value e type of instance
+  fullValue := refValue.Elem()
+  fullType := fullValue.Type()
+
+  //fmt.Println("## set Tenant to ", fullType)
+
+
+  for i := 0; i < fullType.NumField(); i++ {
+    field := fullType.Field(i)
+
+		if field.Name == "Tenant" {
+
+			tags := this.getTags(field)
+
+		  if tags == nil || len(tags) == 0 {
+        fmt.Println("## set tenant")
+		    return true
+		  }
+
+		  set := !this.hasTag(tags, "no_set_tenant")
+
+      fmt.Println("## set tenant = %v", set)
+
+      return set
+
+		}
+
+	}
+
+  fmt.Println("## not set tenant")
+	return false
+}
+
+func (this *Session) HasFilterTenant(reply interface{}) bool{
+
+  // value e type of pointer
+  refValue := reflect.ValueOf(reply)
+  //refType := reflect.TypeOf(reply)
+
+
+  // value e type of instance
+  fullValue := refValue.Elem()
+  fullType := fullValue.Type()
+
+  for i := 0; i < fullType.NumField(); i++ {
+    field := fullType.Field(i)
+
+		if field.Name == "Tenant" {
+
+			tags := this.getTags(field)
+
+		  if tags == nil || len(tags) == 0 {
+        fmt.Println("## filter tenant")
+		    return true
+		  }
+
+		  filter := !this.hasTag(tags, "no_filter_tenant")
+
+      fmt.Println("## filter tenant = %v", filter)
+
+      return filter
+
+		}
+
+	}
+	fmt.Println("## filter tenant")
+	return false
 }
