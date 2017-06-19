@@ -431,8 +431,12 @@ func (this *BaseController) GetCurrentTime() time.Time {
 func (this *BaseController) GetPage() *db.Page{
   page := new(db.Page)
 
+  this.Log("BaseController.GetPage this.Ctx %v", this.Ctx)
+  
   if this.IsJson() {
 
+
+    this.Log("BaseController.GetPage this.Ctx %v", this.Ctx)
 
     jsonMap, _ := this.JsonToMap(this.Ctx)
 

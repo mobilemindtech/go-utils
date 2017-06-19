@@ -266,11 +266,13 @@ func (this *Criteria) buildPage() {
 
 	if this.Page != nil {
 
-		switch this.Page.Order {
-			case "asc":
-    		this.OrderAsc(this.Page.Sort)
-    	case "desc":
-    		this.OrderDesc(this.Page.Sort)
+		if len(strings.TrimSpace(this.Page.Sort)) > 0 {
+			switch this.Page.Order {
+				case "asc":
+	    		this.OrderAsc(this.Page.Sort)
+	    	case "desc":
+	    		this.OrderDesc(this.Page.Sort)
+			}
 		}
 
     if this.Page.FilterColumns != nil && len(this.Page.FilterColumns) > 0 {

@@ -867,13 +867,13 @@ func (this *Session) isSetTenant(reply interface{}) bool{
 			tags := this.getTags(field)
 
 		  if tags == nil || len(tags) == 0 {
-        fmt.Println("## set tenant")
+        //fmt.Println("## set tenant")
 		    return true
 		  }
 
 		  set := !this.hasTag(tags, "no_set_tenant")
 
-      fmt.Println("## set tenant = %v", set)
+      //fmt.Println("## set tenant = %v", set)
 
       return set
 
@@ -881,7 +881,7 @@ func (this *Session) isSetTenant(reply interface{}) bool{
 
 	}
 
-  fmt.Println("## not set tenant")
+  //fmt.Println("## not set tenant")
 	return false
 }
 
@@ -904,19 +904,19 @@ func (this *Session) HasFilterTenant(reply interface{}) bool{
 			tags := this.getTags(field)
 
 		  if tags == nil || len(tags) == 0 {
-        fmt.Println("## filter tenant")
+        //fmt.Println("## filter tenant")
 		    return true
 		  }
 
 		  filter := !this.hasTag(tags, "no_filter_tenant")
 
-      fmt.Println("## filter tenant = %v", filter)
+      //fmt.Println("## filter tenant = %v", filter)
 
       return filter
 
 		}
 
 	}
-	fmt.Println("## filter tenant")
+	//fmt.Println("## filter tenant")
 	return false
 }
