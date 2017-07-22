@@ -605,6 +605,8 @@ func (this *Session) RemoveCascadeDeep(reply interface{}) error{
   fullValue := refValue.Elem()
   fullType := fullValue.Type()
 
+  var itensToRemove []interface{}
+
   for i := 0; i < fullType.NumField(); i++ {
     field := fullType.Field(i)
 
@@ -614,11 +616,11 @@ func (this *Session) RemoveCascadeDeep(reply interface{}) error{
 
     tags := this.getTags(field)
 
-    if tags == nil && len(tags) == 0 {
+    if tags == nil || len(tags) == 0 {
       continue
     }
 
-    if tags == nil && !this.hasTag(tags, "remove_cascade"){
+    if tags == nil || !this.hasTag(tags, "remove_cascade"){
       continue
     }
 
@@ -658,18 +660,26 @@ func (this *Session) RemoveCascadeDeep(reply interface{}) error{
         fmt.Println("## cascade remove field: ", field.Name)
       }
 
-      if err := this.RemoveCascadeDeep(fieldValue); err != nil {
-        return err
-      }
+      itensToRemove = append(itensToRemove, fieldValue)
     }
 
   }
 
   if this.Debug {
-    fmt.Println("## remove : ", fullType)
+    fmt.Println("## remove: ", fullType)
   }
 
-  return this.Remove(reply)
+  if err := this.Remove(reply); err != nil {
+    return err
+  }
+
+  for _, it := range itensToRemove {
+    if err := this.RemoveCascadeDeep(it); err != nil {
+      return err
+    }    
+  }
+
+  return nil
 }
 
 
