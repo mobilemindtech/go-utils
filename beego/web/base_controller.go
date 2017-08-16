@@ -6,6 +6,7 @@ import (
   "github.com/mobilemindtec/go-utils/beego/db"
   "github.com/mobilemindtec/go-utils/support"
   "github.com/astaxie/beego/validation"
+  "github.com/leekchan/accounting"
   "github.com/astaxie/beego/orm"
   "github.com/astaxie/beego"
   "github.com/beego/i18n"
@@ -19,6 +20,7 @@ import (
 var (
   langTypes []string // Languages that are supported.
   datetimeLayout = "02/01/2006 10:25:32"
+  timeLayout = "10:25"
   dateLayout = "02/01/2006"
   dateZero = "01/01/0001"
   jsonDateLayout = "2006-01-02T15:04:05-07:00"
@@ -66,10 +68,22 @@ func LoadFuncs(controller *BaseController) {
     return strconv.Itoa(time.Now().Year())
   }
 
+  formatMoney := func(number float64) string{
+    ac := accounting.Accounting{Symbol: "R$ ", Precision: 2, Thousand: ",", Decimal: "."}
+    return ac.FormatMoney(number)    
+  }
+
+  formatDecimal := func(number float64) string{
+    ac := accounting.Accounting{Symbol: "", Precision: 2, Thousand: ",", Decimal: "."}
+    return ac.FormatMoney(number)    
+  }
+
   beego.AddFuncMap("has_error", hasError)
   beego.AddFuncMap("error_msg", errorMsg)
   beego.AddFuncMap("current_yaer", currentYaer)
   beego.InsertFilter("*", beego.BeforeRouter, filters.FilterMethod) // enable put
+  beego.AddFuncMap("format_money", formatMoney)
+  beego.AddFuncMap("format_decimal", formatDecimal)    
 }
 
 func LoadIl8n() {
@@ -91,6 +105,9 @@ func LoadIl8n() {
 // Prepare implemented Prepare() method for baseController.
 // It's used for language option check and setting.
 func (this *BaseController) NestPrepareBase () {
+
+  this.Log("** web.BaseController.NestPrepareBase")
+
   // Reset language option.
   this.Lang = "" // This field is from i18n.Locale.
 
@@ -117,6 +134,7 @@ func (this *BaseController) NestPrepareBase () {
   this.Data["xsrfdata"]= template.HTML(this.XSRFFormHTML())
   this.Data["dateLayout"] = dateLayout
   this.Data["datetimeLayout"] = datetimeLayout
+  this.Data["timeLayout"] = timeLayout
 
 
   this.Session = db.NewSession()
@@ -212,7 +230,14 @@ func (this *BaseController) OnResult(viewName string, result interface{}) {
 }
 
 func (this *BaseController) OnResults(viewName string, results interface{}) {
-  this.Data["result"] = results
+  this.Data["results"] = results
+  this.OnTemplate(viewName)
+  this.OnFlash(false)
+}
+
+func (this *BaseController) OnResultsWithTotalCount(viewName string, results interface{}, totalCount int64) {
+  this.Data["results"] = results
+  this.Data["totalCount"] = totalCount
   this.OnTemplate(viewName)
   this.OnFlash(false)
 }
@@ -295,6 +320,85 @@ func (this *BaseController) OnRedirectSuccess(action string, message string) {
   this.Redirect(action, 302)
 }
 
+// executes redirect or OnJsonError
+func (this *BaseController) OnErrorAny(path string, message string) {
+  if this.IsJson() {
+    this.OnJsonError(message)
+  } else {
+    this.Flash.Error(message)
+    this.OnRedirect(path)    
+  }
+}
+
+// executes redirect or OnJsonOk
+func (this *BaseController) OnOkAny(path string, message string) {
+  
+  if this.IsJson() {
+    this.OnJsonOk(message)
+  } else {
+    this.Flash.Success(message)
+    this.OnRedirect(path)    
+  }
+
+}
+
+// executes OnEntity or OnJsonValidationError
+func (this *BaseController) OnValidationErrorAny(view string, entity interface{}) {
+  
+  if this.IsJson() {
+    this.OnJsonValidationError()
+  } else {
+    this.OnEntity(view, entity)
+  }
+
+}
+
+// executes OnEntity or OnJsonError
+func (this *BaseController) OnEntityErrorAny(view string, entity interface{}, message string) {
+  
+  if this.IsJson() {
+    this.OnJsonError(message)
+  } else {
+    this.Flash.Error(message)
+    this.OnEntity(view, entity)
+  }
+
+}
+
+// executes OnEntity or OnJsonResultWithMessage
+func (this *BaseController) OnEntityAny(view string, entity interface{}, message string) {
+  
+  if this.IsJson() {
+    this.OnJsonResultWithMessage(entity, message)
+  } else {
+    this.Flash.Success(message)
+    this.OnEntity(view, entity)
+  }
+
+}
+
+// executes OnResults or OnJsonResults
+func (this *BaseController) OnResultsAny(viewName string, results interface{}) {
+  
+  if this.IsJson() {
+    this.OnJsonResults(results)
+  } else {    
+    this.OnResults(viewName, results)
+  }
+
+}
+
+// executes  OnResultsWithTotalCount or OnJsonResultsWithTotalCount
+func (this *BaseController) OnResultsWithTotalCountAny(viewName string, results interface{}, totalCount int64) {
+  
+  if this.IsJson() {
+    this.OnJsonResultsWithTotalCount(results, totalCount)
+  } else {    
+    this.OnResultsWithTotalCount(viewName, results, totalCount)
+  }
+
+}
+
 func (this *BaseController) OnFlash(store bool) {
   if store {
     this.Flash.Store(&this.Controller)
@@ -325,10 +429,6 @@ func (this *BaseController) OnParseForm(entity interface{}) {
     beego.Error("## error on parse form ", err.Error())
     panic(err)
   }
-
-  //beego.Debug(fmt.Sprintf("################################################"))
-  //beego.Debug(fmt.Sprintf("## on parse form success %+v", entity))
-  //beego.Debug(fmt.Sprintf("################################################"))
 }
 
 func (this *BaseController) OnJsonParseForm(entity interface{}) {
@@ -336,28 +436,26 @@ func (this *BaseController) OnJsonParseForm(entity interface{}) {
     beego.Error("## error on parse form ", err.Error())
     panic(err)
   }
-
-  //beego.Debug(fmt.Sprintf("################################################"))
-  //beego.Debug(fmt.Sprintf("## on parse form success %+v", entity))
-  //beego.Debug(fmt.Sprintf("################################################"))
 }
 
 
-
 func (this *BaseController) OnParseJson(entity interface{}) {
-
   if err := this.JsonToModel(this.Ctx, entity); err != nil {
     beego.Error("## error on parse json ", err.Error())
     panic(err)
   }
+}
 
-  //beego.Debug(fmt.Sprintf("################################################"))
-  //beego.Debug(fmt.Sprintf("## on parse json success %+v", entity))
-  //beego.Debug(fmt.Sprintf("################################################"))
+func (this *BaseController) HasPath(paths ...string) bool{  
+  for _, it := range paths {
+    if strings.HasPrefix(this.Ctx.Input.URL(), it){
+      return true
+    }
+  }
+  return false
 }
 
 func (this *BaseController) IsJson() bool{
-  //this.Ctx.Request.Header.Get("Content-Type") == "application/json" || this.Ctx.Request.Header.Get("contentType") == "application/json" ||
   return  this.Ctx.Input.AcceptsJSON()
 }
 
@@ -430,17 +528,10 @@ func (this *BaseController) GetCurrentTime() time.Time {
 
 func (this *BaseController) GetPage() *db.Page{
   page := new(db.Page)
-
-  this.Log("BaseController.GetPage this.Ctx %v", this.Ctx)
   
   if this.IsJson() {
 
-
-    this.Log("BaseController.GetPage this.Ctx %v", this.Ctx)
-
     jsonMap, _ := this.JsonToMap(this.Ctx)
-
-    this.Log("BaseController.GetPage JSON %v", jsonMap)
 
     if _, ok := jsonMap["limit"]; ok {
       page.Limit = this.GetJsonInt64(jsonMap, "limit")
@@ -451,8 +542,6 @@ func (this *BaseController) GetPage() *db.Page{
     }
 
   } else {
-
-    this.Log("BaseController.GetPage FORM")
 
     page.Limit = this.GetIntByKey("limit")
     page.Offset = this.GetIntByKey("offset")

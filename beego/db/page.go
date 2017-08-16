@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"strings"
 )
 
 type Page struct {
@@ -46,7 +47,9 @@ func (this *Page) AddFilterAnd(columnName string, value interface{}) *Page{
 func (this *Page) AddFilterDefaults(columnName ...string) *Page{	
 
 	for _, s := range columnName {
-		this.AddFilter(fmt.Sprintf("%v__icontains", s), this.Search)		
+		if len(strings.TrimSpace(this.Search)) > 0 {
+			this.AddFilter(fmt.Sprintf("%v__icontains", s), this.Search)		
+		}
 	}
 
 	return this

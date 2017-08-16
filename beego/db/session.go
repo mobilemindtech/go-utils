@@ -386,6 +386,40 @@ func (this *Session) ToCount(querySeter orm.QuerySeter) (int64, error) {
   return count, err
 }
 
+func (this *Session) ExecuteDelete(querySeter orm.QuerySeter) (int64, error) {
+
+  var count int64
+  var err error
+  
+  if count, err = querySeter.Delete(); err != nil {
+    fmt.Println("## Session: error on to list: %v", err.Error())
+    //this.OnError()
+    return count, err
+  }
+  
+  return count, err
+}
+
+func (this *Session) ExecuteUpdate(querySeter orm.QuerySeter, args map[string]interface{}) (int64, error) {
+
+  var count int64
+  var err error
+  var params orm.Params
+
+  for k, v := range args {
+    params[k] = v
+  }
+  
+  if _, err := querySeter.Update(params); err != nil {
+    fmt.Println("## Session: error on to list: %v", err.Error())
+    //this.OnError()
+    return count, err
+  }
+
+  return count, err
+}
+
+
 func (this *Session) Eager(reply interface{}) error{
   this.deepEager = map[string]int{}
   return this.eagerDeep(reply, false)

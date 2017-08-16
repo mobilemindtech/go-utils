@@ -45,6 +45,8 @@ const (
 	CriteriaList CriteriaResult = 1 + iota
 	CriteriaOne
 	CriteriaCount
+	CriteriaUpdate
+	CriteriaDelete
 )
 
 type CriteriaOrder struct {
@@ -73,6 +75,8 @@ type Criteria struct {
 	Result interface{}
 	Results interface{}
 
+	UpdateParams map[string] interface{}
+
 	Page *Page
 
 	Error error
@@ -89,14 +93,17 @@ type Criteria struct {
 
 	Tenant interface{}
 
+	RelatedSelList []string
+
 	Any bool
 	HasError bool
+	Distinct bool
 
 	Debug bool
 }
 
 func NewCriteria(session *Session, entity interface{}, entities interface{}) *Criteria {
-	return &Criteria{ criaterias: []*Criteria{}, criateriasOr: []*Criteria{}, criateriasAnd: []*Criteria{}, criateriasAndOr: []*Criteria{}, Session: session, Result: entity, Results: entities, Tenant: session.Tenant  }
+	return &Criteria{ criaterias: []*Criteria{}, criateriasOr: []*Criteria{}, criateriasAnd: []*Criteria{}, criateriasAndOr: []*Criteria{}, Session: session, Result: entity, Results: entities, Tenant: session.Tenant, RelatedSelList: []string{}  }
 }
 
 func NewCondition() *Criteria{
@@ -137,6 +144,15 @@ func (this *Criteria) SetTenant(tenant interface{}) *Criteria {
 	return this
 }
 
+func (this *Criteria) SetRelatedSel(related string) *Criteria {
+	this.RelatedSelList = append(this.RelatedSelList, related)
+	return this
+}
+
+func (this *Criteria) SetDistinct() *Criteria {
+	this.Distinct = true
+	return this
+}
 
 func (this *Criteria) Eq(path string, value interface{}) *Criteria {
 	return this.add(path, value, Eq)
@@ -239,6 +255,15 @@ func (this *Criteria) Count() *Criteria {
 func (this *Criteria) Get(id int64) *Criteria {
 	this.Eq("Id", id)
 	return this.execute(CriteriaOne)
+}
+
+func (this *Criteria) Delete() *Criteria {
+	return this.execute(CriteriaDelete)
+}
+
+func (this *Criteria) Update(args map[string] interface{}) *Criteria {
+	this.UpdateParams = args
+	return this.execute(CriteriaUpdate)
 }
 
 func (this *Criteria) Query() orm.QuerySeter {
@@ -528,6 +553,11 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   this.buildPage()
   query = this.build(query)
 
+
+  if this.Distinct {
+  	query = query.Distinct()
+  }
+
   switch resultType {
 
   	case CriteriaList:
@@ -539,6 +569,16 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   				query = query.OrderBy(fmt.Sprintf(order.Path))
   			}
   		}
+
+		  if len(this.RelatedSelList) > 0 {
+		  	if len(this.RelatedSelList) == 1 && this.RelatedSelList[0] == "all" {
+		  		query = query.RelatedSel()
+		  	} else {
+		  		for _, it := range this.RelatedSelList {
+		  			query = query.RelatedSel(it)
+		  		}
+		  	}
+		  }  		
 
   		if this.Results == nil {
   			this.setError(errors.New("Results can't be nil"))
@@ -552,6 +592,16 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   		this.Any = reflect.ValueOf(this.Results).Elem().Len() > 0
 
   	case CriteriaOne:
+
+		  if len(this.RelatedSelList) > 0 {
+		  	if len(this.RelatedSelList) == 1 && this.RelatedSelList[0] == "all" {
+		  		query = query.RelatedSel()
+		  	} else {
+		  		for _, it := range this.RelatedSelList {
+		  			query = query.RelatedSel(it)
+		  		}
+		  	}
+		  }
 
   		err := this.Session.ToOne(query, this.Result)
 
@@ -568,6 +618,28 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   	case CriteriaCount:
 
   		count, err := this.Session.ToCount(query)
+
+  		this.Count64 = count
+  		this.Count32 = int(count)
+
+  		this.Any = count > 0
+
+  		this.setError(err)
+
+  	case CriteriaDelete:
+
+			count, err := this.Session.ExecuteDelete(query)  		
+
+  		this.Count64 = count
+  		this.Count32 = int(count)
+
+  		this.Any = count > 0
+
+  		this.setError(err)
+
+  	case CriteriaUpdate:
+
+			count, err := this.Session.ExecuteUpdate(query, this.UpdateParams)  		
 
   		this.Count64 = count
   		this.Count32 = int(count)
