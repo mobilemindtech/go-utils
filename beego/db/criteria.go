@@ -562,12 +562,17 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
 
   	case CriteriaList:
 
+  		orders := []string{}
   		for _, order := range this.orderBy {
   			if order.Desc {
-  				query = query.OrderBy(fmt.Sprintf("-%v", order.Path))
+  				orders = append(orders, fmt.Sprintf("-%v", order.Path))
   			} else {
-  				query = query.OrderBy(fmt.Sprintf(order.Path))
-  			}
+  				orders = append(orders, fmt.Sprintf(order.Path))
+  			}  			
+  		}
+
+  		if len(orders) > 0 {
+  			query = query.OrderBy(orders...)
   		}
 
 		  if len(this.RelatedSelList) > 0 {
