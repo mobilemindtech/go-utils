@@ -13,7 +13,7 @@ type TenantUser struct{
   UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"-"`      
 
   Enabled bool `orm:"" valid:"Required;" form:"" json:",string,omitempty"`
-  Tenant *Tenant `orm:"rel(fk);on_delete(do_nothing)" valid:"Required" form:",select"`
+  Tenant *Tenant `orm:"rel(fk);on_delete(do_nothing)" valid:"Required" form:"" goutils:"no_set_tenant;no_filter_tenant"`
   User *User `orm:"rel(fk);on_delete(do_nothing)" valid:"Required" form:",select"`
 
   Session *db.Session `orm:"-"`

@@ -166,13 +166,30 @@ func (this *Session) Remove(entity interface{}) error {
   return nil
 }
 
-func (this *Session) Load(entity interface{}) error {
-  if err := this.Db.Read(entity); err != nil {
-    fmt.Println("## Session: error on load: %v", err.Error())
-    //this.OnError()
-    return err
+func (this *Session) Load(entity interface{}) (bool, error) {
+  return this.Get(entity)
+}
+
+func (this *Session) Get(entity interface{}) (bool, error) {
+
+  if model, ok := entity.(Model); ok {
+
+    if err := this.Db.Read(entity); err != nil {
+      fmt.Println("## Session: error on load: %v", err.Error())
+      //this.OnError()
+      return false, err
+    }
+
+    if model.IsPersisted() {
+      return true, nil
+    }
+
+    return false, nil
+
   }
-  return nil
+
+  this.OnError()
+  return false, errors.New("entity does not implements of Model")  
 }
 
 func (this *Session) Count(entity interface{}) (int64, error){
@@ -226,11 +243,11 @@ func (this *Session) FindById(entity interface{}, id int64) (interface{}, error)
     if err != nil{
       fmt.Println("## Session: error on find by id: %v", err.Error())
       //this.OnError()
-      return entity, err
+      return nil, err
     }
 
-    if model.IsPersisted() {
-      return entity, nil
+    if !model.IsPersisted() {
+      return nil, nil
     }
 
     return entity, nil

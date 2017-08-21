@@ -12,8 +12,11 @@ type Tenant struct{
   UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"-"`
 
   Name string `orm:"size(100)"  valid:"Required;MaxSize(100)" form:""`
+  Documento string `orm:"size(20)"  valid:"Required;MaxSize(14);MinSize(11)" form:""`
 
-  Session *db.Session `orm:"-"`
+  Cidade *Cidade `orm:"rel(fk);on_delete(do_nothing)" valid:"RequiredRel" form:""`
+
+  Session *db.Session `orm:"-"` 
 }
 
 func (this *Tenant) TableName() string{

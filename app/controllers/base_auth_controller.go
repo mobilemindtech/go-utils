@@ -50,6 +50,11 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
 
     this.SetAuthTenant(tenant)
 
+    if tenant == nil {
+      this.baseController.Abort("user does not has active tenant")
+      return
+    }
+
 
     this.baseController.Log("**********************************")
     this.baseController.Log("** IsLoggedIn=%v", this.IsLoggedIn)

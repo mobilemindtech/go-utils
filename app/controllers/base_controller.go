@@ -21,8 +21,6 @@ type BaseController struct {
   ModelTenantUser *models.TenantUser
   ModelUserRole *models.UserRole  
 
-  TenantUpdated func(tenant *models.Tenant)
-  TenantCreated func(tenant *models.Tenant)
 }
 
 func (this *BaseController) NestPrepareAppBase() {

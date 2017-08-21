@@ -13,57 +13,30 @@ import (
 type LoginService struct {
 	Lang string
 	Session *db.Session
+	ModelUser *models.User
+	ModelTenantUser *models.TenantUser
 }
 
 func NewLoginService(lang string, session *db.Session) *LoginService {
-	return &LoginService{ Lang: lang, Session: session }
+	return &LoginService{ Lang: lang, Session: session, ModelUser: models.NewUser(session), ModelTenantUser: models.NewTenantUser(session) }
 }
 
-func (this *LoginService) Authenticate(username string, password string) (user *models.User, err error)  {
-
-	user = models.NewUser(this.Session)
-
-	user, err = user.GetByUserName(username)
-
-	if err != nil {
-
-		if err.Error() == "<QuerySeter> no row found" {
-			err = errors.New(this.GetMessage("login.invalid"))
-		}
-
-		return user, err
-
-	} else if user == nil || user.Id < 1 {
-
-		return user, errors.New(this.GetMessage("login.invalid"))
-
-	} else if !user.IsSamePassword(password) {
-
-		return user, errors.New(this.GetMessage("login.invalid"))
-
-	} else if !user.Enabled {
-
-		return user, errors.New(this.GetMessage("login.inactiveMsg"))
-
-	}else {
-
-		user.LastLogin = time.Now().In(util.GetDefaultLocation())
-		if err := this.Session.Update(user); err != nil {
-			beego.Debug("### update user login error %v", err)
-		}
-		return user, nil
-
-	}
+func (this *LoginService) Authenticate(username string, password string) (*models.User, error)  {
+	user, err := this.ModelUser.GetByUserName(username)
+	return this.onLogin(user, err)
 }
 
 
 func (this *LoginService) AuthenticateToken(token string) (*models.User, error) {
-	user := models.NewUser(this.Session)
-	var err error
 
 
-	user, err = user.GetByToken(token)
+	user, err := this.ModelUser.GetByToken(token)
 
+	return this.onLogin(user, err)
+
+}
+
+func (this *LoginService) onLogin(user *models.User, err error) (*models.User, error){
 	if err != nil {
 
 		if err.Error() == "<QuerySeter> no row found" {
@@ -87,13 +60,23 @@ func (this *LoginService) AuthenticateToken(token string) (*models.User, error) 
 
 	}else {
 
+		tenant, err := this.ModelTenantUser.GetFirstTenant(user)
+
+		if err != nil {
+			return user, errors.New(this.GetMessage("login.error"))
+		}
+
+		if tenant == nil {
+			return user, errors.New("user does not has active tenant related")	
+		}		
+
 		user.LastLogin = time.Now().In(util.GetDefaultLocation())
 		if err := this.Session.Update(user); err != nil {
 			beego.Debug("### update user login error %v", err)
 		}
 		return user, nil
 
-	}
+	}	
 }
 
 
