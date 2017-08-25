@@ -36,7 +36,10 @@ func (c JsonParser) JsonToModel(ctx *context.Context, model interface{}) error {
 }
 
 func (c JsonParser) FormToJson(ctx *context.Context) map[string]interface{} {
+  return c.FormToJsonWithDateFormats(ctx, nil);
+}
 
+func (c JsonParser) FormToJsonWithDateFormats(ctx *context.Context, dateFormatConvert map[string]interface{}) map[string]interface{} {
 
   jsonMap := make(map[string]interface{})
 
@@ -65,6 +68,17 @@ func (c JsonParser) FormToJson(ctx *context.Context) map[string]interface{} {
           parent = parent[key].(map[string]interface{})
         } else {
           parent[key] = v[0]
+
+          if dateFormatConvert != nil {
+            for k, v := range dateFormatConvert {
+              if k == key {
+                if parent[key] != nil {
+                  
+                }
+              }
+            }
+          }
+
         }
       }
 
