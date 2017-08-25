@@ -22,7 +22,6 @@ var (
   datetimeLayout = "02/01/2006 10:25:32"
   timeLayout = "10:25"
   dateLayout = "02/01/2006"
-  dateZero = "01/01/0001"
   jsonDateLayout = "2006-01-02T15:04:05-07:00"
 )
 
@@ -463,55 +462,12 @@ func (this *BaseController) IsAjax() bool{
   return  this.Ctx.Input.IsAjax()
 }
 
-func (this *BaseController) GetId() int64 {
-  return this.GetIntParam(":id")
-}
-
-func (this *BaseController) GetIntParam(key string) int64 {
-  id := this.Ctx.Input.Param(key)
-  intid, _ := strconv.ParseInt(id, 10, 64)
-  return intid
-}
-
-func (this *BaseController) GetIntByKey(key string) int64{
-  val := this.Ctx.Input.Query(key)
-  intid, _ := strconv.ParseInt(val, 10, 64)
-  return intid
-}
-
-func (this *BaseController) GetBoolByKey(key string) bool{
-  val := this.Ctx.Input.Query(key)
-  boolean, _ := strconv.ParseBool(val)
-  return boolean
-}
-
-func (this *BaseController) GetStringByKey(key string) string{
-  return this.Ctx.Input.Query(key)
-}
-
-func (this *BaseController) GetDateByKey(key string) (time.Time, error){
-  date := this.Ctx.Input.Query(key)
-  return this.ParseDate(date)
-}
-
-func (this *BaseController) ParseDate(date string) (time.Time, error){
-  return time.ParseInLocation(dateLayout, date, this.DefaultLocation)
-}
-
-func (this *BaseController) ParseDateTime(date string) (time.Time, error){
-  return time.ParseInLocation(datetimeLayout, date, this.DefaultLocation)
-}
-
-func (this *BaseController) ParseJsonDate(date string) (time.Time, error){
-  return time.ParseInLocation(jsonDateLayout, date, this.DefaultLocation)
-}
-
 func (this *BaseController) GetToken() string{
-  return this.Ctx.Request.Header.Get("X-Auth-Token")
+  return this.GetTokenByName("X-Auth-Token")
 }
 
-func (this *BaseController) IsZeroDate(date time.Time) bool{
-  return date.Format(dateLayout) == dateZero || date.IsZero()
+func (this *BaseController) GetTokenByName(tokenName string) string{
+  return this.Ctx.Request.Header.Get(tokenName)
 }
 
 func (this *BaseController) Log(format string, v ...interface{}) {
@@ -556,4 +512,78 @@ func (this *BaseController) GetPage() *db.Page{
   }
 
   return page
+}
+
+func (this *BaseController) StringToInt(text string) int {
+  val, _ := strconv.Atoi(text)
+  return val
+}
+
+func (this *BaseController) StringToInt64(text string) int64 {
+  val, _ := strconv.ParseInt(text, 10, 64)
+  return val
+}
+
+func (this *BaseController) IntToString(val int) string {
+  return fmt.Sprintf("%v", val)
+}
+
+func (this *BaseController) Int64ToString(val int64) string {
+  return fmt.Sprintf("%v", val)
+}
+
+
+func (this *BaseController) GetId() int64 {
+  return this.GetIntParam(":id")
+}
+
+func (this *BaseController) GetIntParam(key string) int64 {
+  id := this.Ctx.Input.Param(key)
+  intid, _ := strconv.ParseInt(id, 10, 64)
+  return intid
+}
+
+func (this *BaseController) GetParam(key string) string {
+  return this.Ctx.Input.Param(key)
+}
+
+func (this *BaseController) GetIntByKey(key string) int64{
+  val := this.Ctx.Input.Query(key)
+  intid, _ := strconv.ParseInt(val, 10, 64)
+  return intid
+}
+
+func (this *BaseController) GetBoolByKey(key string) bool{
+  val := this.Ctx.Input.Query(key)
+  boolean, _ := strconv.ParseBool(val)
+  return boolean
+}
+
+func (this *BaseController) GetStringByKey(key string) string{
+  return this.Ctx.Input.Query(key)
+}
+
+func (this *BaseController) GetDateByKey(key string) (time.Time, error){
+  date := this.Ctx.Input.Query(key)
+  return this.ParseDate(date)
+}
+
+func (this *BaseController) ParseDateByKey(key string, layout string) (time.Time, error){
+  date := this.Ctx.Input.Query(key)
+  return time.ParseInLocation(layout, date, this.DefaultLocation)
+}
+
+// deprecated
+func (this *BaseController) ParseDate(date string) (time.Time, error){
+  return time.ParseInLocation(dateLayout, date, this.DefaultLocation)
+}
+
+// deprecated
+func (this *BaseController) ParseDateTime(date string) (time.Time, error){
+  return time.ParseInLocation(datetimeLayout, date, this.DefaultLocation)
+}
+
+// deprecated
+func (this *BaseController) ParseJsonDate(date string) (time.Time, error){
+  return time.ParseInLocation(jsonDateLayout, date, this.DefaultLocation)
 }
