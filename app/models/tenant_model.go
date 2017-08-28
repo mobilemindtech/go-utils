@@ -11,7 +11,6 @@ type Tenant struct{
   CreatedAt time.Time `orm:"auto_now_add;type(datetime)" json:"-"`
   UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"-"`
 
-  Enabled bool `orm:"" valid:"Required;" form:"" json:",string,omitempty"`
   Name string `orm:"size(100)"  valid:"Required;MaxSize(100)" form:""`
   Documento string `orm:"size(20)"  valid:"Required;MaxSize(14);MinSize(11)" form:""`
 
