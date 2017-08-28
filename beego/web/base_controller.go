@@ -411,9 +411,9 @@ func (this *BaseController) GetMessage(key string, args ...interface{}) string{
   return i18n.Tr(this.Lang, key, args)
 }
 
-func (this *BaseController) OnValidate(entity interface{}, plus func(validator *validation.Validation)) bool {
+func (this *BaseController) OnValidate(entity interface{}, custonValidation func(validator *validation.Validation)) bool {
 
-  result, _ := this.EntityValidator.IsValid(entity, plus)
+  result, _ := this.EntityValidator.IsValid(entity, custonValidation)
 
   if result.HasError {
     this.Flash.Error(this.GetMessage("cadastros.validacao"))

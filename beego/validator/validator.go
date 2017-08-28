@@ -6,6 +6,7 @@ import (
   "github.com/mobilemindtec/go-utils/beego/db"
   "github.com/astaxie/beego/validation"  
   "strings"
+  "reflect"
   _"fmt"
 )
 
@@ -34,6 +35,7 @@ func SetDefaultMessages() {
     "Cnpj":         "O CNPJ informado é inválido",
     "Cpf":          "O CPF informado é inválido",
     "RequiredRel":  "Selecione uma opção",
+    "RequiredConst": "Selecione uma opção",
   })
 
 }
@@ -67,14 +69,36 @@ func AddCpfValidator() {
       }
     }
 
+  })
+}
+
+func AddConstValidator() {
+
+  validation.AddCustomFunc("RequiredConst", func(v *validation.Validation, obj interface{}, key string){
+
+    key = strings.Split(key, ".")[0]
+
+    ref := reflect.ValueOf(obj)
+
+    if ref.Kind() != reflect.Int32 || ref.Kind() != reflect.Int64 {
+      val := int(ref.Int())
+      
+      if int(val) <= 0 {
+        v.SetError(key, validation.MessageTmpls["RequiredConst"])
+      }
+
+    } else {
+      v.SetError(key, validation.MessageTmpls["RequiredConst"])
+    }
 
   })
 }
 
+
+
 func AddRelationValidator() {
 
   validation.AddCustomFunc("RequiredRel", func(v *validation.Validation, obj interface{}, key string){
-
 
     key = strings.Split(key, ".")[0]
 
@@ -92,11 +116,9 @@ func AddRelationValidator() {
       }
     }
 
-
     if !isSatisfied {
       v.SetError(key, validation.MessageTmpls["RequiredRel"])
     }
-
 
   })
 }

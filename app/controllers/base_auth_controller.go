@@ -212,6 +212,8 @@ func (this *BaseAuthController) AuthCheckAdmin() {
 
 func (this *BaseAuthController) UpSecurityAuth() bool {
 
+  this.baseController.Log("** UpSecurityAuth")
+
   roles := []string{}
 
   if this.Auth != nil {
@@ -219,6 +221,8 @@ func (this *BaseAuthController) UpSecurityAuth() bool {
   }
 
   if !route.IsRouteAuthorized(this.baseController.Ctx, roles) {
+
+    this.baseController.Log("** not authorized ")
 
     if !this.IsLoggedIn && !this.IsTokenLoggedIn {
       if this.baseController.IsJson(){
@@ -240,7 +244,6 @@ func (this *BaseAuthController) UpSecurityAuth() bool {
     return false
 
   }
-
 
   return true
 }

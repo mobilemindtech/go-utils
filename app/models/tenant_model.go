@@ -2,6 +2,7 @@ package models
 
 import (
   "github.com/mobilemindtec/go-utils/beego/db"
+  "github.com/satori/go.uuid"
 	"time"
 )
 
@@ -15,7 +16,8 @@ type Tenant struct{
   Documento string `orm:"size(20)"  valid:"Required;MaxSize(14);MinSize(11)" form:""`
 
   Enabled bool `orm:""  form:"" json:""`
-  
+  Uuid string `orm:"size(100);unique"  valid:"MaxSize(100);Required" form:"-" json:"-"`
+
   Cidade *Cidade `orm:"rel(fk);on_delete(do_nothing)" valid:"RequiredRel" form:""`
 
   Session *db.Session `orm:"-"` 
@@ -31,6 +33,23 @@ func NewTenant(session *db.Session) *Tenant{
 
 func (this *Tenant) IsPersisted() bool{
   return this.Id > 0
+}
+
+func (this *Tenant) SetUuid() string{
+  this.Uuid = this.GenereteUuid()
+}
+
+
+func (this *Tenant) GenereteUuid() string{
+
+  for true {
+    uuid := uuid.NewV4().String()
+    if !db.NewCriteria(this.Session, new(Tenant), nil).Eq("Uuid", uuid).Exists() {
+      return uuid
+    }
+  }
+
+  return ""
 }
 
 func (this *Tenant) List() (*[]*Tenant , error) {
