@@ -85,17 +85,28 @@ func (this *EntityValidator) IsValid(entity interface{}, action func(validator *
 }
 
 func (this *EntityValidator) CopyErrorsToView(result *EntityValidatorResult, data map[interface{}]interface{}) {
+  
   if len(result.Errors) > 0 {
-    data["errors"] = result.Errors
 
     if data["errorsFields"] == nil {
+      
       data["errorsFields"] = result.ErrorsFields
+      data["errors"] = result.Errors
+
     } else {
+
       mapItem := data["errorsFields"].(map[string]string)
-      for k, v := range result.ErrorsFields       {
+      for k, v := range result.ErrorsFields {
         mapItem[k] = v
       }
+
+      mapItem = data["errors"].(map[string]string)
+      for k, v := range result.Errors {
+        mapItem[k] = v      
+      }
+
     }
+
   }
 }
 

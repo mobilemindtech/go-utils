@@ -248,6 +248,11 @@ func (this *Criteria) One() *Criteria {
 	return this.execute(CriteriaOne)
 }
 
+func (this *Criteria) Exists() bool {
+	this.execute(CriteriaCount)
+	return this.Any
+}
+
 func (this *Criteria) Count() *Criteria {
 	return this.execute(CriteriaCount)
 }

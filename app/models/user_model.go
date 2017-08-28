@@ -1,9 +1,9 @@
 package models
 
 import (
+  "github.com/mobilemindtec/go-utils/app/util"
   "github.com/mobilemindtec/go-utils/beego/db"
   "github.com/mobilemindtec/go-utils/support"
-  "github.com/mobilemindtec/go-utils/app/util"
   "github.com/astaxie/beego/orm"
   "github.com/satori/go.uuid"
 	"time"
@@ -17,18 +17,18 @@ type User struct{
   UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"-"`
 
   Name string `orm:"size(100)"  valid:"Required;MaxSize(100)" form:""`
-  UserName string `orm:"size(100)" valid:"Required;MaxSize(100);Email" form:""`
+  UserName string `orm:"size(100);unique" valid:"Required;MaxSize(100);Email" form:""`
   Password string `orm:"size(100)" valid:"MaxSize(100)" form:"" json:"-"`
   Enabled bool `orm:"" valid:"Required;" form:"" json:",string,omitempty"`
   LastLogin time.Time `orm:"null;type(datetime)"`
 
   ExpirationDate time.Time `orm:"type(datetime);null" form:"-" json:"-"`
-  Token string `orm:"size(256);null"  valid:"MaxSize(256)" form:"-" json:"-"`
+  Token string `orm:"type(text);null"  valid:"MaxSize(256)" form:"-" json:"-"`
 
-  Uuid string `orm:"size(100);null"  valid:"MaxSize(100)" form:"-" json:"-"`
+  Uuid string `orm:"size(100);unique"  valid:"MaxSize(100);Required" form:"-" json:"-"`
   
   ChangePwdExpirationDate time.Time `orm:"type(datetime);null" form:"-" json:"-"`
-  ChangePwdToken string `orm:"size(256);null"  valid:"MaxSize(256)" form:"-" json:"-"`  
+  ChangePwdToken string `orm:"type(text);null"  valid:"MaxSize(256)" form:"-" json:"-"`  
   
   Tenant *Tenant `orm:"rel(fk);on_delete(do_nothing)" valid:"Required" form:"" goutils:"no_set_tenant;no_filter_tenant"`
 
@@ -42,6 +42,7 @@ type User struct{
 func NewUser(session *db.Session) *User{
   return &User{ Session: session }
 }
+
 
 func (this *User) TableName() string{
   return "users"
@@ -103,13 +104,30 @@ func (this *User) GetByToken(token string) (has *User, err error) {
 }
 
 func (this *User) EncodePassword() {
+  this.GenerateToken(this.Password)
   this.Password = support.TextToSha1(this.Password)
 }
 
 func (this *User) ChangePassword(newPassword string) {
   this.Password = newPassword
+  this.GenerateToken(this.Password)
   this.EncodePassword()
-  this.GenerateToken(fmt.Sprintf("%v:%v", uuid.NewV4().String(), newPassword))
+}
+
+func (this *User) SetUuid() string{
+  this.Uuid = this.GenereteUuid()
+}
+
+func (this *User) GenereteUuid() string{
+
+  for true {
+    uuid := uuid.NewV4().String()
+    if !db.NewCriteria(this.Session, new(User), nil).Eq("Uuid", uuid).Exists() {
+      return uuid
+    }
+  }
+
+  return ""
 }
 
 func (this *User) IsSamePassword(newPassword string) bool {
@@ -180,13 +198,12 @@ func (this *User) PageByTenant(tenant Tenant, page *db.Page) (*[]*User , error) 
 
 
 
-func (this *User) GenerateToken(secret string) {
+func (this *User) GenerateToken(password string) {
 
-  this.Token = support.TextToSha256(secret)
   this.ExpirationDate = time.Now().In(util.GetDefaultLocation()).AddDate(50, 0, 0)
 
   var err error
-  if this.Token, err = support.GenereteApiToken(this.Id, this.Uuid, secret, this.ExpirationDate); err != nil {
+  if this.Token, err = support.GenereteApiToken(this.Id, this.Uuid, password, this.ExpirationDate); err != nil {
     fmt.Println("** error on generete api token: %v", err)
   }
 
