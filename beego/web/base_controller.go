@@ -311,20 +311,31 @@ func (this *BaseController) OnTemplate(viewName string) {
 
 func (this *BaseController) OnRedirect(action string) {
   this.OnFlash(true)
-  this.Redirect(action, 302)
+  if this.Ctx.Input.URL() == "action" {
+    this.Abort("redirect to some path")
+  } else {
+    this.Redirect(action, 302)
+  }
 }
 
 func (this *BaseController) OnRedirectError(action string, message string) {
   this.Rollback()
   this.Flash.Error(message)
   this.OnFlash(true)
-  this.Redirect(action, 302)
-}
+  if this.Ctx.Input.URL() == "action" {
+    this.Abort("redirect to some path")
+  } else {
+    this.Redirect(action, 302)
+  }}
 
 func (this *BaseController) OnRedirectSuccess(action string, message string) {
   this.Flash.Success(message)
   this.OnFlash(true)
-  this.Redirect(action, 302)
+  if this.Ctx.Input.URL() == "action" {
+    this.Abort("redirect to some path")
+  } else {
+    this.Redirect(action, 302)
+  }
 }
 
 // executes redirect or OnJsonError
