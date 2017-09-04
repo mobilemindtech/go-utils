@@ -312,7 +312,7 @@ func (this *BaseController) OnTemplate(viewName string) {
 func (this *BaseController) OnRedirect(action string) {
   this.OnFlash(true)
   if this.Ctx.Input.URL() == "action" {
-    this.Abort("redirect to some path")
+    this.Abort("500")
   } else {
     this.Redirect(action, 302)
   }
@@ -323,7 +323,7 @@ func (this *BaseController) OnRedirectError(action string, message string) {
   this.Flash.Error(message)
   this.OnFlash(true)
   if this.Ctx.Input.URL() == "action" {
-    this.Abort("redirect to some path")
+    this.Abort("500")
   } else {
     this.Redirect(action, 302)
   }}
@@ -332,7 +332,7 @@ func (this *BaseController) OnRedirectSuccess(action string, message string) {
   this.Flash.Success(message)
   this.OnFlash(true)
   if this.Ctx.Input.URL() == "action" {
-    this.Abort("redirect to some path")
+    this.Abort("500")
   } else {
     this.Redirect(action, 302)
   }
