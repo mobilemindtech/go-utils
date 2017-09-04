@@ -8,6 +8,7 @@ import (
   "errors"
   "time"
   "fmt"
+  "github.com/mobilemindtec/go-utils/app/util"
 
 )
 
@@ -37,7 +38,10 @@ func (c JsonParser) JsonToModel(ctx *context.Context, model interface{}) error {
 
 
 func (c JsonParser) FormToJson(ctx *context.Context) map[string]interface{} {
+  return c.FormToJsonWithFieldsConfigs(ctx, nil);
+}
 
+func (c JsonParser) FormToJsonWithFieldsConfigs(ctx *context.Context, configs map[string]string) map[string]interface{} {
 
   jsonMap := make(map[string]interface{})
 
@@ -66,13 +70,35 @@ func (c JsonParser) FormToJson(ctx *context.Context) map[string]interface{} {
           parent = parent[key].(map[string]interface{})
         } else {
           parent[key] = v[0]
+
+          if configs != nil {
+            for field, format := range configs {
+              if field == key {
+                if parent[key] != nil {
+                  auxDate, _ := util.DateParse(format, parent[key].(string))
+                  jsonDateLayout := "2006-01-02T15:04:05-07:00"
+                  parent[key] = auxDate.Format(jsonDateLayout)
+                }
+              }
+            }
+          }
+
         }
       }
 
-
-
     } else {
       jsonMap[k] = v[0]
+      if configs != nil {
+        for field, format := range configs {
+          if field == k {
+            if jsonMap[k] != nil {
+              auxDate, _ := util.DateParse(format, jsonMap[k].(string))
+              jsonDateLayout := "2006-01-02T15:04:05-07:00"
+              jsonMap[k] = auxDate.Format(jsonDateLayout)
+            }
+          }
+        }
+      }
     }
   }
 
@@ -80,8 +106,12 @@ func (c JsonParser) FormToJson(ctx *context.Context) map[string]interface{} {
 }
 
 func (c JsonParser) FormToModel(ctx *context.Context, model interface{}) error {
+  return c.FormToModelWithFieldsConfigs(ctx, model, nil)
+}
 
-  jsonMap := c.FormToJson(ctx)
+func (c JsonParser) FormToModelWithFieldsConfigs(ctx *context.Context, model interface{}, configs map[string]string) error {
+
+  jsonMap := c.FormToJsonWithFieldsConfigs(ctx, configs)
 
   jsonData, err := json.Marshal(jsonMap)
 

@@ -453,7 +453,11 @@ func (this *BaseController) OnParseForm(entity interface{}) {
 }
 
 func (this *BaseController) OnJsonParseForm(entity interface{}) {
-  if err := this.FormToModel(this.Ctx, entity)  ; err != nil {
+  this.OnJsonParseFormWithFieldsConfigs(entity, nil)
+}
+
+func (this *BaseController) OnJsonParseFormWithFieldsConfigs(entity interface{}, configs map[string]string) {
+  if err := this.FormToModelWithFieldsConfigs(this.Ctx, entity, configs)  ; err != nil {
     beego.Error("## error on parse form ", err.Error())
     panic(err)
   }

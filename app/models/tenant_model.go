@@ -20,7 +20,7 @@ type Tenant struct{
 
   Cidade *Cidade `orm:"rel(fk);on_delete(do_nothing)" valid:"RequiredRel" form:""`
 
-  Session *db.Session `orm:"-"` 
+  Session *db.Session `orm:"-"`
 }
 
 func (this *Tenant) TableName() string{

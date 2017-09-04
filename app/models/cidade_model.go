@@ -25,7 +25,7 @@ func (this *Cidade) IsPersisted() bool{
 }
 
 func (this *Cidade) LoadRelated(entity *Cidade) { 
-  this.Session.Db.LoadRelated(entity, "Estado")  
+  this.Session.Db.LoadRelated(entity, "Estado")
 }
 
 func (this *Cidade) ListByEstado(estado *Estado) (*[]*Cidade , error) { 
