@@ -118,3 +118,21 @@ func (this *TenantUser) GetFirstTenant(user *User) (*Tenant , error) {
 
   return nil, nil
 }
+
+func (this *TenantUser) Create(user *User, tenant *Tenant) error { 
+
+  entity, err := this.FindByUserAndTenant(user, tenant)
+
+  if err != nil && err != orm.ErrNoRows {
+    return err
+  }
+
+  if entity != nil && entity.IsPersisted() {
+    return nil
+  }
+
+  entity = &TenantUser{ User: user, Tenant: tenant, Enabled: true }
+
+  return this.Session.Save(entity)
+
+}

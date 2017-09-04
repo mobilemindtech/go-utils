@@ -41,6 +41,12 @@ func NewSessionWithTenant(tenant interface{}) *Session{
   return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false }
 }
 
+func (this *Session) SetTenant(tenant interface{}) *Session {
+  this.Tenant = tenant
+  return this
+}
+
+
 func (this *Session) OnError() *Session {
   this.State = SessionStateError
   return this
@@ -559,6 +565,12 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
 
   return nil
 }
+
+func (this *Session) SaveCascade(reply interface{}) error{
+  this.deepSaveOrUpdate = map[string]int{}
+  return this.saveOrUpdateCascadeDeep(reply)
+}
+
 
 func (this *Session) SaveOrUpdateCascade(reply interface{}) error{
   this.deepSaveOrUpdate = map[string]int{}

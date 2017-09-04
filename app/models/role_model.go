@@ -2,6 +2,7 @@ package models
 
 import (
   "github.com/mobilemindtec/go-utils/beego/db"
+  "github.com/astaxie/beego/orm"
 	"time"
 )
 
@@ -46,5 +47,9 @@ func (this *Role) FindByAuthority(authority string) (role *Role, err error) {
   
   err = query.Filter("Authority", authority).One(result)
   
+  if err == orm.ErrNoRows {
+    return result, nil  
+  }
+
   return result, err
 }

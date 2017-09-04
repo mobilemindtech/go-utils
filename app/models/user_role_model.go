@@ -2,7 +2,10 @@ package models
 
 import (
 	"github.com/mobilemindtec/go-utils/beego/db"
-	"time"
+  "github.com/astaxie/beego/orm"
+  "errors"
+  "time"
+  "fmt"
 )
 
 type UserRole struct{
@@ -40,7 +43,11 @@ func (this *UserRole) FindRoleByUser(user *User) *Role {
 
   query, _ := this.Session.Query(entity)
 
-  query.Filter("User", user).One(entity)
+  err := query.Filter("User", user).One(entity)
+
+  if err == orm.ErrNoRows {
+    return nil
+  }  
 
   this.Session.Db.LoadRelated(entity, "Role")
 
@@ -90,7 +97,55 @@ func (this *UserRole) FindByUser(user *User) (*UserRole, error) {
 
   err := query.Filter("User", user).One(entity)
 
+  if err == orm.ErrNoRows {
+    return entity, nil  
+  }  
+
   this.Session.Db.LoadRelated(entity, "Role")
 
   return entity, err
+}
+
+func (this *UserRole) FindByUserAndRole(user *User, role *Role) (*UserRole, error) {
+
+  entity := new(UserRole)
+
+  query, _ := this.Session.Query(entity)
+
+  err := query.Filter("User", user).Filter("Role", role).One(entity)
+
+  if err == orm.ErrNoRows {
+    return entity, nil  
+  }
+
+  return entity, err
+}
+
+func (this *UserRole) Create(user *User, autority string) error { 
+
+  search := NewRole(this.Session)
+  role, err := search.FindByAuthority(autority)
+
+  if err != nil {
+    return err
+  }
+
+  if role == nil || !role.IsPersisted() {
+    return errors.New(fmt.Sprintf("role %v not found", autority))
+  }
+
+  entity, err := this.FindByUserAndRole(user, role)
+
+  if err != nil && err != orm.ErrNoRows {
+    return err
+  }
+
+  if entity != nil && entity.IsPersisted() {
+    return nil
+  }
+
+  entity = &UserRole{ User: user, Role: role }
+
+  return this.Session.Save(entity)
+
 }
