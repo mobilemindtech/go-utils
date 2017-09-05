@@ -30,8 +30,8 @@ func init() {
     routes = data["routes"].(map[string]interface{})	
 
     fmt.Println("****************** routes ******************")
-    for key, value := range routes{
-    	fmt.Println(" path: %v, role: %v", key, value)
+    for route, value := range routes{
+    	fmt.Println(" path: %v, role: %v", route, value)
   	}
   	fmt.Println("****************** routes ******************")
 }
@@ -40,45 +40,51 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 
 
 	var routeConfigured bool
-	route := ctx.Input.URL()
+	requestedUrl := ctx.Input.URL()
 
 
+	fmt.Println("** check route %v", requestedUrl)
 
-	for key, value := range routes{
+
+	for route, value := range routes{
 
 		var allow bool
 		
 		// verifica se é curinga
-		if strings.HasSuffix(key, "/*") {
+		if strings.HasSuffix(route, "/*") {
 
-			base := strings.Split(key, "/")[1]
+			
 			var hasUniqueRule bool 
 
 			// verifica se tem uma regra unida para esse path
 			for _, it := range routes {
-				if route == it {
+				if requestedUrl == it {
 					hasUniqueRule = true
 				}
 			}
 
 			if !hasUniqueRule {
 				// como tem o curinga * verifica se a base path é a mesma
-				allow = strings.Split(route, "/")[1] == base
+
+				allow = checkCuringa(route, requestedUrl)
+				
 			}
 
 		}
 
-		if route == key  || allow {
+		if requestedUrl == route  || allow {
 
 			routeConfigured = true
 			roleNames := value.(string)
 
 			if roleNames == "anonymous" {
+				fmt.Println("** route %v anonymous allowed", requestedUrl)
 				return true
 			}
 
 			if roleNames == "authenticated" {
 				// authService is nil, so not auth
+				fmt.Println("** route %v authenticated user allowed", requestedUrl)
 				return len(currentAuthUserRoles) > 0
 			}
 
@@ -87,6 +93,7 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 			for _, roleName := range values {
 				for _, role := range currentAuthUserRoles {
 					if role == roleName {
+						fmt.Println("** route %v authenticated user role allowed", requestedUrl)
 						return true
 					}
 				}
@@ -97,8 +104,44 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 	}
 
 	if !routeConfigured {
-		fmt.Println("** route %v not is configured in routes.json", route)
+		fmt.Println("** route %v not is configured in routes.json", requestedUrl)
 	}
 
+	fmt.Println("** route %v not allowed", requestedUrl)
 	return false
+}
+
+func checkCuringa(route string, url string) bool {
+	
+	routesSplited := strings.Split(route, "/")
+	requestedUrlSplited := strings.Split(url, "/")
+
+	allow := false
+
+	if len(routesSplited) - 1 > 0 && len(requestedUrlSplited) > 0 {
+
+		allow = true
+
+
+		for index, it := range routesSplited {
+
+			if index > len(requestedUrlSplited) -1 {
+				allow = false
+				break
+			}
+			
+			if index == len(routesSplited) -1 {
+				break
+			}
+
+			if it != requestedUrlSplited[index] {
+				allow = false
+			}
+
+		}
+
+	}	
+
+	return allow
+
 }

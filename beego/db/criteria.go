@@ -244,6 +244,11 @@ func (this *Criteria) List() *Criteria {
 	return this.execute(CriteriaList)
 }
 
+func (this *Criteria) ListAndCount() *Criteria {
+	return this.execute(CriteriaList)
+	return this.execute(CriteriaCount)
+}
+
 func (this *Criteria) One() *Criteria {
 	return this.execute(CriteriaOne)
 }

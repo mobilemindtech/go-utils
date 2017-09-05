@@ -16,7 +16,7 @@ type Tenant struct{
   Documento string `orm:"size(20)"  valid:"Required;MaxSize(14);MinSize(11)" form:""`
 
   Enabled bool `orm:""  form:"" json:""`
-  Uuid string `orm:"size(100);unique"  valid:"MaxSize(100);Required" form:"-" json:"-"`
+  Uuid string `orm:"size(100);unique"  valid:"MaxSize(100)" form:"-" json:""`
 
   Cidade *Cidade `orm:"rel(fk);on_delete(do_nothing)" valid:"RequiredRel" form:""`
 
@@ -39,7 +39,6 @@ func (this *Tenant) SetUuid() string{
   this.Uuid = this.GenereteUuid()
   return this.Uuid
 }
-
 
 func (this *Tenant) GenereteUuid() string{
 
@@ -66,4 +65,37 @@ func (this *Tenant) Page(page *db.Page) (*[]*Tenant , error) {
 
   err := this.Session.Page(this, &results, page)
   return &results, err
+}
+
+func (this *Tenant) GetByUuid(uuid string) (*Tenant , error) {
+
+  entity := new(Tenant)
+  criteria := db.NewCriteria(this.Session, entity, nil).Eq("Uuid", uuid).One()
+
+  return entity, criteria.Error
+}
+
+func (this *Tenant) GetByUuidAndEnabled(uuid string) (*Tenant , error) {
+
+  entity := new(Tenant)
+  criteria := db.NewCriteria(this.Session, entity, nil).Eq("Uuid", uuid).Eq("Enabled", true).One()
+
+  return entity, criteria.Error
+
+}
+
+func (this *Tenant) FindByDocumento(documento string) (*Tenant , error) {
+
+  entity := new(Tenant)
+  criteria := db.NewCriteria(this.Session, entity, nil).Eq("Documento", documento).One()
+
+  return entity, criteria.Error
+
+}
+
+func (this *Tenant) LoadRelated(entity *Tenant) {
+
+  this.Session.Load(entity.Cidade)
+  this.Session.Load(entity.Cidade.Estado)
+
 }

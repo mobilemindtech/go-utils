@@ -92,6 +92,8 @@ func LoadIl8n() {
   // Initialize language type list.
   langTypes = strings.Split(beego.AppConfig.String("lang_types"), "|")
 
+  beego.Info(" langTypes %v", langTypes)
+
   // Load locale files according to language types.
   for _, lang := range langTypes {
     if err := i18n.SetMessage(lang, "conf/i18n/"+"locale_" + lang + ".ini"); err != nil {
@@ -125,6 +127,8 @@ func (this *BaseController) NestPrepareBase () {
   if len(this.Lang) == 0 {
     this.Lang = "pt-BR"
   }
+
+  this.Log(" ** use language %v", this.Lang)
 
   this.Flash = beego.NewFlash()
 
@@ -290,6 +294,10 @@ func (this *BaseController) OnJsonOk(message string) {
   this.OnJson(support.JsonResult{ Message: message, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix() })
 }
 
+func (this *BaseController) OnJson200() {
+  this.OnJson(support.JsonResult{ CurrentUnixTime: this.GetCurrentTimeUnix() })
+}
+
 func (this *BaseController) OnJsonValidationError() {
   this.Rollback()
   errors := this.Data["errors"].(map[string]string)
@@ -303,24 +311,38 @@ func (this *BaseController) OnTemplate(viewName string) {
 
 func (this *BaseController) OnRedirect(action string) {
   this.OnFlash(true)
-  this.Redirect(action, 302)
+  if this.Ctx.Input.URL() == "action" {
+    this.Abort("500")
+  } else {
+    this.Redirect(action, 302)
+  }
 }
 
 func (this *BaseController) OnRedirectError(action string, message string) {
   this.Rollback()
   this.Flash.Error(message)
   this.OnFlash(true)
-  this.Redirect(action, 302)
-}
+  if this.Ctx.Input.URL() == "action" {
+    this.Abort("500")
+  } else {
+    this.Redirect(action, 302)
+  }}
 
 func (this *BaseController) OnRedirectSuccess(action string, message string) {
   this.Flash.Success(message)
   this.OnFlash(true)
-  this.Redirect(action, 302)
+  if this.Ctx.Input.URL() == "action" {
+    this.Abort("500")
+  } else {
+    this.Redirect(action, 302)
+  }
 }
 
 // executes redirect or OnJsonError
 func (this *BaseController) OnErrorAny(path string, message string) {
+
+  this.Log("** this.IsJson() %v", this.IsJson() )
+
   if this.IsJson() {
     this.OnJsonError(message)
   } else {
@@ -487,10 +509,10 @@ func (this *BaseController) IsAjax() bool{
 }
 
 func (this *BaseController) GetToken() string{
-  return this.GetTokenByName("X-Auth-Token")
+  return this.GetHeaderByName("X-Auth-Token")
 }
 
-func (this *BaseController) GetTokenByName(tokenName string) string{
+func (this *BaseController) GetHeaderByName(tokenName string) string{
   return this.Ctx.Request.Header.Get(tokenName)
 }
 

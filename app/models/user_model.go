@@ -19,18 +19,18 @@ type User struct{
   Name string `orm:"size(100)"  valid:"Required;MaxSize(100)" form:""`
   UserName string `orm:"size(100);unique" valid:"Required;MaxSize(100);Email" form:""`
   Password string `orm:"size(100)" valid:"MaxSize(100)" form:"" json:"-"`
-  Enabled bool `orm:"" valid:"Required;" form:"" json:",string,omitempty"`
+  Enabled bool `orm:"" valid:"Required;" form:"" json:""`
   LastLogin time.Time `orm:"null;type(datetime)"`
 
   ExpirationDate time.Time `orm:"type(datetime);null" form:"-" json:"-"`
   Token string `orm:"type(text);null"  valid:"MaxSize(256)" form:"-" json:"-"`
 
-  Uuid string `orm:"size(100);unique"  valid:"MaxSize(100);Required" form:"-" json:"-"`
+  Uuid string `orm:"size(100);unique"  valid:"MaxSize(100)" form:"-" json:"-"`
   
   ChangePwdExpirationDate time.Time `orm:"type(datetime);null" form:"-" json:"-"`
   ChangePwdToken string `orm:"type(text);null"  valid:"MaxSize(256)" form:"-" json:"-"`  
   
-  Tenant *Tenant `orm:"rel(fk);on_delete(do_nothing)" valid:"Required" form:"" goutils:"no_set_tenant;no_filter_tenant"`
+  Tenant *Tenant `orm:"rel(fk);on_delete(do_nothing)" valid:"" form:"" goutils:"no_set_tenant;no_filter_tenant"`
 
   Role *Role `orm:"-"`
   Roles *[]*Role `orm:"-"`
@@ -229,3 +229,21 @@ func (this *User) GetByChangePwdToken(token string) (has *User, err error) {
 
   return result, err
 }
+
+func (this *User) GetByUuid(uuid string) (*User , error) {
+
+  entity := new(User)
+  criteria := db.NewCriteria(this.Session, entity, nil).Eq("Uuid", uuid).One()
+
+  return entity, criteria.Error
+}
+
+func (this *User) GetByUuidAndEnabled(uuid string) (*User , error) {
+
+  entity := new(User)
+  criteria := db.NewCriteria(this.Session, entity, nil).Eq("Uuid", uuid).Eq("Enabled", true).One()
+
+  return entity, criteria.Error
+
+}
+

@@ -41,20 +41,38 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
       this.SetAuthUser(this.GetTokenLogin())
     }
 
-    tenant := this.GetAuthTenantSession()
+    var tenant *models.Tenant
 
-    if tenant == nil || !this.HasTenantAuth(tenant) {
-      ModelTenantUser := this.baseController.ModelTenantUser
-      tenant, _ = ModelTenantUser.GetFirstTenant(this.GetAuthUser())
+    if this.IsTokenLoggedIn {
+      
+      ModelTenant := this.baseController.ModelTenant
+      tenantUuid := this.baseController.GetHeaderByName("tenant")
+      tenant, _ = ModelTenant.GetByUuidAndEnabled(tenantUuid)
+
+    } else {
+
+      tenant = this.GetAuthTenantSession()
+
+      if tenant == nil || !this.HasTenantAuth(tenant) {
+        ModelTenantUser := this.baseController.ModelTenantUser
+        tenant, _ = ModelTenantUser.GetFirstTenant(this.GetAuthUser())
+      }
+
     }
 
-    this.SetAuthTenant(tenant)
+    this.baseController.Log("** user does not has active tenant")
 
-    if tenant == nil {
-      this.baseController.Abort("user does not has active tenant")
+    if tenant == nil || !tenant.IsPersisted() {
+
+      if this.IsTokenLoggedIn && !this.baseController.IsJson() {
+        this.baseController.OnJsonError("set header tenant")
+      } else {
+        this.baseController.OnErrorAny("/", "user does not has active tenant")
+      }
       return
     }
 
+    this.SetAuthTenant(tenant)
 
     this.baseController.Log("**********************************")
     this.baseController.Log("** IsLoggedIn=%v", this.IsLoggedIn)
