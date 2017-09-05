@@ -37,6 +37,7 @@ func (this *Tenant) IsPersisted() bool{
 
 func (this *Tenant) SetUuid() string{
   this.Uuid = this.GenereteUuid()
+  return this.Uuid
 }
 
 
