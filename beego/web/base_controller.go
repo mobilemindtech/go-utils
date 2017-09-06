@@ -463,6 +463,26 @@ func (this *BaseController) OnJsonParseFormWithFieldsConfigs(entity interface{},
   }
 }
 
+func (this *BaseController) ParamParseMoney(s string) float64{
+  return this.ParamParseFloat(s)
+}
+
+// remove ,(virgula) do valor em params que vem como val de input com jquery money
+// exemplo 45,000.00 vira 45000.00
+func (this *BaseController) ParamParseFloat(s string) float64{
+  var semic string = ","
+  replaced := strings.Replace(s, semic, "", -1) // troca , por espaço
+  precoFloat, err := strconv.ParseFloat(replaced, 64)
+  var returnValue float64
+  if err == nil {
+    returnValue = precoFloat
+  }else{
+    this.Log("ERROR parse string to float64 for stringv", s)
+    panic(err)
+  }
+
+  return returnValue
+}
 
 func (this *BaseController) OnParseJson(entity interface{}) {
   if err := this.JsonToModel(this.Ctx, entity); err != nil {
