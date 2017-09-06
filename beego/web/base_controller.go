@@ -69,12 +69,12 @@ func LoadFuncs(controller *BaseController) {
 
   formatMoney := func(number float64) string{
     ac := accounting.Accounting{Symbol: "R$ ", Precision: 2, Thousand: ",", Decimal: "."}
-    return ac.FormatMoney(number)    
+    return ac.FormatMoney(number)
   }
 
   formatDecimal := func(number float64) string{
     ac := accounting.Accounting{Symbol: "", Precision: 2, Thousand: ",", Decimal: "."}
-    return ac.FormatMoney(number)    
+    return ac.FormatMoney(number)
   }
 
   beego.AddFuncMap("has_error", hasError)
@@ -82,7 +82,7 @@ func LoadFuncs(controller *BaseController) {
   beego.AddFuncMap("current_yaer", currentYaer)
   beego.InsertFilter("*", beego.BeforeRouter, filters.FilterMethod) // enable put
   beego.AddFuncMap("format_money", formatMoney)
-  beego.AddFuncMap("format_decimal", formatDecimal)    
+  beego.AddFuncMap("format_decimal", formatDecimal)
 }
 
 func LoadIl8n() {
@@ -347,25 +347,25 @@ func (this *BaseController) OnErrorAny(path string, message string) {
     this.OnJsonError(message)
   } else {
     this.Flash.Error(message)
-    this.OnRedirect(path)    
+    this.OnRedirect(path)
   }
 }
 
 // executes redirect or OnJsonOk
 func (this *BaseController) OnOkAny(path string, message string) {
-  
+
   if this.IsJson() {
     this.OnJsonOk(message)
   } else {
     this.Flash.Success(message)
-    this.OnRedirect(path)    
+    this.OnRedirect(path)
   }
 
 }
 
 // executes OnEntity or OnJsonValidationError
 func (this *BaseController) OnValidationErrorAny(view string, entity interface{}) {
-  
+
   if this.IsJson() {
     this.OnJsonValidationError()
   } else {
@@ -376,7 +376,7 @@ func (this *BaseController) OnValidationErrorAny(view string, entity interface{}
 
 // executes OnEntity or OnJsonError
 func (this *BaseController) OnEntityErrorAny(view string, entity interface{}, message string) {
-  
+
   if this.IsJson() {
     this.OnJsonError(message)
   } else {
@@ -388,7 +388,7 @@ func (this *BaseController) OnEntityErrorAny(view string, entity interface{}, me
 
 // executes OnEntity or OnJsonResultWithMessage
 func (this *BaseController) OnEntityAny(view string, entity interface{}, message string) {
-  
+
   if this.IsJson() {
     this.OnJsonResultWithMessage(entity, message)
   } else {
@@ -400,10 +400,10 @@ func (this *BaseController) OnEntityAny(view string, entity interface{}, message
 
 // executes OnResults or OnJsonResults
 func (this *BaseController) OnResultsAny(viewName string, results interface{}) {
-  
+
   if this.IsJson() {
     this.OnJsonResults(results)
-  } else {    
+  } else {
     this.OnResults(viewName, results)
   }
 
@@ -411,10 +411,10 @@ func (this *BaseController) OnResultsAny(viewName string, results interface{}) {
 
 // executes  OnResultsWithTotalCount or OnJsonResultsWithTotalCount
 func (this *BaseController) OnResultsWithTotalCountAny(viewName string, results interface{}, totalCount int64) {
-  
+
   if this.IsJson() {
     this.OnJsonResultsWithTotalCount(results, totalCount)
-  } else {    
+  } else {
     this.OnResultsWithTotalCount(viewName, results, totalCount)
   }
 
@@ -471,7 +471,7 @@ func (this *BaseController) OnParseJson(entity interface{}) {
   }
 }
 
-func (this *BaseController) HasPath(paths ...string) bool{  
+func (this *BaseController) HasPath(paths ...string) bool{
   for _, it := range paths {
     if strings.HasPrefix(this.Ctx.Input.URL(), it){
       return true
@@ -492,8 +492,8 @@ func (this *BaseController) GetToken() string{
   return this.GetHeaderByName("X-Auth-Token")
 }
 
-func (this *BaseController) GetHeaderByName(tokenName string) string{
-  return this.Ctx.Request.Header.Get(tokenName)
+func (this *BaseController) GetHeaderByName(name string) string{
+  return this.Ctx.Request.Header.Get(name)
 }
 
 func (this *BaseController) Log(format string, v ...interface{}) {
@@ -510,7 +510,7 @@ func (this *BaseController) GetCurrentTime() time.Time {
 
 func (this *BaseController) GetPage() *db.Page{
   page := new(db.Page)
-  
+
   if this.IsJson() {
 
     jsonMap, _ := this.JsonToMap(this.Ctx)

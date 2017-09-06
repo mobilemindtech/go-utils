@@ -36,7 +36,7 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
   if this.IsLoggedIn || this.IsTokenLoggedIn {
 
       if this.IsLoggedIn {
-      this.SetAuthUser(this.GetLogin())    
+      this.SetAuthUser(this.GetLogin())
     } else {
       this.SetAuthUser(this.GetTokenLogin())
     }
@@ -44,9 +44,12 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
     var tenant *models.Tenant
 
     if this.IsTokenLoggedIn {
-      
+
       ModelTenant := this.baseController.ModelTenant
       tenantUuid := this.baseController.GetHeaderByName("tenant")
+
+      this.baseController.Log("tenantUuid = %v", tenantUuid)
+
       tenant, _ = ModelTenant.GetByUuidAndEnabled(tenantUuid)
 
     } else {
@@ -258,7 +261,7 @@ func (this *BaseAuthController) UpSecurityAuth() bool {
     } else {
       this.baseController.OnRedirect("/")
     }
-    
+
     return false
 
   }
@@ -295,7 +298,7 @@ func (this *BaseAuthController) GetAuthTenantSession() *models.Tenant {
       tenant := models.Tenant{ Id: int64(id) }
       this.baseController.Session.Load(&tenant)
       return &tenant
-    }    
+    }
   }
 
   return nil
