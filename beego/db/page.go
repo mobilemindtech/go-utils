@@ -15,6 +15,10 @@ type Page struct {
   AndFilterColumns map[string]interface{}
 }
 
+func NewPage(offset int64, limit int64, sort string, order string) *Page{
+	return &Page{ Offset: offset, Limit: limit, Sort: sort, Order: order }
+}
+
 /* deprecated */
 func (this *Page) AddFilter(columnName string, value interface{}) *Page{
 	
