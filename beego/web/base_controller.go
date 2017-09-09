@@ -52,6 +52,10 @@ func init() {
 }
 
 func LoadFuncs(controller *BaseController) {
+  inc := func(i int) int {
+      return i + 1
+  }
+
   hasError := func(args map[string]string, key string) string{
     if args[key] != "" {
       return "has-error"
@@ -77,6 +81,7 @@ func LoadFuncs(controller *BaseController) {
     return ac.FormatMoney(number)
   }
 
+  beego.AddFuncMap("inc", inc)
   beego.AddFuncMap("has_error", hasError)
   beego.AddFuncMap("error_msg", errorMsg)
   beego.AddFuncMap("current_yaer", currentYaer)
