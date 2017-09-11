@@ -116,6 +116,8 @@ func checkCuringa(route string, url string) bool {
 	routesSplited := strings.Split(route, "/")
 	requestedUrlSplited := strings.Split(url, "/")
 
+	routesSplited = routesSplited[:len(routesSplited)-1]
+
 	allow := false
 
 	if len(routesSplited) - 1 > 0 && len(requestedUrlSplited) > 0 {
@@ -130,10 +132,6 @@ func checkCuringa(route string, url string) bool {
 				break
 			}
 			
-			if index == len(routesSplited) -1 {
-				break
-			}
-
 			if it != requestedUrlSplited[index] {
 				allow = false
 			}

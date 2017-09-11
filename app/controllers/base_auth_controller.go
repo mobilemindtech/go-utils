@@ -248,7 +248,7 @@ func (this *BaseAuthController) UpSecurityAuth() bool {
     if !this.IsLoggedIn && !this.IsTokenLoggedIn {
       if this.baseController.IsJson(){
         this.baseController.OnJsonError(this.baseController.GetMessage("security.notLoggedIn"))
-        this.baseController.Abort("401")
+        //this.baseController.Abort("401")
       } else  {
         this.baseController.OnLoginRedirect()
       }
@@ -257,7 +257,7 @@ func (this *BaseAuthController) UpSecurityAuth() bool {
 
     if this.baseController.IsJson() {
       this.baseController.OnJsonError(this.baseController.GetMessage("security.denied"))
-      this.baseController.Abort("401")
+      //this.baseController.Abort("401")
     } else {
       this.baseController.OnRedirect("/")
     }

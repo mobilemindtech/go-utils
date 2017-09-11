@@ -535,6 +535,8 @@ func (this *BaseController) GetPage() *db.Page{
 
     jsonMap, _ := this.JsonToMap(this.Ctx)
 
+    this.Log(" page jsonMap = %v", jsonMap)
+
     if _, ok := jsonMap["limit"]; ok {
       page.Limit = this.GetJsonInt64(jsonMap, "limit")
       page.Offset = this.GetJsonInt64(jsonMap, "offset")

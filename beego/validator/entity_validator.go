@@ -30,36 +30,38 @@ func (this *EntityValidator) IsValid(entity interface{}, action func(validator *
   result.Errors = make(map[string]string)
   result.ErrorsFields = make(map[string]string)
 
-  ok, err := localValid.Valid(entity)
+  if entity != nil {
+    ok, err := localValid.Valid(entity)
 
-  if  err != nil {
-    fmt.Println("## error on run validation %v", err.Error())
-    return nil, err
+    if  err != nil {
+      fmt.Println("## error on run validation %v", err.Error())
+      return nil, err
+    }
+
+    if !ok {
+      for _, err := range localValid.Errors {
+
+        label := this.GetMessage(fmt.Sprintf("%s.%s", this.ViewPath, err.Field))
+
+        if label != "" {
+          result.Errors[label] = err.Message
+        }else{
+          result.Errors[err.Field] = err.Message
+        }
+
+        result.ErrorsFields[err.Field] = err.Message
+
+        //fmt.Println("## ViewPath %v", this.ViewPath)
+        //fmt.Println("## lebel %v", label)
+        fmt.Println("## validator error field %v error %v", err.Field, err)
+      }
+
+      result.HasError = true
+    }
   }
 
   if action != nil {
     action(&callerValid)
-  }
-
-  if !ok {
-    for _, err := range localValid.Errors {
-
-      label := this.GetMessage(fmt.Sprintf("%s.%s", this.ViewPath, err.Field))
-
-      if label != "" {
-        result.Errors[label] = err.Message
-      }else{
-        result.Errors[err.Field] = err.Message
-      }
-
-      result.ErrorsFields[err.Field] = err.Message
-
-      //fmt.Println("## ViewPath %v", this.ViewPath)
-      //fmt.Println("## lebel %v", label)
-      fmt.Println("## validator error field %v error %v", err.Field, err)
-    }
-
-    result.HasError = true
   }
 
   if callerValid.HasErrors() {
