@@ -212,6 +212,7 @@ func (this *BaseController) OnEntity(viewName string, entity interface{}) {
 }
 
 func (this *BaseController) OnEntityError(viewName string, entity interface{}, message string) {
+  this.Rollback()
   this.Flash.Error(message)
   this.Data["entity"] = entity
   this.OnTemplate(viewName)
@@ -256,6 +257,7 @@ func (this *BaseController) OnJsonResult(result interface{}) {
 }
 
 func (this *BaseController) OnJsonResultError(result interface{}, message string) {
+  this.Rollback()
   this.Data["json"] = support.JsonResult{ Result: result, Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix() }
   this.ServeJSON()
 }
@@ -276,6 +278,7 @@ func (this *BaseController) OnJsonResultsWithTotalCount(results interface{}, tot
 }
 
 func (this *BaseController) OnJsonResultsError(results interface{}, message string) {
+  this.Rollback()
   this.Data["json"] = support.JsonResult{ Results: results, Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix() }
   this.ServeJSON()
 }
@@ -351,8 +354,7 @@ func (this *BaseController) OnErrorAny(path string, message string) {
   if this.IsJson() {
     this.OnJsonError(message)
   } else {
-    this.Flash.Error(message)
-    this.OnRedirect(path)
+    this.OnRedirectError(path, message)
   }
 }
 
@@ -374,6 +376,7 @@ func (this *BaseController) OnValidationErrorAny(view string, entity interface{}
   if this.IsJson() {
     this.OnJsonValidationError()
   } else {
+    this.Rollback()
     this.OnEntity(view, entity)
   }
 
@@ -385,6 +388,7 @@ func (this *BaseController) OnEntityErrorAny(view string, entity interface{}, me
   if this.IsJson() {
     this.OnJsonError(message)
   } else {
+    this.Rollback()
     this.Flash.Error(message)
     this.OnEntity(view, entity)
   }

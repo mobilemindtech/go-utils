@@ -114,11 +114,6 @@ func (this *User) ChangePassword(newPassword string) {
   this.EncodePassword()
 }
 
-func (this *User) SetUuid() string{
-  this.Uuid = this.GenereteUuid()
-  return this.Uuid
-}
-
 func (this *User) GenereteUuid() string{
 
   for true {
