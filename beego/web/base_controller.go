@@ -81,6 +81,30 @@ func LoadFuncs(controller *BaseController) {
     return ac.FormatMoney(number)
   }
 
+  sum := func(numbers ...float64) float64{
+    total := 0.0
+    for _, it := range numbers {
+      total += it
+    }
+    return total
+  }
+
+  subtract := func(numbers ...float64) float64{
+    total := 0.0
+    for _, it := range numbers {
+      total -= it
+    }
+    return total
+  }
+
+  mult := func(numbers ...float64) float64{
+    total := 0.0
+    for _, it := range numbers {
+      total *= it
+    }
+    return total
+  }
+
   beego.AddFuncMap("inc", inc)
   beego.AddFuncMap("has_error", hasError)
   beego.AddFuncMap("error_msg", errorMsg)
@@ -88,6 +112,9 @@ func LoadFuncs(controller *BaseController) {
   beego.InsertFilter("*", beego.BeforeRouter, filters.FilterMethod) // enable put
   beego.AddFuncMap("format_money", formatMoney)
   beego.AddFuncMap("format_decimal", formatDecimal)
+  beego.AddFuncMap("sum", sum)
+  beego.AddFuncMap("subtract", subtract)
+  beego.AddFuncMap("mult", mult)
 }
 
 func LoadIl8n() {

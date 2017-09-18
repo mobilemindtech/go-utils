@@ -139,6 +139,16 @@ func (this *Criteria) SetPage(page *Page) *Criteria {
 	return this
 }
 
+func (this *Criteria) SetOffset(offset int64) *Criteria {
+	this.Offset = offset
+	return this
+}
+
+func (this *Criteria) SetLimit(limit int64) *Criteria {
+	this.Limit = limit
+	return this
+}
+
 func (this *Criteria) SetTenant(tenant interface{}) *Criteria {
 	this.Tenant = tenant
 	return this
@@ -146,6 +156,13 @@ func (this *Criteria) SetTenant(tenant interface{}) *Criteria {
 
 func (this *Criteria) SetRelatedSel(related string) *Criteria {
 	this.RelatedSelList = append(this.RelatedSelList, related)
+	return this
+}
+
+func (this *Criteria) SetRelatedsSel(relateds ...string) *Criteria {
+	for _, it := range relateds {
+		this.RelatedSelList = append(this.RelatedSelList, it)
+	}
 	return this
 }
 
@@ -245,7 +262,7 @@ func (this *Criteria) List() *Criteria {
 }
 
 func (this *Criteria) ListAndCount() *Criteria {
-	return this.execute(CriteriaList)
+	this.execute(CriteriaList)
 	return this.execute(CriteriaCount)
 }
 
