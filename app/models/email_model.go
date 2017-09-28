@@ -12,7 +12,8 @@ type Email struct{
   UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"-"`      
 
   To string `orm:"size(100)"  valid:"Required;MaxSize(100)"`
-  Subject string `orm:"size(50)"  valid:"Required;MaxSize(50)"`
+  Cco string `orm:"size(100)"  valid:"Required;MaxSize(100)"`
+  Subject string `orm:"size(100)"  valid:"Required;MaxSize(50)"`
   Body string `orm:"type(text)"  valid:"Required;"`
   Enabled bool `orm:""  valid:"" `
 
@@ -54,7 +55,19 @@ func (this *Email) List() (*[]*Email , error) {
 func (this *Email) Create(to string, subject string, body string) (*Email, error){
   
   email := new(Email)
+  email.To = to  
+  email.Subject = subject
+  email.Body = body
+  email.Enabled = true
+
+  return email, this.Session.Save(email)
+}
+
+func (this *Email) CreateWithCco(to string, cco string, subject string, body string) (*Email, error){
+  
+  email := new(Email)
   email.To = to
+  email.Cco = cco
   email.Subject = subject
   email.Body = body
   email.Enabled = true

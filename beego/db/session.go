@@ -180,11 +180,14 @@ func (this *Session) Get(entity interface{}) (bool, error) {
 
   if model, ok := entity.(Model); ok {
 
-    if err := this.Db.Read(entity); err != nil {
+    err := this.Db.Read(entity)
+    
+    if err == orm.ErrNoRows {
       fmt.Println("## Session: error on load: %v", err.Error())
       //this.OnError()
-      return false, err
+      return false, nil
     }
+    
 
     if model.IsPersisted() {
       return true, nil

@@ -12,6 +12,8 @@ import (
 )
 
 type MailService struct {
+	Controller beego.Controller
+	PasswordRecoverTemplateName string
 }
 
 func NewMailService() *MailService{
@@ -22,6 +24,7 @@ func (this *MailService) Send(email *models.Email) error{
 	data := this.GetDefaultEmail()
 	data["subject"] = email.Subject
 	data["to"] = email.To
+	data["cco"] = email.Cco
 	data["body"] = email.Body
 	return this.PostEmail(data)
 }
@@ -31,27 +34,23 @@ func (this *MailService) SendPasswordRecover(to string, name string, token strin
 	app_name := beego.AppConfig.String("app_name")
 	app_url := beego.AppConfig.String("app_url")
 
-	values := map[string]string{}
-	values["__user_name__"] = name
-	values["__recover_url__"] = fmt.Sprintf("%v/password/change?token=%v", app_url, token)
+  this.Controller.TplName = this.PasswordRecoverTemplateName
 
-	body, err := this.GetHtmlTemplate("password-recover")
+	this.Controller.Data["user_name"] = name
+	this.Controller.Data["recover_url"] = fmt.Sprintf("%v/password/change?token=%v", app_url, token)
+
+	content, err := this.Controller.RenderString()
 
 	if err != nil {
-		fmt.Println("error this.GetHtmlTemplate ", err.Error())
+		fmt.Println("error Controller.RenderString ", err.Error())
 		return err
 	}
 
-	//fmt.Println("body = ", body)
-
-	body = this.ReplaceTemplate(body, values)
-
-	//fmt.Println("body = ", body)
 
 	email := this.GetDefaultEmail()
 	email["subject"] = fmt.Sprintf("%v - Recuperação de Senha", app_name)
 	email["to"] = to
-	email["body"] = body
+	email["body"] = content
 
 	return this.PostEmail(email)
 }
