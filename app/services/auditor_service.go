@@ -38,10 +38,11 @@ func (this *AuditorService) OnAuditWithNewDbSession(format string, v ...interfac
   
   session := db.NewSession()
   session.Open()
-
+  defer session.Close()
+  
   if err := session.Save(auditor); err != nil {
     fmt.Println("## error on save auditor: ", err.Error())
   }   
 
-  session.Close()
+  
 }

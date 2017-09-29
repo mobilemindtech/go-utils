@@ -83,24 +83,36 @@ func LoadFuncs(controller *BaseController) {
 
   sum := func(numbers ...float64) float64{
     total := 0.0
-    for _, it := range numbers {
-      total += it
+    for i, it := range numbers {
+      if i == 0 {
+        total = it
+      } else {
+        total += it
+      }
     }
     return total
   }
 
   subtract := func(numbers ...float64) float64{
     total := 0.0
-    for _, it := range numbers {
-      total -= it
+    for i, it := range numbers {
+      if i == 0 {
+        total = it  
+      } else {
+        total -= it
+      }
     }
     return total
   }
 
   mult := func(numbers ...float64) float64{
     total := 0.0
-    for _, it := range numbers {
-      total *= it
+    for i, it := range numbers {
+      if i == 0 {
+        total = it
+      } else {
+        total *= it
+      }
     }
     return total
   }
