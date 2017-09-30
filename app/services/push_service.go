@@ -3,7 +3,6 @@ package services
 import (
   "github.com/mobilemindtec/go-utils/beego/db"
   "github.com/astaxie/beego/orm"
-  "github.com/astaxie/beego"
 	"encoding/json"
   "io/ioutil"
   "net/http"
@@ -28,24 +27,36 @@ type PushService struct{
 	pushAppProdName string
 	pushAppDevName string
 	pushServerUrl string
+	pushServerMode string
+
+	notificationTitle string
+	notificationColor string
+	notificationIcon string
 
 }
 
-func NewPushService(session *db.Session, appName string) *PushService{
+func NewPushService(session *db.Session) *PushService{
 	pushServer := new(PushService)
   pushServer.Session = session
 
-
-	pushServer.build()
+	
 	return pushServer
 }
 
-func (this *PushService) build() {
-  this.pushAppProdName = beego.AppConfig.String("push_app_prod_name")
-  this.pushAppDevName = beego.AppConfig.String("push_app_dev_name")
-  this.pushServerUser = beego.AppConfig.String("push_app_user_name")
-  this.pushServerKey = beego.AppConfig.String("push_app_user_password")
-  this.pushServerUrl = beego.AppConfig.String("push_server_url")
+func (this *PushService) Configure(data map[string]string) {
+
+
+  this.pushAppProdName = data["AppProdName"]
+  this.pushAppDevName = data["AppDevName"]
+  this.pushServerUser = data["AccessUserName"]
+  this.pushServerKey = data["AccessKey"]
+  this.pushServerUrl = data["Server"]
+  this.pushServerMode = data["Mode"]
+
+  this.notificationTitle = data["NotificationTitle"]
+  this.notificationColor = data["NotificationColor"]
+  this.notificationIcon = data["NotificationIcon"]
+
 }
 
 func (this *PushService) GetSubscribersFromPushServer(url string) (map[string]interface{}, error){
@@ -89,7 +100,7 @@ func (this *PushService) GetSubscribersFromPushServer(url string) (map[string]in
 
 }
 
-func (this *PushService) LoadSubscribers() {
+func (this *PushService) LoadSubscribers() error{
 
 	this.Subscribers = map[string][]*Subscriber{}
 
@@ -130,50 +141,55 @@ func (this *PushService) LoadSubscribers() {
   }
 
 
-	
-	action := fmt.Sprintf("/apps/%v", this.pushAppProdName)
+	if this.pushServerMode == "PRODUCTION" || this.pushServerMode == "ALL" {
+		action := fmt.Sprintf("/apps/%v", this.pushAppProdName)
 
-	data, err := this.GetSubscribersFromPushServer(fmt.Sprintf("%v%v", this.pushServerUrl, action))
+		data, err := this.GetSubscribersFromPushServer(fmt.Sprintf("%v%v", this.pushServerUrl, action))
 
-	if err != nil {
-		return
+		if err != nil {
+			return err
+		}
+
+		process(data, false)
 	}
 
-	process(data, false)
+	if this.pushServerMode == "TEST" || this.pushServerMode == "ALL" {
+		action := fmt.Sprintf("/apps/%v", this.pushAppDevName)
 
-	action = fmt.Sprintf("/apps/%v", this.pushAppDevName)
+		data, err := this.GetSubscribersFromPushServer(fmt.Sprintf("%v%v", this.pushServerUrl, action))
 
-	data, err = this.GetSubscribersFromPushServer(fmt.Sprintf("%v%v", this.pushServerUrl, action))
+		if err != nil {
+			return err
+		}
 
-	if err != nil {
-		return
+		process(data, true)
 	}
-
-	process(data, true)
 
 
 	fmt.Println("subscribers=%v", this.Subscribers)
+
+	return nil
 }
 
 
 
 
-func (this *PushService) NotificateUserName(username string, message string) {
+func (this *PushService) NotificateUserName(username string, message string) error{
   list := []string{username}
-  this.NotificateByUserNameList(&list, message)
+ 	return  this.NotificateByUserNameList(&list, message)
 }
 
 //
 // query should return a username list
 //
-func (this *PushService) NotificateByQuery(query string, message string) {
+func (this *PushService) NotificateByQuery(query string, message string) error{
 
   var results orm.ParamsList
 	_, err := this.Session.Db.Raw(query).ValuesFlat(&results)
 
   if err != nil {
 		fmt.Println("PushService.sendToAppUsers %v", err)
-		return
+		return err
 	}
 
   list := []string{}
@@ -182,84 +198,114 @@ func (this *PushService) NotificateByQuery(query string, message string) {
     list = append(list, username.(string))
   }
 
-  this.NotificateByUserNameList(&list, message)
+  return this.NotificateByUserNameList(&list, message)
+
+
 }
 
-func (this *PushService) NotificateByUserNameList(usernameList *[]string, message string) {
+func (this *PushService) NotificateAll(message string) error{
+	return this.NotificateByUserNameList(nil, message)	
+}
 
-	this.LoadSubscribers()
-
+func (this *PushService) NotificateByUserNameList(usernameList *[]string, message string) error{
 	
-	action := fmt.Sprintf("/event/%v", this.pushAppProdName)
 
+	notification := map[string]string{}
+	notification["msg"] = message
+	notification["title"] = this.notificationTitle
+	notification["icon"] = this.notificationIcon
+	notification["color"] = this.notificationColor
 
-	for _, username := range *usernameList {
+	if usernameList == nil || len(*usernameList) == 0 {
+		return this.post(notification, nil)
+	} else {
 
-    //fmt.Println("this.Subscribers=%v", this.Subscribers)
+		this.LoadSubscribers()
 
-		subscribers, ok := this.Subscribers[username]
+		for _, username := range *usernameList {
 
-		if !ok {
+	    //fmt.Println("this.Subscribers=%v", this.Subscribers)
 
-			fmt.Println("subscriber %v not found at push server %v %v", username, ok, subscribers)
+			subscribers, ok := this.Subscribers[username]
 
-			continue
-		}
+			if !ok {
 
+				fmt.Println("subscriber %v not found at push server %v %v", username, ok, subscribers)
 
-		for _, subscriber := range subscribers {
-
-			notification := map[string]string{}
-			notification["msg"] = message
-			notification["title"] = "IMOSIG"
-			notification["icon"] = "ic_stat_notify"
-			notification["color"] = "#b20000"
-			notification["data.user_id"] = subscriber.Id
-
-
-			jsonData, err := json.Marshal(notification)
-
-			if err != nil {
-				fmt.Println("PushService.sendToAppUsers json.Marshal %v", err.Error())
 				continue
 			}
 
-			fmt.Println("send notification %v", notification)
 
-			data := bytes.NewBuffer(jsonData)
-
-			client := &http.Client{}
-
-			naction := action
-			if subscriber.Dev {
-				naction += "-dev"
+			for _, subscriber := range subscribers {
+				notification["data.user_id"] = subscriber.Id
+				if err := this.post(notification, subscriber); err != nil {
+					return err
+				}
 			}
 
-			req, err := http.NewRequest("POST", fmt.Sprintf("%v%v", this.pushServerUrl, naction), data)
-
-			if err != nil {
-				fmt.Println("PushService.FindUsers error http.NewRequest ", err.Error())
-				return
-			}
-			req.SetBasicAuth(this.pushServerUser, this.pushServerKey)
-			req.Header.Set("Content-Type", "application/json")
-
-			r, err := client.Do(req)
-
-			if err != nil {
-				fmt.Println("PushService.FindUsers error client.Do ", err.Error())
-				return
-			}
-
-			response, err := ioutil.ReadAll(r.Body)
-
-			if err != nil {
-				fmt.Println("PushService.sendToAppUsers ioutil.ReadAll %v", err.Error())
-				continue
-			}
-
-			fmt.Println("PushService.sendToAppUsers post result %v", string(response))
 		}
-
 	}
+
+	return nil
+}
+
+func (this *PushService) post(notification map[string]string, subscriber *Subscriber) error {
+
+		action := ""
+
+
+		if subscriber == nil {
+
+			if this.pushServerMode == "PRODUCTION" {
+				action = fmt.Sprintf("/event/%v", this.pushAppProdName)
+			} else {
+				action = fmt.Sprintf("/event/%v", this.pushAppDevName)
+			}
+
+		} else {
+			if subscriber.Dev {
+				action = fmt.Sprintf("/event/%v", this.pushAppDevName)
+			}			
+		}
+
+		jsonData, err := json.Marshal(notification)
+
+		if err != nil {
+			fmt.Println("PushService.sendToAppUsers json.Marshal %v", err.Error())
+			return err
+		}
+
+		fmt.Println("send notification %v", notification)
+
+		data := bytes.NewBuffer(jsonData)
+
+		client := &http.Client{}		
+
+		req, err := http.NewRequest("POST", fmt.Sprintf("%v%v", this.pushServerUrl, action), data)
+
+		if err != nil {
+			fmt.Println("PushService.FindUsers error http.NewRequest ", err.Error())
+			return err
+		}
+
+		req.SetBasicAuth(this.pushServerUser, this.pushServerKey)
+		req.Header.Set("Content-Type", "application/json")
+
+		r, err := client.Do(req)
+
+		if err != nil {
+			fmt.Println("PushService.FindUsers error client.Do ", err.Error())
+			return err
+		}
+
+		response, err := ioutil.ReadAll(r.Body)
+
+		if err != nil {
+			fmt.Println("PushService.sendToAppUsers ioutil.ReadAll %v", err.Error())
+			return err
+		}
+
+		fmt.Println("PushService.sendToAppUsers post result %v", string(response))	
+
+		return nil
 }
