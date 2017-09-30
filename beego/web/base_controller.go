@@ -76,6 +76,40 @@ func LoadFuncs(controller *BaseController) {
     return ac.FormatMoney(number)
   }
 
+  formatDate := func(date time.Time) string{
+    if !time.Time.IsZero(date) {
+      return date.Format("02/01/2006")
+    }
+    return ""
+  }
+
+  formatDateTime := func(date time.Time) string{
+    if !time.Time.IsZero(date) {
+      return date.Format("02/01/2006 15:04")
+    }
+    return ""
+  }
+
+  formatBoolean := func(b bool, wrapLabel bool) string{
+    var s string
+    if b {
+      s = "Sim"
+    }else{
+      s = "Não"
+    }
+    if wrapLabel {
+      var class string
+      if b {
+        class = "info"
+      }else{
+        class = "danger"
+      }
+      val := "<span class='label label-" + class + "'>"+s+"</span>"
+      s = val
+    }
+    return s
+  }
+
   formatDecimal := func(number float64) string{
     ac := accounting.Accounting{Symbol: "", Precision: 2, Thousand: ",", Decimal: "."}
     return ac.FormatMoney(number)
@@ -122,6 +156,9 @@ func LoadFuncs(controller *BaseController) {
   beego.AddFuncMap("error_msg", errorMsg)
   beego.AddFuncMap("current_yaer", currentYaer)
   beego.InsertFilter("*", beego.BeforeRouter, filters.FilterMethod) // enable put
+  beego.AddFuncMap("format_boolean", formatBoolean)
+  beego.AddFuncMap("format_date", formatDate)
+  beego.AddFuncMap("format_date_time", formatDateTime)
   beego.AddFuncMap("format_money", formatMoney)
   beego.AddFuncMap("format_decimal", formatDecimal)
   beego.AddFuncMap("sum", sum)

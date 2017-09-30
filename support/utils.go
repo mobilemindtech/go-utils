@@ -5,6 +5,7 @@ import (
 	"strings"
 	"regexp"
 	"math"
+	"sort"
 )
 
 
@@ -29,6 +30,13 @@ func MakeRange(min, max int) []int {
         a[i] = min + i
     }
     return a
+}
+
+func SliceCopyAndSortOfStrings(arr []string) []string {
+    tmpArr := make([]string, len(arr))
+    copy(tmpArr, arr)
+    sort.Strings(tmpArr)
+    return tmpArr
 }
 
 func SliceIndex(limit int, predicate func(i int) bool) int {
