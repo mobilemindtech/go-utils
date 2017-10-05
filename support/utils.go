@@ -1,23 +1,23 @@
 package support 
 
 import (
-	"github.com/astaxie/beego/context"
-	"strings"
-	"regexp"
-	"math"
-	"sort"
+    "github.com/astaxie/beego/context"
+    "strings"
+    "regexp"
+    "math"
+    "sort"
 )
 
 
 func FilterNumber(text string) string{
-	re := regexp.MustCompile("[0-9]+")
-	result := re.FindAllString(text, -1)
-	number := ""
-	for _, s := range result {
-		number += s
-	}
+    re := regexp.MustCompile("[0-9]+")
+    result := re.FindAllString(text, -1)
+    number := ""
+    for _, s := range result {
+        number += s
+    }
 
-	return number
+    return number
 }
 
 func IsEmpty(text string) bool{
@@ -50,22 +50,97 @@ func SliceIndex(limit int, predicate func(i int) bool) int {
 
 // troca , por .(ponto), posi alterei o js maskMoney pra #.###,##
 func NormalizeSemicolon(key string, ctx *context.Context) {
-	if _, ok := ctx.Request.Form[key]; ok {
-		ctx.Request.Form[key][0] = strings.Replace(ctx.Request.Form[key][0], ",", "", -1)
-	}
+    if _, ok := ctx.Request.Form[key]; ok {
+        ctx.Request.Form[key][0] = strings.Replace(ctx.Request.Form[key][0], ",", "", -1)
+    }
 }
 
 func RemoveAllSemicolon(key string, ctx *context.Context) {
-	if _, ok := ctx.Request.Form[key]; ok {
-		ctx.Request.Form[key][0] = strings.Replace(ctx.Request.Form[key][0], ",", "", -1)
-	}
+    if _, ok := ctx.Request.Form[key]; ok {
+        ctx.Request.Form[key][0] = strings.Replace(ctx.Request.Form[key][0], ",", "", -1)
+    }
 }
 
 func ToFixed(num float64, precision int) float64 {
-    output := math.Pow(10, float64(precision))
-    return float64(Round(num * output)) / output
+  output := math.Pow(10, float64(precision))
+  return float64(Round(num * output)) / output
 }
 
 func Round(num float64) int {
-   return int(num + math.Copysign(0.5, num))
+  return int(num + math.Copysign(0.5, num))
+}
+
+func Reverse(s string) string {
+  runes := []rune(s)
+  for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+      runes[i], runes[j] = runes[j], runes[i]
+  }
+  return string(runes)
+}
+
+func NumberMask(text string, maskApply string) string{
+
+  re := regexp.MustCompile("[0-9]+")
+  results := re.FindAllString(text, -1)
+  text = strings.Join(results[:],",")
+  text = Reverse(text)
+
+  var newText string
+  var j int 
+
+  for i:= len(maskApply)-1; i >= 0; i-- {
+    
+    m := maskApply[i]
+
+    if j >= len(text) {
+      newText += string(m)
+      continue
+    }
+
+    c := text[j]
+
+    if re.MatchString(string(c)) {
+      if re.MatchString(string(m)) {
+        newText += string(c)
+        j++
+      } else {
+        newText += string(m)
+      }
+    }
+  }
+
+  return Reverse(newText)
+}
+
+func NumberMaskReverse(text string, maskApply string) string{
+
+  re := regexp.MustCompile("[0-9]+")
+  results := re.FindAllString(text, -1)
+  text = strings.Join(results[:],",")
+
+  var newText string
+  var j int 
+
+  for i:= 0; i < len(maskApply); i++ {
+    
+    m := maskApply[i]
+
+    if j >= len(text) {
+      newText += string(m)
+      continue
+    }
+
+    c := text[j]
+
+    if re.MatchString(string(c)) {
+      if re.MatchString(string(m)) {
+        newText += string(c)
+        j++
+      } else {
+        newText += string(m)
+      }
+    }
+  }
+
+  return newText
 }

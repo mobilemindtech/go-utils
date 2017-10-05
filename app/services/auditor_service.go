@@ -37,8 +37,7 @@ func (this *AuditorService) OnAuditWithNewDbSession(format string, v ...interfac
   auditor.User = this.AuditorInfo.User  
   
   session := db.NewSession()
-  session.Open()
-  defer session.Close()
+  session.OpenWithoutTransaction()  
   
   if err := session.Save(auditor); err != nil {
     fmt.Println("## error on save auditor: ", err.Error())

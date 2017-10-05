@@ -25,27 +25,42 @@ type Session struct {
   State SessionState
   Tenant interface{}
   Debug bool
+  DbName string
 
   deepSetDefault map[string]int
   deepSaveOrUpdate map[string]int
   deepEager map[string]int
   deepRemove map[string]int
+  transactional bool
 }
 
 
 func NewSession() *Session{
-  return &Session{ State: SessionStateOk, Debug: false }
+  return &Session{ State: SessionStateOk, Debug: false, DbName: "default" }
+}
+
+func NewSessionWithDbName(dbName string) *Session{
+  return &Session{ State: SessionStateOk, Debug: false,  DbName: dbName }
 }
 
 func NewSessionWithTenant(tenant interface{}) *Session{
-  return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false }
+  return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false, DbName: "default" }
 }
+
+func NewSessionWithTenantAndDbName(tenant interface{}, dbName string) *Session{
+  return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false, DbName: dbName }
+}
+
 
 func (this *Session) SetTenant(tenant interface{}) *Session {
   this.Tenant = tenant
   return this
 }
 
+func (this *Session) SetDbName(dbName string) *Session {
+  this.DbName = dbName
+  return this
+}
 
 func (this *Session) OnError() *Session {
   this.State = SessionStateError
@@ -56,22 +71,39 @@ func (this *Session) Open() orm.Ormer{
   return this.Begin()
 }
 
+
+func (this *Session) OpenWithoutTransaction() orm.Ormer{
+  return this.begin(false)
+}
+
 func (this *Session) Close() {
-  if this.State == SessionStateOk {
-    this.Commit()
-  } else {
-    this.Rollback()
+
+  if this.transactional{
+    if this.State == SessionStateOk {
+      this.Commit()
+    } else {
+      this.Rollback()
+    }
   }
 }
 
 func (this *Session) Begin() orm.Ormer{
-  this.Db = orm.NewOrm()
-  this.Db.Using("default")
+  return this.begin(true)
+}
 
-  err := this.Db.Begin()
-  if err != nil {
-    fmt.Println("## db begin error: %v", err.Error())
-    panic(err)
+func (this *Session) begin(transaction bool) orm.Ormer{
+  this.Db = orm.NewOrm()
+  this.Db.Using(this.DbName)
+
+  if transaction {
+    this.transactional = true
+    err := this.Db.Begin()
+    if err != nil {
+      fmt.Println("## db begin error: %v", err.Error())
+      panic(err)
+    }
+  }else{
+    this.transactional = false
   }
 
   return this.Db
@@ -101,6 +133,7 @@ func (this *Session) Rollback() {
   }
 
   if this.Db != nil{
+    fmt.Println("** Session Rollback ")
     err := this.Db.Rollback()
     if err != nil {
       fmt.Println("## db rollback error: %v", err.Error())

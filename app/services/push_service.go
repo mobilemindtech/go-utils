@@ -265,7 +265,9 @@ func (this *PushService) post(notification map[string]string, subscriber *Subscr
 		} else {
 			if subscriber.Dev {
 				action = fmt.Sprintf("/event/%v", this.pushAppDevName)
-			}			
+			}	else {
+				action = fmt.Sprintf("/event/%v", this.pushAppProdName)
+			}
 		}
 
 		jsonData, err := json.Marshal(notification)
@@ -275,13 +277,15 @@ func (this *PushService) post(notification map[string]string, subscriber *Subscr
 			return err
 		}
 
-		fmt.Println("send notification %v", notification)
 
 		data := bytes.NewBuffer(jsonData)
 
 		client := &http.Client{}		
 
-		req, err := http.NewRequest("POST", fmt.Sprintf("%v%v", this.pushServerUrl, action), data)
+		url := fmt.Sprintf("%v%v", this.pushServerUrl, action)
+		fmt.Println("send notification %v to %v", notification, url)
+
+		req, err := http.NewRequest("POST", url, data)
 
 		if err != nil {
 			fmt.Println("PushService.FindUsers error http.NewRequest ", err.Error())
