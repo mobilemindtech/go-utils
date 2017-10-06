@@ -83,6 +83,39 @@ func NumberMask(text string, maskApply string) string{
   re := regexp.MustCompile("[0-9]+")
   results := re.FindAllString(text, -1)
   text = strings.Join(results[:],",")
+
+  var newText string
+  var j int 
+
+  for i:= 0; i < len(maskApply); i++ {
+    
+    m := maskApply[i]
+
+    if j >= len(text) {
+      newText += string(m)
+      continue
+    }
+
+    c := text[j]
+
+    if re.MatchString(string(c)) {
+      if re.MatchString(string(m)) {
+        newText += string(c)
+        j++
+      } else {
+        newText += string(m)
+      }
+    }
+  }
+
+  return newText
+}
+
+func NumberMaskReverse(text string, maskApply string) string{
+
+  re := regexp.MustCompile("[0-9]+")
+  results := re.FindAllString(text, -1)
+  text = strings.Join(results[:],",")
   text = Reverse(text)
 
   var newText string
@@ -110,37 +143,4 @@ func NumberMask(text string, maskApply string) string{
   }
 
   return Reverse(newText)
-}
-
-func NumberMaskReverse(text string, maskApply string) string{
-
-  re := regexp.MustCompile("[0-9]+")
-  results := re.FindAllString(text, -1)
-  text = strings.Join(results[:],",")
-
-  var newText string
-  var j int 
-
-  for i:= 0; i < len(maskApply); i++ {
-    
-    m := maskApply[i]
-
-    if j >= len(text) {
-      newText += string(m)
-      continue
-    }
-
-    c := text[j]
-
-    if re.MatchString(string(c)) {
-      if re.MatchString(string(m)) {
-        newText += string(c)
-        j++
-      } else {
-        newText += string(m)
-      }
-    }
-  }
-
-  return newText
 }
