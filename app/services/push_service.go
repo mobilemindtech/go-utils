@@ -198,6 +198,11 @@ func (this *PushService) NotificateByQuery(query string, message string) error{
     list = append(list, username.(string))
   }
 
+  if len(list) == 0 {
+  	fmt.Println("not found subscribers from query")
+  	return nil
+  }
+
   return this.NotificateByUserNameList(&list, message)
 
 
