@@ -151,6 +151,14 @@ func LoadFuncs(controller *BaseController) {
     return total
   }
 
+  numberMask := func(text string, mask string) string {
+    return support.NumberMask(text, mask)
+  }
+
+  numberMaskReverse := func(text string, mask string) string {
+    return support.NumberMaskReverse(text, mask)
+  }
+
   beego.AddFuncMap("inc", inc)
   beego.AddFuncMap("has_error", hasError)
   beego.AddFuncMap("error_msg", errorMsg)
@@ -164,6 +172,9 @@ func LoadFuncs(controller *BaseController) {
   beego.AddFuncMap("sum", sum)
   beego.AddFuncMap("subtract", subtract)
   beego.AddFuncMap("mult", mult)
+
+  beego.AddFuncMap("mask", numberMask)
+  beego.AddFuncMap("mask_reverse", numberMaskReverse)
 }
 
 func LoadIl8n() {
@@ -371,6 +382,10 @@ func (this *BaseController) OnJsonMap(jsonMap map[string]interface{}) {
 
 func (this *BaseController) OnJsonError(message string) {
   this.Rollback()
+  this.OnJson(support.JsonResult{ Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix() })
+}
+
+func (this *BaseController) OnJsonErrorNotRollback(message string) {  
   this.OnJson(support.JsonResult{ Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix() })
 }
 
