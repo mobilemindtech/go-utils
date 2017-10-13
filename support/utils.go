@@ -6,6 +6,7 @@ import (
     "regexp"
     "math"
     "sort"
+    "time"
 )
 
 
@@ -110,6 +111,13 @@ func NumberMask(text string, maskApply string) string{
   }
 
   return Reverse(newText)
+}
+
+func DateToTheEndOfDay(timeArg time.Time) time.Time {
+	returnTime := timeArg.Local().Add(time.Hour * time.Duration(23) +
+	                                 time.Minute * time.Duration(59) +
+	                                 time.Second * time.Duration(59))
+	return returnTime
 }
 
 func NumberMaskReverse(text string, maskApply string) string{
