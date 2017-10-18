@@ -66,7 +66,7 @@ func (this *BaseController) loadTenants(){
 
 func (this *BaseController) OnAuditor(format string, v ...interface{}) {
   auditor := services.NewAuditorService(this.Session, this.Lang, this.GetAuditorInfo())
-  auditor.OnAudit(format, v...)
+  auditor.OnAuditWithNewDbSession(format, v...)
 }
 
 func (this *BaseController) GetAuditorInfo() *services.AuditorInfo{
