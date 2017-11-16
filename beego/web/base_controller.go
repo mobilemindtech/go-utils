@@ -151,12 +151,12 @@ func LoadFuncs(controller *BaseController) {
     return total
   }
 
-  numberMask := func(text string, mask string) string {
-    return support.NumberMask(text, mask)
+  numberMask := func(text interface{}, mask string) string {
+    return support.NumberMask(fmt.Sprintf("%v", text), mask)
   }
 
-  numberMaskReverse := func(text string, mask string) string {
-    return support.NumberMaskReverse(text, mask)
+  numberMaskReverse := func(text interface{}, mask string) string {
+    return support.NumberMaskReverse(fmt.Sprintf("%v", text), mask)
   }
 
   beego.AddFuncMap("inc", inc)

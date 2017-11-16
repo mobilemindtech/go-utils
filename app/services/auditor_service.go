@@ -32,16 +32,22 @@ func (this *AuditorService) OnAudit(format string, v ...interface{}) {
 }
 
 func (this *AuditorService) OnAuditWithNewDbSession(format string, v ...interface{}) {
-  content := fmt.Sprintf(format, v...)
-  auditor := models.NewAuditorWithTenantAndContent(this.AuditorInfo.Tenant, content)
-  auditor.User = this.AuditorInfo.User  
-  
-  session := db.NewSession()
-  session.OpenWithoutTransaction()  
-  
-  if err := session.Save(auditor); err != nil {
-    fmt.Println("## error on save auditor: ", err.Error())
-  }   
+
+  action := func() {
+    content := fmt.Sprintf(format, v...)
+    auditor := models.NewAuditorWithTenantAndContent(this.AuditorInfo.Tenant, content)
+    auditor.User = this.AuditorInfo.User  
+    
+    session := db.NewSession()
+    session.OpenWithoutTransaction()  
+    defer session.Close()
+    
+    if err := session.Save(auditor); err != nil {
+      fmt.Println("## error on save auditor: ", err.Error())
+    }       
+  }
+
+  go action()
 
   
 }
