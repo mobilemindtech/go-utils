@@ -15,7 +15,7 @@ type Tenant struct{
   Name string `orm:"size(100)"  valid:"Required;MaxSize(100)" form:""`
   Documento string `orm:"size(20)"  valid:"Required;MaxSize(14);MinSize(11)" form:""`
 
-  Enabled bool `orm:""  form:"" json:""`
+  Enabled bool `orm:""  form:"" json:",string"`
   Uuid string `orm:"size(100);unique"  valid:"MaxSize(100)" form:"-" json:""`
 
   Cidade *Cidade `orm:"rel(fk);on_delete(do_nothing)" valid:"RequiredRel" form:""`

@@ -35,7 +35,7 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
 
   if this.IsLoggedIn || this.IsTokenLoggedIn {
 
-      if this.IsLoggedIn {
+    if this.IsLoggedIn {
       this.SetAuthUser(this.GetLogin())
     } else {
       this.SetAuthUser(this.GetTokenLogin())
@@ -56,7 +56,7 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
 
       tenant = this.GetAuthTenantSession()
 
-      if tenant == nil || !this.HasTenantAuth(tenant) {
+      if tenant == nil {
         ModelTenantUser := this.baseController.ModelTenantUser
         tenant, _ = ModelTenantUser.GetFirstTenant(this.GetAuthUser())
       }
