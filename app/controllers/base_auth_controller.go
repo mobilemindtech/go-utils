@@ -63,9 +63,10 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
 
     }
 
-    this.baseController.Log("** user does not has active tenant")
 
     if tenant == nil || !tenant.IsPersisted() {
+      
+      this.baseController.Log("** user does not has active tenant")
 
       if this.IsTokenLoggedIn && !this.baseController.IsJson() {
         this.baseController.OnJsonError("set header tenant")
