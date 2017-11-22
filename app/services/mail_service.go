@@ -4,6 +4,10 @@ import (
 	"github.com/mobilemindtec/go-utils/app/models"
   "github.com/astaxie/beego"
 	"encoding/json"
+  "encoding/base64"
+  "encoding/hex"
+  "crypto/sha1"
+  "crypto/hmac"			
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -14,10 +18,25 @@ import (
 type MailService struct {
 	Controller beego.Controller
 	PasswordRecoverTemplateName string
+	
+	ApiKey string
+	ApiAppName string
+	AppName string
+	AppUrl string
+	EmailDefault string
+	EmailPasswordDefault string
+
 }
 
-func NewMailService() *MailService{
-	return &MailService{}
+func NewMailService(data map[string]string) *MailService{
+	c := &MailService{  }
+  c.ApiKey = data["apiKey"]
+  c.ApiAppName = data["apiAppName"]
+  c.EmailDefault = data["emailDefault"]
+  c.EmailPasswordDefault = data["emailPasswordPadrao"]
+  c.AppName = data["appName"]
+  c.AppUrl = data["appUrl"]
+  return c
 }
 
 func (this *MailService) Send(email *models.Email) error{
@@ -31,13 +50,11 @@ func (this *MailService) Send(email *models.Email) error{
 
 func (this *MailService) SendPasswordRecover(to string, name string, token string) error {
 
-	app_name := beego.AppConfig.String("app_name")
-	app_url := beego.AppConfig.String("app_url")
 
   this.Controller.TplName = this.PasswordRecoverTemplateName
 
 	this.Controller.Data["user_name"] = name
-	this.Controller.Data["recover_url"] = fmt.Sprintf("%v/password/change?token=%v", app_url, token)
+	this.Controller.Data["recover_url"] = fmt.Sprintf("%v/password/change?token=%v", this.AppUrl, token)
 
 	content, err := this.Controller.RenderString()
 
@@ -48,7 +65,7 @@ func (this *MailService) SendPasswordRecover(to string, name string, token strin
 
 
 	email := this.GetDefaultEmail()
-	email["subject"] = fmt.Sprintf("%v - Recuperação de Senha", app_name)
+	email["subject"] = fmt.Sprintf("%v - Recuperação de Senha", this.AppName)
 	email["to"] = to
 	email["body"] = content
 
@@ -59,6 +76,15 @@ func (this *MailService) PostEmail(email map[string]string) error {
 
 	mail_server_url := beego.AppConfig.String("mail_server_url")
 
+
+	if len(strings.TrimSpace(this.EmailDefault)) > 0 && len(strings.TrimSpace(this.EmailPasswordDefault)) > 0 {
+		email["username"] = this.EmailDefault
+		email["password"] = this.EmailPasswordDefault
+	}
+
+	email["application"] = this.ApiAppName
+
+
 	jsonData, err := json.Marshal(email)
 
 	if err != nil {
@@ -66,14 +92,28 @@ func (this *MailService) PostEmail(email map[string]string) error {
 		return err
 	}
 
+	signatureHash := this.GenerateHash(jsonData)
+
 	data := bytes.NewBuffer(jsonData)
 
-	r, err := http.Post(mail_server_url, "text/json", data)
+  client := &http.Client{}
+  req, err := http.NewRequest("POST", mail_server_url, data)
+
+  if err != nil {
+    fmt.Println("error http.NewRequest ", err.Error())
+    return err
+  }
+
+  req.Header.Add("Content-Type", "application/json")
+  req.Header.Add("X-Hub-Signature", signatureHash)
+  
+  r, err := client.Do(req)
 
 	if err != nil {
-		fmt.Println("error http.Post ", err.Error())
+		fmt.Println("error http.Do ", err.Error())
 		return err
 	}
+
 
 	response, err := ioutil.ReadAll(r.Body)
 
@@ -123,18 +163,24 @@ func (this *MailService) ReplaceTemplate(templateContent string, values map[stri
 }
 
 func (this *MailService) GetDefaultEmail() map[string]string {
-	email := beego.AppConfig.String("email")
-	//email_username := beego.AppConfig.String("email_username")
-	email_password := beego.AppConfig.String("email_password")
-	email_from := beego.AppConfig.String("email_from")
 
 	emailMap := map[string]string{}
 
-	emailMap["fromName"] = email_from
-	emailMap["application"] = "goapp"
-
-	emailMap["gmailUserName"] = email
-	emailMap["gmailPassword"] = email_password
+	emailMap["fromName"] = this.AppName
+	emailMap["application"] = this.ApiAppName
 
 	return emailMap
+}
+
+
+
+func (this *MailService) GenerateHash(body []byte) string {
+  mac := hmac.New(sha1.New, []byte(this.ApiKey))
+
+  bodyHex := []byte(hex.EncodeToString(body))
+
+  mac.Write(bodyHex)
+  rawBodyMAC := mac.Sum(nil)
+  computedHash := base64.StdEncoding.EncodeToString(rawBodyMAC)	
+  return computedHash
 }
