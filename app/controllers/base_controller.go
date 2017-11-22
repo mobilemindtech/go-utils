@@ -32,9 +32,9 @@ func (this *BaseController) NestPrepareAppBase() {
 
   this.NestPrepareAuth(this)
 
-  if this.IsLoggedIn || this.IsTokenLoggedIn {
-    this.Session.Tenant = this.GetAuthTenant()
-  }
+  //if this.IsLoggedIn || this.IsTokenLoggedIn {
+  this.Session.Tenant = this.GetAuthTenant()
+  //}
 
   this.Data["today"] = time.Now().In(this.DefaultLocation).Format("02.01.2006")
 

@@ -33,6 +33,16 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
   this.IsLoggedIn = this.baseController.GetSession("userinfo") != nil
   this.IsTokenLoggedIn = this.baseController.GetSession("appuserinfo") != nil
 
+  var tenant *models.Tenant
+  tenantUuid := this.baseController.GetHeaderByName("tenant")
+
+  if len(tenantUuid) > 0 {
+    this.baseController.Log("tenantUuid = %v", tenantUuid)
+    ModelTenant := this.baseController.ModelTenant
+    tenant, _ = ModelTenant.GetByUuidAndEnabled(tenantUuid)
+    this.SetAuthTenant(tenant)
+  }
+
   if this.IsLoggedIn || this.IsTokenLoggedIn {
 
     if this.IsLoggedIn {
@@ -41,18 +51,8 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
       this.SetAuthUser(this.GetTokenLogin())
     }
 
-    var tenant *models.Tenant
 
-    if this.IsTokenLoggedIn {
-
-      ModelTenant := this.baseController.ModelTenant
-      tenantUuid := this.baseController.GetHeaderByName("tenant")
-
-      this.baseController.Log("tenantUuid = %v", tenantUuid)
-
-      tenant, _ = ModelTenant.GetByUuidAndEnabled(tenantUuid)
-
-    } else {
+    if !this.IsTokenLoggedIn {
 
       tenant = this.GetAuthTenantSession()
 
