@@ -23,7 +23,7 @@ func NewLoginService(lang string, session *db.Session) *LoginService {
 
 func (this *LoginService) Authenticate(username string, password string) (*models.User, error)  {
 	user, err := this.ModelUser.GetByUserName(username)
-	return this.onLogin(user, err)
+	return this.onLogin(user, password, err)
 }
 
 
@@ -32,11 +32,11 @@ func (this *LoginService) AuthenticateToken(token string) (*models.User, error) 
 
 	user, err := this.ModelUser.GetByToken(token)
 
-	return this.onLogin(user, err)
+	return this.onLogin(user, "", err)
 
 }
 
-func (this *LoginService) onLogin(user *models.User, err error) (*models.User, error){
+func (this *LoginService) onLogin(user *models.User, password string, err error) (*models.User, error){
 	if err != nil {
 
 		if err.Error() == "<QuerySeter> no row found" {
@@ -57,6 +57,11 @@ func (this *LoginService) onLogin(user *models.User, err error) (*models.User, e
 	}else if time.Now().In(util.GetDefaultLocation()).Unix() > user.ExpirationDate.Unix() {
 
 		return user, errors.New(this.GetMessage("login.expiredToken"))
+
+	}else if len(password) > 0 && !user.IsSamePassword(password) {
+		beego.Debug("### password not match ")
+		// No matched password
+		return user, errors.New(this.GetMessage("login.invalid"))
 
 	}else {
 

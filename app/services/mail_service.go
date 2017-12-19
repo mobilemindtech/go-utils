@@ -79,6 +79,7 @@ func (this *MailService) PostEmail(email map[string]string) error {
 
 	if len(strings.TrimSpace(this.EmailDefault)) > 0 && len(strings.TrimSpace(this.EmailPasswordDefault)) > 0 {
 		email["username"] = this.EmailDefault
+    email["from"] = this.EmailDefault
 		email["password"] = this.EmailPasswordDefault
 	}
 
