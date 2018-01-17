@@ -23,7 +23,7 @@ func NewLoginService(lang string, session *db.Session) *LoginService {
 
 func (this *LoginService) Authenticate(username string, password string) (*models.User, error)  {
 	user, err := this.ModelUser.GetByUserName(username)
-	return this.onLogin(user, password, false, err)
+	return this.Login(user, password, false, err)
 }
 
 
@@ -32,11 +32,11 @@ func (this *LoginService) AuthenticateToken(token string) (*models.User, error) 
 
 	user, err := this.ModelUser.GetByToken(token)
 
-	return this.onLogin(user, "", true, err)
+	return this.Login(user, "", true, err)
 
 }
 
-func (this *LoginService) onLogin(user *models.User, password string, byToken bool, err error) (*models.User, error){
+func (this *LoginService) Login(user *models.User, password string, byToken bool, err error) (*models.User, error){
 	if err != nil {
 
 		if err.Error() == "<QuerySeter> no row found" {
