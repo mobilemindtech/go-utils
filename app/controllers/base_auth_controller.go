@@ -34,7 +34,7 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
   this.IsTokenLoggedIn = this.baseController.GetSession("appuserinfo") != nil
 
   var tenant *models.Tenant
-  tenantUuid := this.baseController.GetHeaderByName("tenant")
+  tenantUuid := this.baseController.GetHeaderByNames("tenant", "X-Auth-Tenant")
 
   if len(tenantUuid) > 0 {
     this.baseController.Log("tenantUuid = %v", tenantUuid)

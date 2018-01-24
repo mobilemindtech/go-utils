@@ -32,6 +32,8 @@ type Session struct {
   deepEager map[string]int
   deepRemove map[string]int
   transactional bool
+
+  openDbError bool
 }
 
 
@@ -67,12 +69,16 @@ func (this *Session) OnError() *Session {
   return this
 }
 
-func (this *Session) Open() orm.Ormer{
+func (this *Session) IsOpenDbError() bool{
+  return this.openDbError
+}
+
+func (this *Session) Open() (orm.Ormer, error){
   return this.Begin()
 }
 
 
-func (this *Session) OpenWithoutTransaction() orm.Ormer{
+func (this *Session) OpenWithoutTransaction() (orm.Ormer, error){
   return this.begin(false)
 }
 
@@ -87,11 +93,11 @@ func (this *Session) Close() {
   }
 }
 
-func (this *Session) Begin() orm.Ormer{
+func (this *Session) Begin() (orm.Ormer, error){
   return this.begin(true)
 }
 
-func (this *Session) begin(transaction bool) orm.Ormer{
+func (this *Session) begin(transaction bool) (orm.Ormer, error){
   this.Db = orm.NewOrm()
   this.Db.Using(this.DbName)
 
@@ -99,17 +105,28 @@ func (this *Session) begin(transaction bool) orm.Ormer{
     this.transactional = true
     err := this.Db.Begin()
     if err != nil {
-      fmt.Println("## db begin error: %v", err.Error())
-      panic(err)
+
+      this.openDbError = true
+
+      fmt.Println("****************************************************************")
+      fmt.Println("****************************************************************")
+      fmt.Println("****************************************************************")
+      fmt.Println("************************ db begin error: %v", err.Error())
+      fmt.Println("****************************************************************")
+      fmt.Println("****************************************************************")
+      fmt.Println("****************************************************************")
+
+      return nil, err
+      //panic(err)
     }
   }else{
     this.transactional = false
   }
 
-  return this.Db
+  return this.Db, nil
 }
 
-func (this *Session) Commit() {
+func (this *Session) Commit() error{
 
   if this.Debug {
     fmt.Println("## session commit ")
@@ -118,15 +135,24 @@ func (this *Session) Commit() {
   if this.Db != nil{
     err := this.Db.Commit()
     if err != nil {
-      fmt.Println("## db commit error: %v", err.Error())
+      fmt.Println("****************************************************************")
+      fmt.Println("****************************************************************")
+      fmt.Println("****************************************************************")
+      fmt.Println("************************ db commit error: %v", err.Error())
+      fmt.Println("****************************************************************")
+      fmt.Println("****************************************************************")
+      fmt.Println("****************************************************************")
       this.Rollback()
-      panic(err)
+      //panic(err)
+      return err
     }
     this.Db = nil
   }
+
+  return nil
 }
 
-func (this *Session) Rollback() {
+func (this *Session) Rollback() error{
 
   if this.Debug {
     fmt.Println("## session rollback ")
@@ -136,11 +162,19 @@ func (this *Session) Rollback() {
     fmt.Println("** Session Rollback ")
     err := this.Db.Rollback()
     if err != nil {
-      fmt.Println("## db rollback error: %v", err.Error())
-      panic(err)
+      fmt.Println("****************************************************************")
+      fmt.Println("****************************************************************")
+      fmt.Println("****************************************************************")
+      fmt.Println("************************ db roolback error: %v", err.Error())
+      fmt.Println("****************************************************************")
+      fmt.Println("****************************************************************")
+      fmt.Println("****************************************************************")
+      return err
     }
     this.Db = nil
   }
+
+  return nil
 }
 
 func (this *Session) Save(entity interface{}) error {
