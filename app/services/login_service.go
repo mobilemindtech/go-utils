@@ -42,6 +42,8 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 
 	if err != nil {
 
+		beego.Debug("### login user error = %v ", err)
+
 		if err.Error() == "<QuerySeter> no row found" {
 			err = errors.New(this.GetMessage("login.invalid"))
 		}
@@ -69,6 +71,7 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 		tenant, err := this.ModelTenantUser.GetFirstTenant(user)
 
 		if err != nil {
+			beego.Debug("### login user error2 = %v ", err)
 			return user, errors.New(this.GetMessage("login.error"))
 		}
 
