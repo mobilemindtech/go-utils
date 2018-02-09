@@ -37,12 +37,7 @@ func (this *LoginService) AuthenticateToken(token string) (*models.User, error) 
 }
 
 func (this *LoginService) Login(user *models.User, password string, byToken bool, err error) (*models.User, error){
-	
-	beego.Debug("### login user byToken = %v ", byToken)
-
 	if err != nil {
-
-		beego.Debug("### login user error = %v ", err)
 
 		if err.Error() == "<QuerySeter> no row found" {
 			err = errors.New(this.GetMessage("login.invalid"))
@@ -71,11 +66,12 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 		tenant, err := this.ModelTenantUser.GetFirstTenant(user)
 
 		if err != nil {
-			beego.Debug("### login user error2 = %v ", err)
+			beego.Debug("### error on get user tenant %v", err)
 			return user, errors.New(this.GetMessage("login.error"))
 		}
 
-		if tenant == nil {
+		if tenant == nil || !tenant.IsPersisted() || !tenant.Enabled{
+			beego.Debug("### error does not have tenant")
 			return user, errors.New("user does not has active tenant related")	
 		}		
 
