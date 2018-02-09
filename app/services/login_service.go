@@ -54,11 +54,13 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 
 		return user, errors.New(this.GetMessage("login.inactiveMsg"))
 
-	}else if time.Now().In(util.GetDefaultLocation()).Unix() > user.ExpirationDate.Unix() {
+	}
+	//else if time.Now().In(util.GetDefaultLocation()).Unix() > user.ExpirationDate.Unix() {
 
-		return user, errors.New(this.GetMessage("login.expiredToken"))
+		//return user, errors.New(this.GetMessage("login.expiredToken"))
 
-	}else if !byToken && !user.IsSamePassword(password) {
+	//}
+	else if !byToken && !user.IsSamePassword(password) {
 		beego.Debug("### password not match ")
 		// No matched password
 		return user, errors.New(this.GetMessage("login.invalid"))
