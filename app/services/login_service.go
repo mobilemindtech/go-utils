@@ -38,7 +38,7 @@ func (this *LoginService) AuthenticateToken(token string) (*models.User, error) 
 
 func (this *LoginService) Login(user *models.User, password string, byToken bool, err error) (*models.User, error){
 	
-	beego.Debug("### login user token = %v ", token)
+	beego.Debug("### login user byToken = %v ", byToken)
 
 	if err != nil {
 
