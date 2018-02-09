@@ -7,7 +7,7 @@ import (
   "github.com/astaxie/beego"  
   "github.com/beego/i18n"
   "errors"
-  "time"
+  "time"  
 )
 
 type LoginService struct {
@@ -48,13 +48,21 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 
 	} else if user == nil || user.Id < 1 {
 
+		beego.Debug("### user not found ")
 		return user, errors.New(this.GetMessage("login.invalidToken"))
 
 	} else if !user.Enabled {
 
+		beego.Debug("### user not enabled ")
 		return user, errors.New(this.GetMessage("login.inactiveMsg"))
 
-	} else if !byToken && !user.IsSamePassword(password) {
+	}else if time.Now().In(util.GetDefaultLocation()).Unix() > user.ExpirationDate.Unix() {
+
+		beego.Debug("### user expired token ")
+		//return user, errors.New(this.GetMessage("login.expiredToken"))
+
+
+	}else if !byToken && !user.IsSamePassword(password) {
 		beego.Debug("### password not match ")
 		// No matched password
 		return user, errors.New(this.GetMessage("login.invalid"))
