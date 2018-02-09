@@ -37,6 +37,9 @@ func (this *LoginService) AuthenticateToken(token string) (*models.User, error) 
 }
 
 func (this *LoginService) Login(user *models.User, password string, byToken bool, err error) (*models.User, error){
+	
+	beego.Debug("### login user token = %v ", token)
+
 	if err != nil {
 
 		if err.Error() == "<QuerySeter> no row found" {
@@ -55,12 +58,6 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 
 		beego.Debug("### user not enabled ")
 		return user, errors.New(this.GetMessage("login.inactiveMsg"))
-
-	}else if time.Now().In(util.GetDefaultLocation()).Unix() > user.ExpirationDate.Unix() {
-
-		beego.Debug("### user expired token ")
-		//return user, errors.New(this.GetMessage("login.expiredToken"))
-
 
 	}else if !byToken && !user.IsSamePassword(password) {
 		beego.Debug("### password not match ")
