@@ -70,7 +70,7 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 			return user, errors.New(this.GetMessage("login.error"))
 		}
 
-		if tenant == nil || !tenant.IsPersisted() || !tenant.Enabled{
+		if tenant == nil {
 			beego.Debug("### error does not have tenant")
 			return user, errors.New("user does not has active tenant related")	
 		}		
