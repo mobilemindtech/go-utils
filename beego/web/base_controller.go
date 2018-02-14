@@ -76,6 +76,10 @@ func LoadFuncs(controller *BaseController) {
     return ac.FormatMoney(number)
   }
 
+  isZeroDate := func(date time.Time) bool{
+    return time.Time.IsZero(date)
+  }
+
   formatDate := func(date time.Time) string{
     if !time.Time.IsZero(date) {
       return date.Format("02/01/2006")
@@ -159,6 +163,8 @@ func LoadFuncs(controller *BaseController) {
     return support.NumberMaskReverse(fmt.Sprintf("%v", text), mask)
   }
 
+  beego.AddFuncMap("is_zero_date", isZeroDate)
+  
   beego.AddFuncMap("inc", inc)
   beego.AddFuncMap("has_error", hasError)
   beego.AddFuncMap("error_msg", errorMsg)
