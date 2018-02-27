@@ -58,10 +58,9 @@ func (this *BaseController) loadTenants(){
         tenants = append(tenants, it.Tenant)
       }
     }
-    
   }
 
-  this.Data["AvailableTenants"] = tenants  
+  this.Data["AvailableTenants"] = tenants
 }
 
 func (this *BaseController) OnAuditor(format string, v ...interface{}) {

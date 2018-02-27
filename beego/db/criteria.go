@@ -369,9 +369,12 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 
 		switch criteria.Expression {
 
-			case Ne, NotIn:
-				//query = query.Exclude(pathName, criteria.Value)
+			case In:
+				cond = cond.And(pathName, criteria.InValues)
+			case Ne:
 				cond = cond.AndNot(pathName, criteria.Value)
+			case NotIn:
+				cond = cond.AndNot(pathName, criteria.InValues)
 			case IsNull:
 				cond = cond.And(pathName, true)
 			case IsNotNull:
@@ -406,8 +409,12 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 			pathName := this.getPathName(criteria)
 
 			switch criteria.Expression {
-				case Ne, NotIn:
+				case In:
+					cond = cond.Or(pathName, criteria.InValues)
+				case Ne:
 					cond = cond.OrNot(pathName, criteria.Value)
+				case NotIn:
+					cond = cond.OrNot(pathName, criteria.InValues)
 				case IsNull:
 					cond = cond.Or(pathName, true)
 				case IsNotNull:
