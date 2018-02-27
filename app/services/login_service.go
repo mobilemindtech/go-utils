@@ -7,7 +7,7 @@ import (
   "github.com/astaxie/beego"  
   "github.com/beego/i18n"
   "errors"
-  "time"
+  "time"  
 )
 
 type LoginService struct {
@@ -23,7 +23,7 @@ func NewLoginService(lang string, session *db.Session) *LoginService {
 
 func (this *LoginService) Authenticate(username string, password string) (*models.User, error)  {
 	user, err := this.ModelUser.GetByUserName(username)
-	return this.onLogin(user, err)
+	return this.Login(user, password, false, err)
 }
 
 
@@ -32,11 +32,11 @@ func (this *LoginService) AuthenticateToken(token string) (*models.User, error) 
 
 	user, err := this.ModelUser.GetByToken(token)
 
-	return this.onLogin(user, err)
+	return this.Login(user, "", true, err)
 
 }
 
-func (this *LoginService) onLogin(user *models.User, err error) (*models.User, error){
+func (this *LoginService) Login(user *models.User, password string, byToken bool, err error) (*models.User, error){
 	if err != nil {
 
 		if err.Error() == "<QuerySeter> no row found" {
@@ -48,25 +48,30 @@ func (this *LoginService) onLogin(user *models.User, err error) (*models.User, e
 
 	} else if user == nil || user.Id < 1 {
 
+		beego.Debug("### user not found ")
 		return user, errors.New(this.GetMessage("login.invalidToken"))
 
 	} else if !user.Enabled {
 
+		beego.Debug("### user not enabled ")
 		return user, errors.New(this.GetMessage("login.inactiveMsg"))
 
-	}else if time.Now().In(util.GetDefaultLocation()).Unix() > user.ExpirationDate.Unix() {
-
-		return user, errors.New(this.GetMessage("login.expiredToken"))
+	}else if !byToken && !user.IsSamePassword(password) {
+		beego.Debug("### password not match ")
+		// No matched password
+		return user, errors.New(this.GetMessage("login.invalid"))
 
 	}else {
 
 		tenant, err := this.ModelTenantUser.GetFirstTenant(user)
 
 		if err != nil {
+			beego.Debug("### error on get user tenant %v", err)
 			return user, errors.New(this.GetMessage("login.error"))
 		}
 
 		if tenant == nil {
+			beego.Debug("### error does not have tenant")
 			return user, errors.New("user does not has active tenant related")	
 		}		
 

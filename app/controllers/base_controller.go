@@ -32,9 +32,9 @@ func (this *BaseController) NestPrepareAppBase() {
 
   this.NestPrepareAuth(this)
 
-  if this.IsLoggedIn || this.IsTokenLoggedIn {
-    this.Session.Tenant = this.GetAuthTenant()
-  }
+  //if this.IsLoggedIn || this.IsTokenLoggedIn {
+  this.Session.Tenant = this.GetAuthTenant()
+  //}
 
   this.Data["today"] = time.Now().In(this.DefaultLocation).Format("02.01.2006")
 
@@ -65,7 +65,7 @@ func (this *BaseController) loadTenants(){
 
 func (this *BaseController) OnAuditor(format string, v ...interface{}) {
   auditor := services.NewAuditorService(this.Session, this.Lang, this.GetAuditorInfo())
-  auditor.OnAudit(format, v...)
+  auditor.OnAuditWithNewDbSession(format, v...)
 }
 
 func (this *BaseController) GetAuditorInfo() *services.AuditorInfo{

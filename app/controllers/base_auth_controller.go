@@ -33,39 +33,40 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
   this.IsLoggedIn = this.baseController.GetSession("userinfo") != nil
   this.IsTokenLoggedIn = this.baseController.GetSession("appuserinfo") != nil
 
+  var tenant *models.Tenant
+  tenantUuid := this.baseController.GetHeaderByNames("tenant", "X-Auth-Tenant")
+
+  if len(tenantUuid) > 0 {
+    this.baseController.Log("tenantUuid = %v", tenantUuid)
+    ModelTenant := this.baseController.ModelTenant
+    tenant, _ = ModelTenant.GetByUuidAndEnabled(tenantUuid)
+    this.SetAuthTenant(tenant)
+  }
+
   if this.IsLoggedIn || this.IsTokenLoggedIn {
 
-      if this.IsLoggedIn {
+    if this.IsLoggedIn {
       this.SetAuthUser(this.GetLogin())
     } else {
       this.SetAuthUser(this.GetTokenLogin())
     }
 
-    var tenant *models.Tenant
 
-    if this.IsTokenLoggedIn {
-
-      ModelTenant := this.baseController.ModelTenant
-      tenantUuid := this.baseController.GetHeaderByName("tenant")
-
-      this.baseController.Log("tenantUuid = %v", tenantUuid)
-
-      tenant, _ = ModelTenant.GetByUuidAndEnabled(tenantUuid)
-
-    } else {
+    if !this.IsTokenLoggedIn {
 
       tenant = this.GetAuthTenantSession()
 
-      if tenant == nil || !this.HasTenantAuth(tenant) {
+      if tenant == nil {
         ModelTenantUser := this.baseController.ModelTenantUser
         tenant, _ = ModelTenantUser.GetFirstTenant(this.GetAuthUser())
       }
 
     }
 
-    this.baseController.Log("** user does not has active tenant")
 
     if tenant == nil || !tenant.IsPersisted() {
+      
+      this.baseController.Log("** user does not has active tenant")
 
       if this.IsTokenLoggedIn && !this.baseController.IsJson() {
         this.baseController.OnJsonError("set header tenant")

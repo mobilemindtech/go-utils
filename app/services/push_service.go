@@ -6,6 +6,7 @@ import (
 	"encoding/json"
   "io/ioutil"
   "net/http"
+  "strings"
   "bytes"
   "fmt"
 )
@@ -242,6 +243,14 @@ func (this *PushService) NotificateByUserNameList(usernameList *[]string, messag
 
 
 			for _, subscriber := range subscribers {
+
+				if len(strings.TrimSpace(subscriber.Id)) == 0 {
+					fmt.Println("not sent notification to subscriber %v, name %v, email %v", subscriber.Id, subscriber.Name, subscriber.Email)
+					continue
+				}
+
+				fmt.Println("sent notification to subscriber %v, name %v, email %v", subscriber.Id, subscriber.Name, subscriber.Email)
+
 				notification["data.user_id"] = subscriber.Id
 				if err := this.post(notification, subscriber); err != nil {
 					return err

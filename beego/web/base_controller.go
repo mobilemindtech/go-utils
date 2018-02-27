@@ -76,6 +76,10 @@ func LoadFuncs(controller *BaseController) {
     return ac.FormatMoney(number)
   }
 
+  isZeroDate := func(date time.Time) bool{
+    return time.Time.IsZero(date)
+  }
+
   formatDate := func(date time.Time) string{
     if !time.Time.IsZero(date) {
       return date.Format("02/01/2006")
@@ -151,14 +155,16 @@ func LoadFuncs(controller *BaseController) {
     return total
   }
 
-  numberMask := func(text string, mask string) string {
-    return support.NumberMask(text, mask)
+  numberMask := func(text interface{}, mask string) string {
+    return support.NumberMask(fmt.Sprintf("%v", text), mask)
   }
 
-  numberMaskReverse := func(text string, mask string) string {
-    return support.NumberMaskReverse(text, mask)
+  numberMaskReverse := func(text interface{}, mask string) string {
+    return support.NumberMaskReverse(fmt.Sprintf("%v", text), mask)
   }
 
+  beego.AddFuncMap("is_zero_date", isZeroDate)
+  
   beego.AddFuncMap("inc", inc)
   beego.AddFuncMap("has_error", hasError)
   beego.AddFuncMap("error_msg", errorMsg)
@@ -233,7 +239,19 @@ func (this *BaseController) NestPrepareBase () {
 
 
   this.Session = db.NewSession()
-  this.Db = this.Session.Open()
+  var err error
+  this.Db, err = this.Session.Open()
+
+  if err != nil {
+    this.Log("***************************************************")
+    this.Log("***************************************************")
+    this.Log("***** erro ao iniciar conexão com banco de dados: %v", err)
+    this.Log("***************************************************")
+    this.Log("***************************************************")
+
+    this.Abort("505")
+    return
+  }
 
   this.FlashRead()
 
@@ -547,8 +565,10 @@ func (this *BaseController) OnValidate(entity interface{}, custonValidation func
 
 func (this *BaseController) OnParseForm(entity interface{}) {
   if err := this.ParseForm(entity); err != nil {
-    beego.Error("## error on parse form ", err.Error())
-    panic(err)
+    this.Log("*******************************************")
+    this.Log("***** ERROR on parse form ", err.Error())
+    this.Log("*******************************************")
+    this.Abort("500")
   }
 }
 
@@ -558,8 +578,10 @@ func (this *BaseController) OnJsonParseForm(entity interface{}) {
 
 func (this *BaseController) OnJsonParseFormWithFieldsConfigs(entity interface{}, configs map[string]string) {
   if err := this.FormToModelWithFieldsConfigs(this.Ctx, entity, configs)  ; err != nil {
-    beego.Error("## error on parse form ", err.Error())
-    panic(err)
+    this.Log("*******************************************")
+    this.Log("***** ERROR on parse form ", err.Error())
+    this.Log("*******************************************")
+    this.Abort("500")
   }
 }
 
@@ -577,8 +599,10 @@ func (this *BaseController) ParamParseFloat(s string) float64{
   if err == nil {
     returnValue = precoFloat
   }else{
-    this.Log("ERROR parse string to float64 for stringv", s)
-    panic(err)
+    this.Log("*******************************************")
+    this.Log("****** ERROR parse string to float64 for stringv", s)
+    this.Log("*******************************************")
+    this.Abort("500")
   }
 
   return returnValue
@@ -586,8 +610,10 @@ func (this *BaseController) ParamParseFloat(s string) float64{
 
 func (this *BaseController) OnParseJson(entity interface{}) {
   if err := this.JsonToModel(this.Ctx, entity); err != nil {
-    beego.Error("## error on parse json ", err.Error())
-    panic(err)
+    this.Log("*******************************************")
+    this.Log("***** ERROR on parse json ", err.Error())
+    this.Log("*******************************************")
+    this.Abort("500")
   }
 }
 
@@ -614,6 +640,19 @@ func (this *BaseController) GetToken() string{
 
 func (this *BaseController) GetHeaderByName(name string) string{
   return this.Ctx.Request.Header.Get(name)
+}
+
+func (this *BaseController) GetHeaderByNames(names ...string) string{
+
+  for _, name := range names {
+    val := this.Ctx.Request.Header.Get(name)
+
+    if len(val) > 0 {
+      return val
+    }
+  }
+
+  return ""
 }
 
 func (this *BaseController) Log(format string, v ...interface{}) {
