@@ -117,7 +117,7 @@ func (this *User) ChangePassword(newPassword string) {
 func (this *User) GenereteUuid() string{
 
   for true {
-    uuid, _ := uuid.NewV4()
+    uuid := uuid.NewV4()
     if !db.NewCriteria(this.Session, new(User), nil).Eq("Uuid", uuid.String()).Exists() {
       return uuid.String()
     }
