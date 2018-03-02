@@ -43,7 +43,7 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 	requestedUrl := ctx.Input.URL()
 
 
-	fmt.Println("** check route %v", requestedUrl)
+	fmt.Println("** check route %v, roles %v", requestedUrl, currentAuthUserRoles)
 
 
 	for route, value := range routes{
@@ -95,7 +95,9 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 					if role == roleName {
 						fmt.Println("** route %v authenticated user role allowed", requestedUrl)
 						return true
-					}
+					} else {
+            fmt.Println("** route %v not authenticated user role allowed for role ", requestedUrl, roleName)
+          }
 				}
 			}
 

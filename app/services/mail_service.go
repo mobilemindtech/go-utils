@@ -26,6 +26,8 @@ type MailService struct {
 	EmailDefault string
 	EmailPasswordDefault string
 
+  MailServerUrl string
+
 }
 
 func NewMailService(data map[string]string) *MailService{
@@ -36,6 +38,7 @@ func NewMailService(data map[string]string) *MailService{
   c.EmailPasswordDefault = data["emailPasswordPadrao"]
   c.AppName = data["appName"]
   c.AppUrl = data["appUrl"]
+  c.MailServerUrl = data["mailServerUrl"]
   return c
 }
 
@@ -74,8 +77,6 @@ func (this *MailService) SendPasswordRecover(to string, name string, token strin
 
 func (this *MailService) PostEmail(email map[string]string) error {
 
-	mail_server_url := beego.AppConfig.String("mail_server_url")
-
 
 	if len(strings.TrimSpace(this.EmailDefault)) > 0 && len(strings.TrimSpace(this.EmailPasswordDefault)) > 0 {
 		email["username"] = this.EmailDefault
@@ -97,8 +98,10 @@ func (this *MailService) PostEmail(email map[string]string) error {
 
 	data := bytes.NewBuffer(jsonData)
 
+  fmt.Println("MAIL SERVER URL %v", this.MailServerUrl)
+
   client := &http.Client{}
-  req, err := http.NewRequest("POST", mail_server_url, data)
+  req, err := http.NewRequest("POST", this.MailServerUrl, data)
 
   if err != nil {
     fmt.Println("error http.NewRequest ", err.Error())

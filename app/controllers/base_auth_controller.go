@@ -90,6 +90,8 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
     this.baseController.Data["Tenant"] = this.GetAuthTenant()
 
     this.Auth = services.NewAuthService(this.GetAuthUser())
+  } else {
+    base.Log("** user not is logged")
   }
 
   this.baseController.Data["IsLoggedIn"] = this.IsLoggedIn || this.IsTokenLoggedIn
@@ -106,6 +108,8 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
 func (this *BaseAuthController) AppAuth(){
 
   token := this.baseController.GetToken()
+
+  this.baseController.Log("AUTH TOKEN %v", token)
 
   if strings.TrimSpace(token) != "" {
 

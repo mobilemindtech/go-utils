@@ -8,6 +8,7 @@ import (
   "net/http"
   "strings"
   "bytes"
+  "errors"
   "fmt"
 )
 
@@ -81,6 +82,11 @@ func (this *PushService) GetSubscribersFromPushServer(url string) (map[string]in
 
   jsonData := make(map[string]interface{})
 
+  if r.StatusCode != 200 {
+		fmt.Println("error on get subscribers: %v - Code: %v, Status: %v", url, r.StatusCode, r.Status)
+		return nil, errors.New(fmt.Sprintf("error on get subscribers: %v - Code: %v, Status: %v", url, r.StatusCode, r.Status))
+  }
+
   body, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
@@ -109,6 +115,9 @@ func (this *PushService) LoadSubscribers() error{
 
 
   process := func(jsonData map[string]interface{}, dev bool){
+
+  	fmt.Println("PushService.LoadSubscribers process %v", jsonData)
+
 		for key, value := range jsonData {
 
 			// key = username
