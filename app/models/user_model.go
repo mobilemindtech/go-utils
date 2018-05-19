@@ -35,7 +35,7 @@ type User struct{
   Role *Role `orm:"-"`
   Roles *[]*Role `orm:"-"`
 
-  Session *db.Session `orm:"-"`
+  Session *db.Session `orm:"-" json:"-"`
 }
 
 
@@ -117,7 +117,7 @@ func (this *User) ChangePassword(newPassword string) {
 func (this *User) GenereteUuid() string{
 
   for true {
-    uuid := uuid.NewV4()
+    uuid, _ := uuid.NewV4()
     if !db.NewCriteria(this.Session, new(User), nil).Eq("Uuid", uuid.String()).Exists() {
       return uuid.String()
     }

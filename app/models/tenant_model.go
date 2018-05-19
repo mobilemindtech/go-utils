@@ -20,7 +20,7 @@ type Tenant struct{
 
   Cidade *Cidade `orm:"rel(fk);on_delete(do_nothing)" valid:"RequiredRel" form:""`
 
-  Session *db.Session `orm:"-"`
+  Session *db.Session `orm:"-" json:"-"`
 }
 
 func (this *Tenant) TableName() string{
@@ -38,7 +38,7 @@ func (this *Tenant) IsPersisted() bool{
 func (this *Tenant) GenereteUuid() string{
 
   for true {
-    uuid := uuid.NewV4()
+    uuid, _ := uuid.NewV4()
     if !db.NewCriteria(this.Session, new(Tenant), nil).Eq("Uuid", uuid.String()).Exists() {
       return uuid.String()
     }

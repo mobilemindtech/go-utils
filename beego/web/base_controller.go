@@ -672,16 +672,26 @@ func (this *BaseController) GetPage() *db.Page{
 
   if this.IsJson() {
 
-    jsonMap, _ := this.JsonToMap(this.Ctx)
+    if this.Ctx.Input.IsPost() {
+      jsonMap, _ := this.JsonToMap(this.Ctx)
 
-    this.Log(" page jsonMap = %v", jsonMap)
+      this.Log(" page jsonMap = %v", jsonMap)
 
-    if _, ok := jsonMap["limit"]; ok {
-      page.Limit = this.GetJsonInt64(jsonMap, "limit")
-      page.Offset = this.GetJsonInt64(jsonMap, "offset")
-      page.Sort = this.GetJsonString(jsonMap, "order_column")
-      page.Order = this.GetJsonString(jsonMap, "order_sort")
-      page.Search = this.GetJsonString(jsonMap, "search")
+      if _, ok := jsonMap["limit"]; ok {
+        page.Limit = this.GetJsonInt64(jsonMap, "limit")
+        page.Offset = this.GetJsonInt64(jsonMap, "offset")
+        page.Sort = this.GetJsonString(jsonMap, "order_column")
+        page.Order = this.GetJsonString(jsonMap, "order_sort")
+        page.Search = this.GetJsonString(jsonMap, "search")
+      }
+    } else {
+
+        page.Limit = this.GetIntByKey("limit")
+        page.Offset = this.GetIntByKey("offset")
+        page.Sort = this.GetStringByKey("order_column")
+        page.Order = this.GetStringByKey("order_sort")
+        page.Search = this.GetStringByKey("search")
+
     }
 
   } else {

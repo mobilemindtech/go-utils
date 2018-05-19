@@ -10,7 +10,7 @@ type Estado struct{
   Nome string `orm:"size(100)"  valid:"Required;MaxSize(100)" form:""`
   Uf string `orm:"size(2)" valid:"Required;MaxSize(2)" form:""`
 
-  Session *db.Session `orm:"-"`
+  Session *db.Session `orm:"-" json:"-"`
 }
 
 
