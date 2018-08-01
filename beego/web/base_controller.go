@@ -303,11 +303,15 @@ func (this *BaseController) Finish() {
 }
 
 func (this *BaseController) Finally(){
-  this.Session.OnError().Close()
+  if this.Session != nil {
+    this.Session.OnError().Close()
+  }
 }
 
 func (this *BaseController) Rollback() {
-  this.Session.OnError()
+  if this.Session != nil {
+    this.Session.OnError()
+  }
 }
 
 func (this *BaseController) OnEntity(viewName string, entity interface{}) {
@@ -418,6 +422,11 @@ func (this *BaseController) OnJson200() {
 func (this *BaseController) OnJsonValidationError() {
   this.Rollback()
   errors := this.Data["errors"].(map[string]string)
+  this.OnJson(support.JsonResult{  Message: this.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix() })
+}
+
+func (this *BaseController) OnJsonValidationWithErrors(errors map[string]string) {
+  this.Rollback()  
   this.OnJson(support.JsonResult{  Message: this.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix() })
 }
 
