@@ -1,12 +1,13 @@
 package support 
 
 import (
-    "github.com/astaxie/beego/context"
-    "strings"
-    "regexp"
-    "math"
-    "sort"
-    "time"
+  "github.com/astaxie/beego/context"
+  "github.com/leekchan/accounting"
+  "strings"
+  "regexp"
+  "math"
+  "sort"
+  "time"
 )
 
 
@@ -61,6 +62,24 @@ func RemoveAllSemicolon(key string, ctx *context.Context) {
         ctx.Request.Form[key][0] = strings.Replace(ctx.Request.Form[key][0], ",", "", -1)
     }
 }
+
+func SetFormDefault(key string, defVal string, ctx *context.Context) {
+    if _, ok := ctx.Request.Form[key]; ok {
+
+      val := ctx.Request.Form[key][0]
+
+      if len(strings.TrimSpace(val)) == 0 {
+        ctx.Request.Form[key][0] = defVal
+      }
+      
+    }
+}
+
+func FormatMoney(number float64) string{
+  ac := accounting.Accounting{Symbol: "R$ ", Precision: 2, Thousand: ",", Decimal: "."}
+  return ac.FormatMoney(number)
+}
+
 
 func ToFixed(num float64, precision int) float64 {
   output := math.Pow(10, float64(precision))

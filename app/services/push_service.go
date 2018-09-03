@@ -140,6 +140,11 @@ func (this *PushService) LoadSubscribers() error{
 				email := subJson["email"].(string)
 				subscrible_id := subJson["subscrible_id"].(string)
 
+				if len(strings.TrimSpace(subscrible_id)) == 0 {
+					fmt.Println("subscrible_id to %v is empty", email)
+					continue
+				}
+
 				subscriber := Subscriber{ Name: name, Email: email, Id: subscrible_id, Dev: dev }
 
 				//fmt.Println("subscriber=%v", subscriber)
