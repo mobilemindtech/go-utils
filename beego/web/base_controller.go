@@ -381,8 +381,18 @@ func (this *BaseController) OnJsonResults(results interface{}) {
   this.ServeJSON()
 }
 
+func (this *BaseController) OnJsonResultAndResults(result interface{}, results interface{}) {
+  this.Data["json"] = support.JsonResult{ Result: result, Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix() }
+  this.ServeJSON()
+}
+
 func (this *BaseController) OnJsonResultsWithTotalCount(results interface{}, totalCount int64) {
   this.Data["json"] = support.JsonResult{ Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix(), TotalCount: totalCount }
+  this.ServeJSON()
+}
+
+func (this *BaseController) OnJsonResultAndResultsWithTotalCount(result interface{}, results interface{}, totalCount int64) {
+  this.Data["json"] = support.JsonResult{ Result: result, Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix(), TotalCount: totalCount }
   this.ServeJSON()
 }
 

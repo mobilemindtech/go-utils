@@ -1046,9 +1046,9 @@ func (this *Session) HasFilterTenant(reply interface{}) bool{
 
 			tags := this.getTags(field)
 
-		  if tags == nil || len(tags) == 0 {
+		  if !this.hasTag(tags, "tenant") {
         //fmt.Println("## filter tenant")
-		    return true
+		    return false
 		  }
 
 		  filter := !this.hasTag(tags, "no_filter_tenant")

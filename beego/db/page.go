@@ -13,6 +13,7 @@ type Page struct {
   Sort string  
   FilterColumns map[string]interface{} 
   AndFilterColumns map[string]interface{}
+  TenantColumnFilter map[string]interface{}
 }
 
 func NewPage(offset int64, limit int64, sort string, order string) *Page{
@@ -56,6 +57,14 @@ func (this *Page) AddFilterDefaults(columnName ...string) *Page{
 		}
 	}
 
+	return this
+}
+
+func (this *Page) AddAndInOrConditionFilter(columnName string, value interface{}) *Page{
+	if this.TenantColumnFilter == nil {
+		this.TenantColumnFilter = make(map[string]interface{} )
+	}		
+	this.TenantColumnFilter[columnName] = value
 	return this
 }
 

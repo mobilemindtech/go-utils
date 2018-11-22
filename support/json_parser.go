@@ -1,6 +1,7 @@
 package support
 
 import (
+  "github.com/mobilemindtec/go-utils/app/util"
   "github.com/astaxie/beego/context"
   "encoding/json"
   "strconv"
@@ -8,7 +9,6 @@ import (
   "errors"
   "time"
   "fmt"
-  "github.com/mobilemindtec/go-utils/app/util"
 
 )
 
@@ -183,6 +183,8 @@ func (c JsonParser) GetJsonInt64(json map[string]interface{}, key string) int64{
       val = json[key].(int)
     } else if _, ok := json[key].(int64); ok {
       val = int(json[key].(int64))
+    } else if _, ok := json[key].(float64); ok {
+      val = int(json[key].(float64))
     } else {
       val, _ = strconv.Atoi(c.GetJsonString(json, key))
     }

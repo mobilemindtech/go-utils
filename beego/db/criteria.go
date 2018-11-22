@@ -21,6 +21,7 @@ const (
 	Ge
 	Gt
 	Like
+	NotLike
 	Between
 	IsNull
 	IsNotNull
@@ -28,6 +29,7 @@ const (
 	NotIn
 	Or
 	AndOr
+	OrAnd
 )
 
 const (
@@ -70,6 +72,7 @@ type Criteria struct {
 
 	criateriasOr []*Criteria
 	criateriasAndOr []*Criteria
+	criateriasOrAnd []*Criteria
 	criateriasAnd []*Criteria
 
 	Result interface{}
@@ -97,21 +100,24 @@ type Criteria struct {
 
 	Any bool
 	HasError bool
+
+	ForceAnd bool
 	Distinct bool
 
 	Debug bool
 }
 
 func NewCriteria(session *Session, entity interface{}, entities interface{}) *Criteria {
-	return &Criteria{ criaterias: []*Criteria{}, criateriasOr: []*Criteria{}, criateriasAnd: []*Criteria{}, criateriasAndOr: []*Criteria{}, Session: session, Result: entity, Results: entities, Tenant: session.Tenant, RelatedSelList: []string{}  }
+	return &Criteria{ criaterias: []*Criteria{}, criateriasOr: []*Criteria{}, criateriasAnd: []*Criteria{}, criateriasAndOr: []*Criteria{}, criateriasOrAnd: []*Criteria{}, Session: session, Result: entity, Results: entities, Tenant: session.Tenant, RelatedSelList: []string{}  }
 }
 
 func NewCondition() *Criteria{
 	return &Criteria{ criaterias: []*Criteria{}  }
 }
 
-func (this *Criteria) add(path string, value interface{}, expression CriteriaExpression) *Criteria{
-	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Value: value, Expression: expression } )
+
+func (this *Criteria) add(path string, value interface{}, expression CriteriaExpression, forceAnd bool) *Criteria{
+	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Value: value, Expression: expression, ForceAnd: forceAnd } )
 	return this
 }
 
@@ -172,27 +178,31 @@ func (this *Criteria) SetDistinct() *Criteria {
 }
 
 func (this *Criteria) Eq(path string, value interface{}) *Criteria {
-	return this.add(path, value, Eq)
+	return this.add(path, value, Eq, false)
+}
+
+func (this *Criteria) EqAnd(path string, value interface{}) *Criteria {
+	return this.add(path, value, Eq, true)
 }
 
 func (this *Criteria) Ne(path string, value interface{}) *Criteria {
-	return this.add(path, value, Ne)
+	return this.add(path, value, Ne, false)
 }
 
 func (this *Criteria) Le(path string, value interface{}) *Criteria {
-	return this.add(path, value, Le)
+	return this.add(path, value, Le, false)
 }
 
 func (this *Criteria) Lt(path string, value interface{}) *Criteria {
-	return this.add(path, value, Lt)
+	return this.add(path, value, Lt, false)
 }
 
 func (this *Criteria) Ge(path string, value interface{}) *Criteria {
-	return this.add(path, value, Ge)
+	return this.add(path, value, Ge, false)
 }
 
 func (this *Criteria) Gt(path string, value interface{}) *Criteria {
-	return this.add(path, value, Gt)
+	return this.add(path, value, Gt, false)
 }
 
 func (this *Criteria) Or(criteria *Criteria) *Criteria {
@@ -210,8 +220,18 @@ func (this *Criteria) AndOr(criteria *Criteria) *Criteria {
 	return this
 }
 
+func (this *Criteria) OrAnd(criteria *Criteria) *Criteria {
+	this.criateriasOrAnd = append(this.criateriasOrAnd, criteria)
+	return this
+}
+
 func (this *Criteria) Like(path string, value interface{}) *Criteria {
 	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Value: value, Expression: Like, Match: IAnywhare } )
+	return this
+}
+
+func (this *Criteria) NotLike(path string, value interface{}) *Criteria {
+	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Value: value, Expression: NotLike, Match: IAnywhare } )
 	return this
 }
 
@@ -220,6 +240,10 @@ func (this *Criteria) LikeMatch(path string, value interface{}, likeMatch Criter
 	return this
 }
 
+func (this *Criteria) NotLikeMatch(path string, value interface{}, likeMatch CriteriaLikeMatch) *Criteria {
+	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Value: value, Expression: NotLike, Match: likeMatch } )
+	return this
+}
 
 func (this *Criteria) Between(path string, value interface{}, value2 interface{}) *Criteria {
 	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Value: value, Value2: value2, Expression: Between } )
@@ -311,7 +335,7 @@ func (this *Criteria) Query() orm.QuerySeter {
 
 func (this *Criteria) SetDebug(debug bool) *Criteria {
 	this.Debug = debug
-	return this.execute(CriteriaOne)
+	return this
 }
 
 func (this *Criteria) buildPage() {
@@ -341,6 +365,11 @@ func (this *Criteria) buildPage() {
         for k, v := range this.Page.FilterColumns {
           cond.Eq(k, v)
         }
+
+      	for k, v := range this.Page.TenantColumnFilter {
+      		cond.EqAnd(k, v)
+      	}
+
         this.AndOr(cond)
 
       }
@@ -371,7 +400,7 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 
 			case In:
 				cond = cond.And(pathName, criteria.InValues)
-			case Ne:
+			case Ne, NotLike:
 				cond = cond.AndNot(pathName, criteria.Value)
 			case NotIn:
 				cond = cond.AndNot(pathName, criteria.InValues)
@@ -425,7 +454,11 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 					b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
 					cond = cond.OrCond(b)
 				default:
-					cond = cond.Or(pathName, criteria.Value)
+					if criteria.ForceAnd {
+						cond = cond.And(pathName, criteria.Value)
+					} else {
+						cond = cond.Or(pathName, criteria.Value)
+					}	
 			}
 
 			if this.Debug {
@@ -435,6 +468,9 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 			}
 		}
 
+	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) {
+			cond = cond.And("Tenant", this.Tenant)
+	  }
 
 		condition = condition.OrCond(cond)
 
@@ -492,8 +528,13 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 					b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
 					cond = cond.OrCond(b)
 				default:
-					cond = cond.Or(pathName, criteria.Value)
+					if criteria.ForceAnd {
+						cond = cond.And(pathName, criteria.Value)
+					} else {
+						cond = cond.Or(pathName, criteria.Value)
+					}					
 			}
+
 
 			if this.Debug {
 				fmt.Println("*********************************************************")
@@ -503,7 +544,50 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 
 		}
 
+	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) {
+			cond = cond.And("Tenant", this.Tenant)
+	  }			
+
 		condition = condition.AndCond(cond)
+
+	}
+
+	for _, c := range this.criateriasOrAnd {
+
+		cond := orm.NewCondition()
+
+		for _, criteria := range c.criaterias {
+			pathName := this.getPathName(criteria)
+
+			switch criteria.Expression {
+				case Ne, NotIn:
+					cond = cond.AndNot(pathName, criteria.Value)
+				case IsNull:
+					cond = cond.And(pathName, true)
+				case IsNotNull:
+					cond = cond.And(pathName, false)
+				case Between:
+					b := orm.NewCondition()
+					b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
+					b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
+					cond = cond.AndCond(b)
+				default:
+					cond = cond.And(pathName, criteria.Value)					
+			}
+
+
+			if this.Debug {
+				fmt.Println("*********************************************************")
+				fmt.Println("** set condition and or and %v ", pathName)
+				fmt.Println("*********************************************************")
+			}
+
+		}
+
+	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) {
+			cond = cond.And("Tenant", this.Tenant)
+	  }
+		condition = condition.OrCond(cond)
 
 	}
 
@@ -535,7 +619,7 @@ func (this *Criteria) getPathName(criteria *Criteria) string {
 				pathName = fmt.Sprintf("%v__gte", criteria.Path)
 			case Gt:
 				pathName = fmt.Sprintf("%v__gt", criteria.Path)
-			case Like:
+			case Like, NotLike:
 
 				switch criteria.Match {
 					case Exact:
@@ -556,16 +640,16 @@ func (this *Criteria) getPathName(criteria *Criteria) string {
 						pathName = fmt.Sprintf("%v__icontains", criteria.Path)
 				}
 
-			case IsNull:
+			case IsNull, IsNotNull:
 				pathName = fmt.Sprintf("%v__isnull", criteria.Path)
-			case IsNotNull:
-				pathName = fmt.Sprintf("%v__isnull", criteria.Path)
+			//case IsNotNull:
+			//	pathName = fmt.Sprintf("%v__isnull", criteria.Path)
 			case Between:
 
-			case In:
+			case In, NotIn:
 				pathName = fmt.Sprintf("%v__in", criteria.Path)
-			case NotIn:
-				pathName = fmt.Sprintf("%v__in", criteria.Path)
+			//case NotIn:
+			//	pathName = fmt.Sprintf("%v__in", criteria.Path)
 
 		}
 

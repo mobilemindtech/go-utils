@@ -2,7 +2,7 @@ package controllers
 
 import (
   "github.com/mobilemindtec/go-utils/app/services"
-  "github.com/mobilemindtec/go-utils/app/models"
+  "github.com/mobilemindtec/go-utils/app/models"NestPrepareAuth
   "github.com/mobilemindtec/go-utils/app/route"
   "strings"
 )
