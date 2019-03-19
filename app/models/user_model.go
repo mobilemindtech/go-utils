@@ -48,9 +48,9 @@ func (this *User) TableName() string{
   return "users"
 }
 
-func (this *User) LoadIfExists() (exists bool, err error) {
+func (this *User) LoadIfExists() (bool, error) {
 
-  err = this.Session.Db.Read(this)
+  err := this.Session.Db.Read(this)
 
   if err == orm.ErrNoRows {
     return false, nil
@@ -63,7 +63,7 @@ func (this *User) LoadIfExists() (exists bool, err error) {
   return true, nil
 }
 
-func (this *User) GetByUserName(username string) (has *User, err error) {
+func (this *User) GetByUserName(username string) (*User, error) {
   result := new(User)
 
   query, err := this.Session.Query(this)
@@ -83,7 +83,7 @@ func (this *User) GetByUserName(username string) (has *User, err error) {
   return result, err
 }
 
-func (this *User) GetByToken(token string) (has *User, err error) {
+func (this *User) GetByToken(token string) (*User, error) {
   result := new(User)
 
   query, err := this.Session.Query(this)

@@ -230,6 +230,10 @@ func (this *PushService) NotificateAll(message string) error{
 func (this *PushService) NotificateByUserNameList(usernameList *[]string, message string) error{
 	
 
+	if len(message) == 0 {
+		return errors.New("notification message is empty")
+	}
+
 	notification := map[string]string{}
 	notification["msg"] = message
 	notification["title"] = this.notificationTitle

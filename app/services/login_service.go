@@ -28,12 +28,8 @@ func (this *LoginService) Authenticate(username string, password string) (*model
 
 
 func (this *LoginService) AuthenticateToken(token string) (*models.User, error) {
-
-
 	user, err := this.ModelUser.GetByToken(token)
-
 	return this.Login(user, "", true, err)
-
 }
 
 func (this *LoginService) Login(user *models.User, password string, byToken bool, err error) (*models.User, error){
@@ -43,12 +39,11 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 			err = errors.New(this.GetMessage("login.invalid"))
 		}
 
-
 		return user, err
 
 	} else if user == nil || user.Id < 1 {
 
-		beego.Debug("### user not found ")
+		beego.Debug("### user not found %v", user)
 		return user, errors.New(this.GetMessage("login.invalidToken"))
 
 	} else if !user.Enabled {
