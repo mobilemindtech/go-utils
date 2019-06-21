@@ -19,7 +19,7 @@ import (
 
 var (
   langTypes []string // Languages that are supported.
-  datetimeLayout = "02/01/2006 10:25:32"
+  datetimeLayout = "02/01/2006 15:04:05"
   timeLayout = "10:25"
   dateLayout = "02/01/2006"
   jsonDateLayout = "2006-01-02T15:04:05-07:00"
