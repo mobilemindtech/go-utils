@@ -75,6 +75,30 @@ func (this *MailService) SendPasswordRecover(to string, name string, token strin
 	return this.PostEmail(email)
 }
 
+func (this *MailService) SendPasswordRecoverCode(to string, name string, code string) error {
+
+
+  this.Controller.TplName = this.PasswordRecoverTemplateName
+
+	this.Controller.Data["user_name"] = name
+	this.Controller.Data["code"] = code
+
+	content, err := this.Controller.RenderString()
+
+	if err != nil {
+		fmt.Println("error Controller.RenderString ", err.Error())
+		return err
+	}
+
+
+	email := this.GetDefaultEmail()
+	email["subject"] = fmt.Sprintf("%v - Recuperação de Senha", this.AppName)
+	email["to"] = to
+	email["body"] = content
+
+	return this.PostEmail(email)
+}
+
 func (this *MailService) PostEmail(email map[string]string) error {
 
 

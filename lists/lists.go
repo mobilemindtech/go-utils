@@ -27,7 +27,7 @@ func Include(vs interface{}, t interface{}) bool {
 
 // Any returns `true` if one of the interface{}s in the slice
 // satisfies the predicate `f`.
-func Any(vs []interface{}, f func(interface{}) bool) bool {
+func Any(vs interface{}, f func(interface{}) bool) bool {
 	
   ss := reflect.ValueOf(vs)    
   s := reflect.Indirect(ss)

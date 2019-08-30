@@ -6,6 +6,7 @@ import (
   "encoding/base64"  
   "crypto/sha256"
   "crypto/sha1"
+  "math/rand"
   "time"
 )
 
@@ -58,3 +59,8 @@ func GenereteToken(password string, expirationDate time.Time) (string, error) {
   hmacSampleSecret := []byte(secret)
   return token.SignedString(hmacSampleSecret)
 }
+
+func GenerateCode(min int, max int) int {
+  return min + rand.Intn(max-min)
+}
+

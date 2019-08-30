@@ -133,7 +133,9 @@ func (c JsonParser) GetJsonObject(json map[string]interface{}, key string) map[s
 
    if c.HasJsonKey(json, key) {
     opt, _ := json[key]
-    return opt.(map[string]interface{})
+    if opt != nil {
+      return opt.(map[string]interface{})
+    }
    }
 
    return nil
@@ -160,15 +162,42 @@ func (c JsonParser) GetJsonArray(json map[string]interface{}, key string) []map[
    return nil
 }
 
+func (c JsonParser) GetArrayFromJson(json map[string]interface{}, key string) []interface{} {
+
+   if c.HasJsonKey(json, key) {
+    opt, _ := json[key]
+
+    items := new([]interface{})
+
+    if array, ok := opt.([]interface{}); ok {
+      for _, it := range array {
+        //if p, ok := it.(map[string]interface{}); ok {
+          *items = append(*items, it)
+        //}
+      }
+    }
+
+    return *items
+   }
+
+   return nil
+}
+
 func (c JsonParser) GetJsonInt(json map[string]interface{}, key string) int{
   var val int
 
   if c.HasJsonKey(json, key) {
     if _, ok := json[key].(int); ok {
       val = json[key].(int)
+    } else if _, ok := json[key].(int64); ok {
+      val = int(json[key].(int64))
+    } else if _, ok := json[key].(float64); ok {
+      val = int(json[key].(float64))
     } else {
       val, _ = strconv.Atoi(c.GetJsonString(json, key))
     }
+  } else {
+    fmt.Println("not has int key %v", key)
   }
 
   return val

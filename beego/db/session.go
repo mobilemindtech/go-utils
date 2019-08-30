@@ -53,6 +53,10 @@ func NewSessionWithTenantAndDbName(tenant interface{}, dbName string) *Session{
   return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false, DbName: dbName }
 }
 
+func OrmVerbose(verbose bool){
+  orm.Debug = verbose
+}
+
 
 func (this *Session) SetTenant(tenant interface{}) *Session {
   this.Tenant = tenant
@@ -337,13 +341,19 @@ func (this *Session) SaveOrUpdate(entity interface{}) error{
 
   if model, ok := entity.(Model); ok {
     if model.IsPersisted() {
-      return this.Update(entity)
+      if err := this.Update(entity); err != nil {
+        return errors.New(fmt.Sprintf("error on update %v: %v", model.TableName(), err))
+      }
+      return nil
     }
-    return this.Save(entity)
+    if err := this.Save(entity); err != nil {
+      errors.New(fmt.Sprintf("error on save %v: %v", model.TableName(), err))
+    }    
+    return nil
   }
 
   this.OnError()
-  return errors.New("entity does not implements of Model")
+  return errors.New(fmt.Sprintf("entity %v does not implements of Model", entity))
 }
 
 func (this *Session) List(entity interface{}, entities interface{}) error {
