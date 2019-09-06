@@ -162,6 +162,20 @@ func (c JsonParser) GetJsonArray(json map[string]interface{}, key string) []map[
    return nil
 }
 
+func (c JsonParser) GetJsonSimpleArray(json map[string]interface{}, key string) []interface{} {
+
+   if c.HasJsonKey(json, key) {
+    opt, _ := json[key]
+
+    if array, ok := opt.([]interface{}); ok {
+      return array
+    }
+
+   }
+
+   return nil
+}
+
 func (c JsonParser) GetArrayFromJson(json map[string]interface{}, key string) []interface{} {
 
    if c.HasJsonKey(json, key) {
@@ -257,6 +271,23 @@ func (c JsonParser) GetJsonString(json map[string]interface{}, key string) strin
   }
 
   return val
+}
+
+func (c JsonParser) JsonInterfaceToInt64(item interface{}) int64{
+
+  var val int = 0
+
+  if _, ok := item.(int); ok {
+    val = item.(int)
+  } else if _, ok := item.(int64); ok {
+    val = int(item.(int64))
+  } else if _, ok := item.(float64); ok {
+    val = int(item.(float64))
+  } else {
+    val, _ = strconv.Atoi(fmt.Sprintf("%v", item))
+  }
+
+  return int64(val)
 }
 
 func (c JsonParser) GetJsonDate(json map[string]interface{}, key string, layout string) time.Time{

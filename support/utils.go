@@ -10,7 +10,6 @@ import (
   "time"
 )
 
-
 func FilterNumber(text string) string{
     re := regexp.MustCompile("[0-9]+")
     result := re.FindAllString(text, -1)

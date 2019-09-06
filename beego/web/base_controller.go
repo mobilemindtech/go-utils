@@ -365,6 +365,11 @@ func (this *BaseController) OnJsonResult(result interface{}) {
   this.ServeJSON()
 }
 
+func (this *BaseController) OnJsonMessage(message string) {
+  this.Data["json"] = support.JsonResult{ Message: message, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix() }
+  this.ServeJSON()
+}
+
 func (this *BaseController) OnJsonResultError(result interface{}, message string) {
   this.Rollback()
   this.Data["json"] = support.JsonResult{ Result: result, Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix() }
@@ -442,6 +447,11 @@ func (this *BaseController) OnJsonValidationWithErrors(errors map[string]string)
 
 func (this *BaseController) OnTemplate(viewName string) {
   this.TplName = fmt.Sprintf("%s/%s.tpl", this.ViewPath, viewName)
+  this.OnFlash(false)
+}
+
+func (this *BaseController) OnPureTemplate(templateName string) {
+  this.TplName = templateName
   this.OnFlash(false)
 }
 
