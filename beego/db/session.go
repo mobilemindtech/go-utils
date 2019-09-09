@@ -24,6 +24,7 @@ type Session struct {
   Db orm.Ormer
   State SessionState
   Tenant interface{}
+  IgnoreTenatFilter bool
   Debug bool
   DbName string
 
@@ -1065,7 +1066,7 @@ func (this *Session) HasFilterTenant(reply interface{}) bool{
 
       //fmt.Println("## filter tenant = %v", filter)
 
-      return filter
+      return filter && !this.IgnoreTenatFilter
 
 		}
 
