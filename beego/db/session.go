@@ -1062,11 +1062,19 @@ func (this *Session) HasFilterTenant(reply interface{}) bool{
 		    return false
 		  }
 
-		  filter := !this.hasTag(tags, "no_filter_tenant")
+      if this.IgnoreTenatFilter {
+        return false
+      }
+
+		  noFilter := this.hasTag(tags, "no_filter_tenant")
 
       //fmt.Println("## filter tenant = %v", filter)
 
-      return filter && !this.IgnoreTenatFilter
+      if noFilter {
+        return false
+      }
+
+      return true
 
 		}
 
