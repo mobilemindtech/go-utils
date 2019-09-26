@@ -32,3 +32,14 @@ func GetTodayWithStrTime(layout string, newTime string) (time.Time, error){
 
 	return GetTodayWithTime(d), nil
 }
+
+func BeginningOfMonth(date time.Time) time.Time{ 	
+	return time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, GetDefaultLocation())
+}
+
+func EndOfMonth(date time.Time) time.Time{ 
+	//.AddDate(0, 1, -1)
+	return BeginningOfMonth(date).AddDate(0, 1, 0).Add(time.Nanosecond * -1)	
+}
+
+  

@@ -23,7 +23,7 @@ type User struct{
   LastLogin time.Time `orm:"null;type(datetime)"`
 
   ExpirationDate time.Time `orm:"type(datetime);null" form:"-" json:"-"`
-  Token string `orm:"type(text);null"  valid:"MaxSize(256)" form:"-" json:"-"`
+  Token string `orm:"type(text);null"  valid:"" form:"-" json:"-"`
 
   Uuid string `orm:"size(100);unique"  valid:"MaxSize(100)" form:"-" json:"-"`
   

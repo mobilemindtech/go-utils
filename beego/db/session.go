@@ -348,7 +348,7 @@ func (this *Session) SaveOrUpdate(entity interface{}) error{
       return nil
     }
     if err := this.Save(entity); err != nil {
-      errors.New(fmt.Sprintf("error on save %v: %v", model.TableName(), err))
+      return errors.New(fmt.Sprintf("error on save %v: %v", model.TableName(), err))
     }    
     return nil
   }
