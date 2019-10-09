@@ -779,8 +779,24 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
 func (this *Criteria) setError(err error) {
 	if err != nil && this.Error == nil{
 		this.HasError = true
-		this.Error = err
+		this.Error = errors.New(this.getErrorDescription(err))
 	}
 
 	this.query = nil
 }
+
+func (this *Criteria) getErrorDescription(err error) string {
+
+	  entity := this.Result
+
+	  if model, ok := entity.(Model); ok {
+	    return fmt.Sprintf("Table: %v - Message: %v", model.TableName(), err)
+		} else {
+			return "entity does not implements of Model"
+		}
+
+
+	
+}
+
+

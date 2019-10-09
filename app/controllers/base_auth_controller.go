@@ -84,6 +84,7 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
     this.baseController.Log("** UserInfo.Id=%v", this.GetAuthUser().Id)
     this.baseController.Log("** UserInfo.Name=%v", this.GetAuthUser().Name)
     this.baseController.Log("** UserInfo.Authority=%v", this.GetAuthUser().Role.Authority)
+    this.baseController.Log("** UserInfo.Roles=%v", this.GetAuthUser().GetAuthorities())
     this.baseController.Log("** Tenant.Name=%v", this.GetAuthTenant().Name)
     this.baseController.Log("**********************************")
 

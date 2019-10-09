@@ -111,12 +111,12 @@ func (this *PushService) LoadSubscribers() error{
 
 	this.Subscribers = map[string][]*Subscriber{}
 
-  fmt.Println("PushService.LoadSubscribers run")
+  //fmt.Println("PushService.LoadSubscribers run")
 
 
   process := func(jsonData map[string]interface{}, dev bool){
 
-  	fmt.Println("PushService.LoadSubscribers process %v", jsonData)
+  	//fmt.Println("PushService.LoadSubscribers process %v", jsonData)
 
 		for key, value := range jsonData {
 
@@ -181,7 +181,7 @@ func (this *PushService) LoadSubscribers() error{
 	}
 
 
-	fmt.Println("subscribers=%v", this.Subscribers)
+	//fmt.Println("subscribers=%v", this.Subscribers)
 
 	return nil
 }
@@ -214,7 +214,7 @@ func (this *PushService) NotificateByQuery(query string, message string) error{
   }
 
   if len(list) == 0 {
-  	fmt.Println("not found subscribers from query")
+  	fmt.Println("subscribers not found from query")
   	return nil
   }
 
@@ -254,7 +254,7 @@ func (this *PushService) NotificateByUserNameList(usernameList *[]string, messag
 
 			if !ok {
 
-				fmt.Println("subscriber %v not found at push server %v %v", username, ok, subscribers)
+				fmt.Println("subscriber_id not found to %v", username)
 
 				continue
 			}
@@ -263,11 +263,11 @@ func (this *PushService) NotificateByUserNameList(usernameList *[]string, messag
 			for _, subscriber := range subscribers {
 
 				if len(strings.TrimSpace(subscriber.Id)) == 0 {
-					fmt.Println("not sent notification to subscriber %v, name %v, email %v", subscriber.Id, subscriber.Name, subscriber.Email)
+					fmt.Println("not sent notification to subscriber %v, name %v, email %v.. subscriber_id is empty", subscriber.Id, subscriber.Name, subscriber.Email)
 					continue
 				}
 
-				fmt.Println("sent notification to subscriber %v, name %v, email %v", subscriber.Id, subscriber.Name, subscriber.Email)
+				//fmt.Println("sent notification to subscriber %v, name %v, email %v", subscriber.Id, subscriber.Name, subscriber.Email)
 
 				notification["data.user_id"] = subscriber.Id
 				if err := this.post(notification, subscriber); err != nil {
@@ -315,7 +315,8 @@ func (this *PushService) post(notification map[string]string, subscriber *Subscr
 		client := &http.Client{}		
 
 		url := fmt.Sprintf("%v%v", this.pushServerUrl, action)
-		fmt.Println("send notification %v to %v", notification, url)
+		
+		fmt.Println("** send notification %v, channel %v, to %v", notification, url, subscriber.Email)
 
 		req, err := http.NewRequest("POST", url, data)
 

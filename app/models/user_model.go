@@ -48,6 +48,18 @@ func (this *User) TableName() string{
   return "users"
 }
 
+func (this *User) GetAuthorities() string {
+  authorities := ""
+
+  if this.Roles != nil {
+    for _, it := range *this.Roles {
+      authorities = fmt.Sprintf("%v, %v", authorities, it.Authority)
+    }
+  }
+
+  return authorities
+}
+
 func (this *User) LoadIfExists() (bool, error) {
 
   err := this.Session.Db.Read(this)
@@ -205,7 +217,7 @@ func (this *User) GenerateToken(password string) {
 
 }
 
-func (this *User) GetByChangePwdToken(token string) (has *User, err error) {
+func (this *User) GetByChangePwdToken(token string) (*User, error) {
   result := new(User)
 
   query, err := this.Session.Query(this)

@@ -122,7 +122,7 @@ func (this *MailService) PostEmail(email map[string]string) error {
 
 	data := bytes.NewBuffer(jsonData)
 
-  fmt.Println("MAIL SERVER URL %v", this.MailServerUrl)
+  fmt.Println("MAIL SERVER URL %v TO %v", this.MailServerUrl, email["to"])
 
   client := &http.Client{}
   req, err := http.NewRequest("POST", this.MailServerUrl, data)

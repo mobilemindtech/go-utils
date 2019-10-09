@@ -42,4 +42,15 @@ func EndOfMonth(date time.Time) time.Time{
 	return BeginningOfMonth(date).AddDate(0, 1, 0).Add(time.Nanosecond * -1)	
 }
 
-  
+ 
+func ClearTime(date time.Time) time.Time {
+	return time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, GetDefaultLocation())
+}
+
+func IsSameDate(date1 time.Time, date2 time.Time) bool {
+	return date1.Year() == date2.Year() && date1.Month() == date2.Month() && date1.Day()  == date2.Day()  
+}
+
+func IsSameMonth(date1 time.Time, date2 time.Time) bool {
+	return date1.Year() == date2.Year() && date1.Month() == date2.Month()
+}
