@@ -11,9 +11,9 @@ type Email struct{
   CreatedAt time.Time `orm:"auto_now_add;type(datetime)" json:"-"`
   UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"-"`      
 
-  To string `orm:"size(100)"  valid:"Required;MaxSize(100)"`
-  Cco string `orm:"size(100)"  valid:"Required;MaxSize(100)"`
-  Subject string `orm:"size(100)"  valid:"Required;MaxSize(50)"`
+  To string `orm:"type(text)"  valid:"Required;MaxSize(100)"`
+  Cco string `orm:"type(text)"  valid:"Required;MaxSize(100)"`
+  Subject string `orm:"type(text)"  valid:"Required;MaxSize(50)"`
   Body string `orm:"type(text)"  valid:"Required;"`
   Enabled bool `orm:""  valid:"" `
 
