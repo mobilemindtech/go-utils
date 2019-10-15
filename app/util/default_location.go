@@ -18,6 +18,10 @@ func DateNow() time.Time {
 	return time.Now().In(GetDefaultLocation())
 }
 
+func DateNowZeroTime() time.Time {
+	return ClearTime(time.Now().In(GetDefaultLocation()))
+}
+
 func GetTodayWithTime(newTime time.Time) time.Time{ 
 	now := DateNow()
 	return time.Date(now.Year(), now.Month(), now.Day(), newTime.Hour(), newTime.Minute(), newTime.Second(), newTime.Nanosecond(), GetDefaultLocation())
