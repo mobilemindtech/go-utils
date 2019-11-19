@@ -22,6 +22,10 @@ func DateNowZeroTime() time.Time {
 	return ClearTime(time.Now().In(GetDefaultLocation()))
 }
 
+func DateFormat(date time.Time, layout string) time.Time {
+	return date.In(GetDefaultLocation())
+}
+
 func GetTodayWithTime(newTime time.Time) time.Time{ 
 	now := DateNow()
 	return time.Date(now.Year(), now.Month(), now.Day(), newTime.Hour(), newTime.Minute(), newTime.Second(), newTime.Nanosecond(), GetDefaultLocation())
