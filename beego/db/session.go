@@ -951,7 +951,15 @@ func (this *Session) setTenant(reply interface{}){
         fmt.Println("## field %v is tenant set tenant %v", field.Name, value)
       }
 
-      fieldStruct.Set(value)
+      // check is null
+      //fmt.Println("## set Tenant to ", fullType)
+      elem := fieldStruct.Elem()
+      //fmt.Println("elem = %v", elem)
+      //valueOf := reflect.ValueOf(elem)
+      //fmt.Println("valueOf = %v", valueOf)
+      if !elem.IsValid() {
+        fieldStruct.Set(value)        
+      }
 
     } else {
       if this.Debug {
