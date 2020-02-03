@@ -1018,7 +1018,9 @@ func (this *Session) isSetTenant(reply interface{}) bool{
   fullValue := refValue.Elem()
   fullType := fullValue.Type()
 
-  //fmt.Println("## set Tenant to ", fullType)
+  if this.Debug {
+    fmt.Println("## set Tenant to ", fullType)
+  }
 
 
   for i := 0; i < fullType.NumField(); i++ {

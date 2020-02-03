@@ -1,8 +1,10 @@
 package validator
 
 import (
+  "github.com/mobilemindtec/go-utils/support"
   "github.com/astaxie/beego/validation"
   "github.com/beego/i18n"
+  "reflect"
   "fmt"
 )
 
@@ -30,7 +32,16 @@ func (this *EntityValidator) IsValid(entity interface{}, action func(validator *
   result.Errors = make(map[string]string)
   result.ErrorsFields = make(map[string]string)
 
+  typeName := ""
+
   if entity != nil {
+
+    typeName = reflect.TypeOf(entity).Elem().Name()
+
+    typeName = support.Underscore(typeName)
+
+    fmt.Println("typeName = %v", typeName)
+
     ok, err := localValid.Valid(entity)
 
     if  err != nil {
@@ -41,7 +52,11 @@ func (this *EntityValidator) IsValid(entity interface{}, action func(validator *
     if !ok {
       for _, err := range localValid.Errors {
 
-        label := this.GetMessage(fmt.Sprintf("%s.%s", this.ViewPath, err.Field))
+        label := this.GetMessage(fmt.Sprintf("%s.%s", typeName, err.Field))
+
+        if label == "" {
+          label = this.GetMessage(fmt.Sprintf("%s.%s", this.ViewPath, err.Field))
+        }
 
         if label != "" {
           result.Errors[label] = err.Message
@@ -53,7 +68,7 @@ func (this *EntityValidator) IsValid(entity interface{}, action func(validator *
 
         //fmt.Println("## ViewPath %v", this.ViewPath)
         //fmt.Println("## lebel %v", label)
-        fmt.Println("## validator error field %v error %v", err.Field, err)
+        fmt.Println("## validator error field %v.%v error %v", typeName, err.Field, err)
       }
 
       result.HasError = true
@@ -67,7 +82,11 @@ func (this *EntityValidator) IsValid(entity interface{}, action func(validator *
   if callerValid.HasErrors() {
     for _, err := range callerValid.Errors {
 
-      label := this.GetMessage(fmt.Sprintf("%s.%s", this.ViewPath, err.Field))
+      label := this.GetMessage(fmt.Sprintf("%s.%s", typeName, err.Field))
+
+      if label == "" {
+        label = this.GetMessage(fmt.Sprintf("%s.%s", this.ViewPath, err.Field))
+      }
 
       if label != "" {
         result.Errors[label] = err.Message
@@ -77,7 +96,7 @@ func (this *EntityValidator) IsValid(entity interface{}, action func(validator *
 
       result.ErrorsFields[err.Field] = err.Message
 
-      fmt.Println("## validator error field %v error %v", err.Field, err)
+      fmt.Println("## validator error field %v.%v error %v", typeName, err.Field, err)
     }
 
     result.HasError = true
