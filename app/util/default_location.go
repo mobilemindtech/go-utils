@@ -59,6 +59,15 @@ func IsSameDate(date1 time.Time, date2 time.Time) bool {
 	return date1.Year() == date2.Year() && date1.Month() == date2.Month() && date1.Day()  == date2.Day()  
 }
 
+func IsSameTime(date1 time.Time, date2 time.Time) bool {
+	return date1.Hour() == date2.Hour() && date1.Minute() == date2.Minute()
+}
+
 func IsSameMonth(date1 time.Time, date2 time.Time) bool {
 	return date1.Year() == date2.Year() && date1.Month() == date2.Month()
 }
+
+func IsSameDateTime(date1 time.Time, date2 time.Time) bool {
+	return IsSameDate(date1, date2) && IsSameTime(date1, date2)
+}
+
