@@ -15,6 +15,7 @@ import (
   "strconv"
   "time"
   "fmt"
+  "runtime/debug"
 )
 
 var (
@@ -38,12 +39,21 @@ type BaseController struct {
   defaultPageLimit int64
 }
 
+type RecoverInfo struct {
+  Error string
+  StackTrace string
+}
+
 type NestPreparer interface {
   NestPrepare()
 }
 
 type NestFinisher interface {
   NestFinish()
+}
+
+type NestRecover interface {
+  NextOnRecover(info * RecoverInfo)
 }
 
 func init() {
@@ -303,9 +313,27 @@ func (this *BaseController) Finish() {
 }
 
 func (this *BaseController) Finally(){
+
+  this.Log("-- Controller.Finally, Rollback, Session = %v", this.Session)
+
   if this.Session != nil {
     this.Session.OnError().Close()
   }
+}
+
+func (this *BaseController) Recover(info interface{}){
+  /*
+  this.Log("--------------- Controller.Recover ---------------")
+  this.Log("INFO: %v", info)
+  this.Log("STACKTRACE: %v", string(debug.Stack()))
+  this.Log("--------------- Controller.Recover ---------------")
+  */
+  if app, ok := this.AppController.(NestRecover); ok {
+    info := &RecoverInfo{ Error: fmt.Sprintf("%v", info), StackTrace: string(debug.Stack()) }
+    app.NextOnRecover(info)
+  }
+
+  
 }
 
 func (this *BaseController) Rollback() {
