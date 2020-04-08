@@ -58,7 +58,6 @@ func OrmVerbose(verbose bool){
   orm.Debug = verbose
 }
 
-
 func (this *Session) SetTenant(tenant interface{}) *Session {
   this.Tenant = tenant
   return this
@@ -72,6 +71,20 @@ func (this *Session) SetDbName(dbName string) *Session {
 func (this *Session) OnError() *Session {
   this.State = SessionStateError
   return this
+}
+
+func (this *Session) RunWithTenant(tenant interface{}, runner func()) {
+
+  tmp := this.Tenant
+  this.Tenant = tenant
+
+  defer func() {
+    this.Tenant = tmp
+  }()
+
+  runner()
+
+
 }
 
 func (this *Session) IsOpenDbError() bool{
