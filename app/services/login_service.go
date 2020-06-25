@@ -62,7 +62,7 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 
 		if err != nil {
 			beego.Debug("### error on get user tenant %v", err)
-			return user, errors.New(this.GetMessage("login.error"))
+			return user, errors.New(this.GetMessage("login."))
 		}
 
 		if tenant == nil {

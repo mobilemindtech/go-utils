@@ -10,6 +10,14 @@ import (
   "fmt"
 )
 
+var (
+
+  UserHexPassword = false
+
+)
+
+func OnUserHexPassword() { UserHexPassword = true }
+
 type User struct{
 
   Id int64 `form:"-" json:",string,omitempty"`
@@ -117,7 +125,11 @@ func (this *User) GetByToken(token string) (*User, error) {
 
 func (this *User) EncodePassword() {
   this.GenerateToken(this.Password)
-  this.Password = support.TextToSha1(this.Password)
+  if UserHexPassword {
+    this.Password = support.TextToSha1Hex(this.Password)
+  } else {
+    this.Password = support.TextToSha1(this.Password)
+  }
 }
 
 func (this *User) ChangePassword(newPassword string) {
@@ -139,7 +151,12 @@ func (this *User) GenereteUuid() string{
 }
 
 func (this *User) IsSamePassword(newPassword string) bool {
- return support.IsSameHash(this.Password, newPassword)
+
+  if UserHexPassword {
+    return support.IsSameHashHex(this.Password, newPassword)
+  } else {
+    return support.IsSameHash(this.Password, newPassword)
+  }
 }
 
 func (this *User) IsPersisted() bool{
