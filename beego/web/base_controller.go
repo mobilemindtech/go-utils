@@ -104,6 +104,21 @@ func LoadFuncs(controller *BaseController) {
     return ""
   }
 
+  dateFormat := func(date time.Time, layout string) string{
+    if !time.Time.IsZero(date) {
+      return date.Format(layout)
+    }
+    return ""
+  }
+
+  getNow := func(layout string) string{
+    return time.Now().Format(layout)
+  }
+
+  getYear := func() string{
+    return time.Now().Format("2006")
+  }
+
   formatBoolean := func(b bool, wrapLabel bool) string{
     var s string
     if b {
@@ -182,6 +197,9 @@ func LoadFuncs(controller *BaseController) {
   beego.InsertFilter("*", beego.BeforeRouter, filters.FilterMethod) // enable put
   beego.AddFuncMap("format_boolean", formatBoolean)
   beego.AddFuncMap("format_date", formatDate)
+  beego.AddFuncMap("date_format", dateFormat)
+  beego.AddFuncMap("get_now", getNow)
+  beego.AddFuncMap("get_year", getYear)
   beego.AddFuncMap("format_date_time", formatDateTime)
   beego.AddFuncMap("format_money", formatMoney)
   beego.AddFuncMap("format_decimal", formatDecimal)
