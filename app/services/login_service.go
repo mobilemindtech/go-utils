@@ -44,7 +44,7 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 	} else if user == nil || user.Id < 1 {
 
 		beego.Debug("### user not found %v", user)
-		return user, errors.New(this.GetMessage("login.invalidToken"))
+		return user, errors.New(this.GetMessage("login.invalid"))
 
 	} else if !user.Enabled {
 

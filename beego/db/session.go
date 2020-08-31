@@ -268,7 +268,7 @@ func (this *Session) Get(entity interface{}) (bool, error) {
     err := this.Db.Read(entity)
     
     if err == orm.ErrNoRows {
-      fmt.Println("## Session: error on load: %v", err.Error())
+      //fmt.Println("## Session: error on load: %v", err.Error())
       //this.OnError()
       return false, nil
     }
@@ -297,7 +297,7 @@ func (this *Session) Count(entity interface{}) (int64, error){
     num, err := query.Count()
 
     if err != nil {
-      fmt.Println("## Session: error on count: %v", err.Error())
+      fmt.Println("## Session: error on count table %v: %v", model.TableName(), err.Error())
       //this.OnError()
     }
     return num, err
@@ -335,7 +335,7 @@ func (this *Session) FindById(entity interface{}, id int64) (interface{}, error)
     }
 
     if err != nil{
-      fmt.Println("## Session: error on find by id: %v", err.Error())
+      fmt.Println("## Session: error on find by id table %v: %v", model.TableName(), err.Error())
       //this.OnError()
       return nil, err
     }
