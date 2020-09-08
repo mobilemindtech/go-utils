@@ -111,6 +111,11 @@ func NewCriteria(session *Session, entity interface{}, entities interface{}) *Cr
 	return &Criteria{ criaterias: []*Criteria{}, criateriasOr: []*Criteria{}, criateriasAnd: []*Criteria{}, criateriasAndOr: []*Criteria{}, criateriasOrAnd: []*Criteria{}, Session: session, Result: entity, Results: entities, Tenant: session.Tenant, RelatedSelList: []string{}  }
 }
 
+func NewCriteriaWithTenant(session *Session, tenant interface{}, entity interface{}, entities interface{}) *Criteria {
+	return &Criteria{ criaterias: []*Criteria{}, criateriasOr: []*Criteria{}, criateriasAnd: []*Criteria{}, criateriasAndOr: []*Criteria{}, criateriasOrAnd: []*Criteria{}, Session: session, Result: entity, Results: entities, Tenant: tenant, RelatedSelList: []string{}  }
+}
+
+
 func NewCondition() *Criteria{
 	return &Criteria{ criaterias: []*Criteria{}  }
 }
@@ -468,7 +473,7 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 			}
 		}
 
-	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) {
+	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) && !this.Session.IgnoreTenatFilter {
 			cond = cond.And("Tenant", this.Tenant)
 	  }
 
@@ -544,7 +549,7 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 
 		}
 
-	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) {
+	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) && !this.Session.IgnoreTenatFilter{
 			cond = cond.And("Tenant", this.Tenant)
 	  }			
 
@@ -584,7 +589,7 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 
 		}
 
-	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) {
+	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) && !this.Session.IgnoreTenatFilter{
 			cond = cond.And("Tenant", this.Tenant)
 	  }
 		condition = condition.OrCond(cond)

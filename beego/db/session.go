@@ -353,6 +353,15 @@ func (this *Session) FindById(entity interface{}, id int64) (interface{}, error)
 
 func (this *Session) SaveOrUpdate(entity interface{}) error{
 
+
+  if !this.isTenantNil() && this.isSetTenant(entity) {
+    if this.Debug {
+      fmt.Println("## Save set tenant")
+    }
+    this.setTenant(entity)
+  }
+
+
   if model, ok := entity.(Model); ok {
     if model.IsPersisted() {
       if err := this.Update(entity); err != nil {
@@ -969,9 +978,12 @@ func (this *Session) setTenant(reply interface{}){
       elem := fieldStruct.Elem()
       //fmt.Println("elem = %v", elem)
       //valueOf := reflect.ValueOf(elem)
-      //fmt.Println("valueOf = %v", valueOf)
+      //fmt.Println("valueOf = %v, IsValid = %v", valueOf, elem.IsValid())
       if !elem.IsValid() {
+        //fmt.Println("==== auto set tenant")
         fieldStruct.Set(value)        
+      }else{
+        //fmt.Println("==== auto set tenant: tenant already")
       }
 
     } else {
