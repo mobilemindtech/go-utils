@@ -30,6 +30,7 @@ const (
 	Or
 	AndOr
 	OrAnd
+	AndOrAnd
 )
 
 const (
@@ -56,6 +57,23 @@ type CriteriaOrder struct {
 	Desc bool
 }
 
+type CriteriaSet struct {
+	Criterias []*Criteria
+}
+
+func NewCriteriaSet() *CriteriaSet{
+	return &CriteriaSet{ Criterias: []*Criteria{} }
+}
+
+func NewCriteriaSetWithConditions(criterias ...*Criteria) *CriteriaSet{
+	item := &CriteriaSet{ Criterias: []*Criteria{} }
+	for _, it := range criterias {
+		item.Criterias = append(item.Criterias, it)
+	}
+	return item
+}
+
+
 type Criteria struct {
 
 	Path string
@@ -72,6 +90,7 @@ type Criteria struct {
 
 	criateriasOr []*Criteria
 	criateriasAndOr []*Criteria
+	criateriasAndOrAnd []*CriteriaSet
 	criateriasOrAnd []*Criteria
 	criateriasAnd []*Criteria
 
@@ -102,17 +121,18 @@ type Criteria struct {
 	HasError bool
 
 	ForceAnd bool
+	ForceOr bool
 	Distinct bool
 
 	Debug bool
 }
 
 func NewCriteria(session *Session, entity interface{}, entities interface{}) *Criteria {
-	return &Criteria{ criaterias: []*Criteria{}, criateriasOr: []*Criteria{}, criateriasAnd: []*Criteria{}, criateriasAndOr: []*Criteria{}, criateriasOrAnd: []*Criteria{}, Session: session, Result: entity, Results: entities, Tenant: session.Tenant, RelatedSelList: []string{}  }
+	return &Criteria{ criaterias: []*Criteria{}, criateriasOr: []*Criteria{}, criateriasAnd: []*Criteria{}, criateriasAndOr: []*Criteria{}, criateriasAndOrAnd: []*CriteriaSet{}, criateriasOrAnd: []*Criteria{}, Session: session, Result: entity, Results: entities, Tenant: session.Tenant, RelatedSelList: []string{}  }
 }
 
 func NewCriteriaWithTenant(session *Session, tenant interface{}, entity interface{}, entities interface{}) *Criteria {
-	return &Criteria{ criaterias: []*Criteria{}, criateriasOr: []*Criteria{}, criateriasAnd: []*Criteria{}, criateriasAndOr: []*Criteria{}, criateriasOrAnd: []*Criteria{}, Session: session, Result: entity, Results: entities, Tenant: tenant, RelatedSelList: []string{}  }
+	return &Criteria{ criaterias: []*Criteria{}, criateriasOr: []*Criteria{}, criateriasAnd: []*Criteria{}, criateriasAndOr: []*Criteria{}, criateriasAndOrAnd: []*CriteriaSet{}, criateriasOrAnd: []*Criteria{}, Session: session, Result: entity, Results: entities, Tenant: tenant, RelatedSelList: []string{}  }
 }
 
 
@@ -121,8 +141,8 @@ func NewCondition() *Criteria{
 }
 
 
-func (this *Criteria) add(path string, value interface{}, expression CriteriaExpression, forceAnd bool) *Criteria{
-	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Value: value, Expression: expression, ForceAnd: forceAnd } )
+func (this *Criteria) add(path string, value interface{}, expression CriteriaExpression, forceAnd bool, forceOr bool) *Criteria{
+	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Value: value, Expression: expression, ForceAnd: forceAnd, ForceOr: forceOr } )
 	return this
 }
 
@@ -183,31 +203,31 @@ func (this *Criteria) SetDistinct() *Criteria {
 }
 
 func (this *Criteria) Eq(path string, value interface{}) *Criteria {
-	return this.add(path, value, Eq, false)
+	return this.add(path, value, Eq, false, false)
 }
 
 func (this *Criteria) EqAnd(path string, value interface{}) *Criteria {
-	return this.add(path, value, Eq, true)
+	return this.add(path, value, Eq, true, false)
 }
 
 func (this *Criteria) Ne(path string, value interface{}) *Criteria {
-	return this.add(path, value, Ne, false)
+	return this.add(path, value, Ne, false, false)
 }
 
 func (this *Criteria) Le(path string, value interface{}) *Criteria {
-	return this.add(path, value, Le, false)
+	return this.add(path, value, Le, false, false)
 }
 
 func (this *Criteria) Lt(path string, value interface{}) *Criteria {
-	return this.add(path, value, Lt, false)
+	return this.add(path, value, Lt, false, false)
 }
 
 func (this *Criteria) Ge(path string, value interface{}) *Criteria {
-	return this.add(path, value, Ge, false)
+	return this.add(path, value, Ge, false, false)
 }
 
 func (this *Criteria) Gt(path string, value interface{}) *Criteria {
-	return this.add(path, value, Gt, false)
+	return this.add(path, value, Gt, false, false)
 }
 
 func (this *Criteria) Or(criteria *Criteria) *Criteria {
@@ -222,6 +242,11 @@ func (this *Criteria) And(criteria *Criteria) *Criteria {
 
 func (this *Criteria) AndOr(criteria *Criteria) *Criteria {
 	this.criateriasAndOr = append(this.criateriasAndOr, criteria)
+	return this
+}
+
+func (this *Criteria) AndOrAnd(criteriaSet *CriteriaSet) *Criteria {
+	this.criateriasAndOrAnd = append(this.criateriasAndOrAnd, criteriaSet)
 	return this
 }
 
@@ -556,6 +581,55 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 		condition = condition.AndCond(cond)
 
 	}
+
+	if len(this.criateriasAndOrAnd) > 0 {
+		
+		cond := orm.NewCondition()
+		
+		for _, criteriaSet := range this.criateriasAndOrAnd {
+
+			
+			for _, ct := range criteriaSet.Criterias {		 
+				
+				other := orm.NewCondition()
+
+				for _, criteria := range ct.criaterias {
+					pathName := this.getPathName(criteria)
+
+					switch criteria.Expression {
+						case Ne, NotIn:
+							other = other.AndNot(pathName, criteria.Value)
+						case IsNull:
+							other = other.And(pathName, true)
+						case IsNotNull:
+							other = other.And(pathName, false)
+						case Between:
+							b := orm.NewCondition()
+							b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
+							b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
+							other = other.AndCond(b)
+						default:
+							other = other.And(pathName, criteria.Value)
+					}
+
+
+					if this.Debug {
+						fmt.Println("*********************************************************")
+						fmt.Println("** set condition and or %v ", pathName)
+						fmt.Println("*********************************************************")
+					}
+
+				}
+		  
+		  	cond = cond.OrCond(other)
+
+			}	
+
+		}
+		
+		condition = condition.AndCond(cond)
+	}	
+
 
 	for _, c := range this.criateriasOrAnd {
 

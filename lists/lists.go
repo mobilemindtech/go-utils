@@ -59,6 +59,9 @@ func All(vs interface{}, f func(interface{}) bool) bool {
 
 // Filter returns a new slice containing all interface{}s in the
 // slice that satisfy the predicate `f`.
+func FindAll(vs interface{}, f func(interface{}) bool) []interface{} {
+  return Filter(vs, f)
+}
 func Filter(vs interface{}, f func(interface{}) bool) []interface{} {
   
   vsf := make([]interface{}, 0)
@@ -73,6 +76,22 @@ func Filter(vs interface{}, f func(interface{}) bool) []interface{} {
     }
   }
   return vsf
+}
+
+// Filter returns a new slice containing all interface{}s in the
+// slice that satisfy the predicate `f`.
+func Find(vs interface{}, f func(interface{}) bool) interface{} {
+  
+  ss := reflect.ValueOf(vs)    
+  s := reflect.Indirect(ss)
+
+  for i := 0; i < s.Len(); i++ {
+    it := s.Index(i)
+    if f(it.Interface()) {        
+      return it.Interface()
+    }
+  }
+  return nil
 }
 
 // Map returns a new slice containing the results of applying
