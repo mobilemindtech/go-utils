@@ -1,8 +1,8 @@
 package support
 
 import (
+  beego "github.com/astaxie/beego/server/web"
   "github.com/dgrijalva/jwt-go"
-  "github.com/astaxie/beego"
   "encoding/base64"  
   "crypto/sha256"
   "crypto/sha1"
@@ -71,7 +71,7 @@ func GenereteApiToken(id int64, uuid string, password string, expirationDate tim
     "expiration_date": expirationDate.Unix(),
   })
   
-  secret := beego.AppConfig.String("jwt_token_secret")
+  secret, _ := beego.AppConfig.String("jwt_token_secret")
   hmacSampleSecret := []byte(secret)
   return token.SignedString(hmacSampleSecret)
 }
@@ -82,7 +82,7 @@ func GenereteToken(password string, expirationDate time.Time) (string, error) {
     "expiration_date": expirationDate.Unix(),
   })
   
-  secret := beego.AppConfig.String("jwt_token_secret")
+  secret, _ := beego.AppConfig.String("jwt_token_secret")
   hmacSampleSecret := []byte(secret)
   return token.SignedString(hmacSampleSecret)
 }

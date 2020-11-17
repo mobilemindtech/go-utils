@@ -1,7 +1,7 @@
 package route
 
 import (
-	"github.com/astaxie/beego/context"
+	"github.com/astaxie/beego/server/web/context"
   "encoding/json"
   "io/ioutil"
   "strings"
@@ -41,7 +41,6 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 
 	var routeConfigured bool
 	requestedUrl := ctx.Input.URL()
-
 
 	fmt.Println("** check route %v, roles %v", requestedUrl, currentAuthUserRoles)
 

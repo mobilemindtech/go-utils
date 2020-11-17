@@ -5,10 +5,11 @@ import (
   "github.com/mobilemindtec/go-utils/beego/filters"
   "github.com/mobilemindtec/go-utils/beego/db"
   "github.com/mobilemindtec/go-utils/support"
-  "github.com/astaxie/beego/validation"
+  "github.com/astaxie/beego/core/validation"
   "github.com/leekchan/accounting"
-  "github.com/astaxie/beego/orm"
-  "github.com/astaxie/beego"
+  "github.com/astaxie/beego/client/orm"
+  beego "github.com/astaxie/beego/server/web"
+  "github.com/astaxie/beego/core/logs"
   "github.com/beego/i18n"
   "html/template"
   "strings"
@@ -213,17 +214,18 @@ func LoadFuncs(controller *BaseController) {
 
 func LoadIl8n() {
   beego.AddFuncMap("i18n", i18n.Tr)
-  beego.SetLevel(beego.LevelDebug)
+  logs.SetLevel(logs.LevelDebug)
 
   // Initialize language type list.
-  langTypes = strings.Split(beego.AppConfig.String("lang_types"), "|")
+  types, _:= beego.AppConfig.String("lang_types")
+  langTypes = strings.Split(types, "|")
 
-  beego.Info(" langTypes %v", langTypes)
+  logs.Info(" langTypes %v", langTypes)
 
   // Load locale files according to language types.
   for _, lang := range langTypes {
     if err := i18n.SetMessage(lang, "conf/i18n/"+"locale_" + lang + ".ini"); err != nil {
-      beego.Error("Fail to set message file:", err)
+      logs.Error("Fail to set message file:", err)
       return
     }
   }
@@ -248,7 +250,7 @@ func (this *BaseController) NestPrepareBase () {
   }
 
 
-  beego.Trace("Accept-Language is " + al)
+  logs.Trace("Accept-Language is " + al)
   // 2. Default language is English.
   if len(this.Lang) == 0 {
     this.Lang = "pt-BR"
@@ -731,7 +733,7 @@ func (this *BaseController) GetHeaderByNames(names ...string) string{
 }
 
 func (this *BaseController) Log(format string, v ...interface{}) {
-  beego.Debug(fmt.Sprintf(format, v...))
+ logs.Debug(fmt.Sprintf(format, v...))
 }
 
 func (this *BaseController) GetCurrentTimeUnix() int64 {

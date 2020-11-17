@@ -4,7 +4,7 @@ import (
   "github.com/mobilemindtec/go-utils/app/util"
   "github.com/mobilemindtec/go-utils/beego/db"
   "github.com/mobilemindtec/go-utils/support"
-  "github.com/astaxie/beego/orm"
+  "github.com/astaxie/beego/client/orm"
   "github.com/satori/go.uuid"
 	"time"
   "fmt"
@@ -141,7 +141,7 @@ func (this *User) ChangePassword(newPassword string) {
 func (this *User) GenereteUuid() string{
 
   for true {
-    uuid, _ := uuid.NewV4()
+    uuid := uuid.NewV4()
     if !db.NewCriteria(this.Session, new(User), nil).Eq("Uuid", uuid.String()).Exists() {
       return uuid.String()
     }

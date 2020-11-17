@@ -2,7 +2,7 @@ package support
 
 import (
   "github.com/mobilemindtec/go-utils/app/util"
-  "github.com/astaxie/beego/context"
+  "github.com/astaxie/beego/server/web/context"
   "encoding/json"
   "strconv"
   "strings"

@@ -1,7 +1,7 @@
 package db
 
 import (
-  "github.com/astaxie/beego/orm"
+  "github.com/astaxie/beego/client/orm"
   "reflect"
   "strings"
   "errors"
@@ -22,6 +22,7 @@ type Model interface {
 
 type Session struct {
   Db orm.Ormer
+  Tx orm.TxOrmer
   State SessionState
   Tenant interface{}
   IgnoreTenatFilter bool
@@ -116,12 +117,12 @@ func (this *Session) Begin() (orm.Ormer, error){
 }
 
 func (this *Session) begin(transaction bool) (orm.Ormer, error){
-  this.Db = orm.NewOrm()
-  this.Db.Using(this.DbName)
+  this.Db = orm.NewOrmUsingDB(this.DbName)
 
   if transaction {
     this.transactional = true
-    err := this.Db.Begin()
+    var err error
+    this.Tx ,err = this.Db.Begin()
     if err != nil {
 
       this.openDbError = true
@@ -150,8 +151,8 @@ func (this *Session) Commit() error{
     fmt.Println("## session commit ")
   }
 
-  if this.Db != nil{
-    err := this.Db.Commit()
+  if this.Tx != nil{
+    err := this.Tx.Commit()
     if err != nil {
       fmt.Println("****************************************************************")
       fmt.Println("****************************************************************")
@@ -164,6 +165,7 @@ func (this *Session) Commit() error{
       //panic(err)
       return err
     }
+    this.Tx = nil
     this.Db = nil
   }
 
@@ -176,9 +178,9 @@ func (this *Session) Rollback() error{
     fmt.Println("## session rollback ")
   }
 
-  if this.Db != nil{
+  if this.Tx != nil{
     fmt.Println("** Session Rollback ")
-    err := this.Db.Rollback()
+    err := this.Tx.Rollback()
     if err != nil {
       fmt.Println("****************************************************************")
       fmt.Println("****************************************************************")
@@ -189,6 +191,7 @@ func (this *Session) Rollback() error{
       fmt.Println("****************************************************************")
       return err
     }
+    this.Tx = nil
     this.Db = nil
   }
 

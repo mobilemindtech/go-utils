@@ -4,7 +4,7 @@ import (
   "github.com/mobilemindtec/go-utils/validator/cnpj"
   "github.com/mobilemindtec/go-utils/validator/cpf"
   "github.com/mobilemindtec/go-utils/beego/db"
-  "github.com/astaxie/beego/validation"  
+  "github.com/astaxie/beego/core/validation"
   "strings"
   "reflect"
   _"fmt"

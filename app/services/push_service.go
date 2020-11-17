@@ -2,7 +2,7 @@ package services
 
 import (
   "github.com/mobilemindtec/go-utils/beego/db"
-  "github.com/astaxie/beego/orm"
+  "github.com/astaxie/beego/client/orm"
 	"encoding/json"
   "io/ioutil"
   "net/http"

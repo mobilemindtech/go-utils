@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/astaxie/beego/orm"
+	"github.com/astaxie/beego/client/orm"
 	"reflect"
 	"strings"
 	"errors"

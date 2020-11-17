@@ -2,7 +2,7 @@ package validator
 
 import (
   "github.com/mobilemindtec/go-utils/support"
-  "github.com/astaxie/beego/validation"
+  "github.com/astaxie/beego/core/validation"
   "github.com/beego/i18n"
   "reflect"
   "fmt"

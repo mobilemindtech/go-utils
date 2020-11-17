@@ -3,8 +3,8 @@ package services
 import (
   "github.com/mobilemindtec/go-utils/app/models"
 	"github.com/mobilemindtec/go-utils/beego/db"
-  "github.com/mobilemindtec/go-utils/app/util"
-  "github.com/astaxie/beego"  
+	"github.com/astaxie/beego/core/logs"
+  "github.com/mobilemindtec/go-utils/app/util"  
   "github.com/beego/i18n"
   "errors"
   "time"  
@@ -43,16 +43,16 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 
 	} else if user == nil || user.Id < 1 {
 
-		beego.Debug("### user not found %v", user)
+		logs.Debug("### user not found %v", user)
 		return user, errors.New(this.GetMessage("login.invalid"))
 
 	} else if !user.Enabled {
 
-		beego.Debug("### user not enabled ")
+		logs.Debug("### user not enabled ")
 		return user, errors.New(this.GetMessage("login.inactiveMsg"))
 
 	}else if !byToken && !user.IsSamePassword(password) {
-		beego.Debug("### password not match ")
+		logs.Debug("### password not match ")
 		// No matched password
 		return user, errors.New(this.GetMessage("login.invalid"))
 
@@ -61,18 +61,18 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 		tenant, err := this.ModelTenantUser.GetFirstTenant(user)
 
 		if err != nil {
-			beego.Debug("### error on get user tenant %v", err)
+			logs.Debug("### error on get user tenant %v", err)
 			return user, errors.New(this.GetMessage("login."))
 		}
 
 		if tenant == nil {
-			beego.Debug("### error does not have tenant")
+			logs.Debug("### error does not have tenant")
 			return user, errors.New("user does not has active tenant related")	
 		}		
 
 		user.LastLogin = time.Now().In(util.GetDefaultLocation())
 		if err := this.Session.Update(user); err != nil {
-			beego.Debug("### update user login error %v", err)
+			logs.Debug("### update user login error %v", err)
 		}
 		return user, nil
 

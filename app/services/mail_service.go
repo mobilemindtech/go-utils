@@ -2,7 +2,7 @@ package services
 
 import (
 	"github.com/mobilemindtec/go-utils/app/models"
-  "github.com/astaxie/beego"
+  beego "github.com/astaxie/beego/server/web"  
 	"encoding/json"
   "encoding/base64"
   "encoding/hex"

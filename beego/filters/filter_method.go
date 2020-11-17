@@ -1,7 +1,7 @@
 package filters
 
 import (
-  "github.com/astaxie/beego/context"
+  "github.com/astaxie/beego/server/web/context"
 )
 
 var FilterMethod = func(ctx *context.Context) {
