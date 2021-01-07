@@ -15,7 +15,7 @@ func init() {
 
     file, err := ioutil.ReadFile("./conf/routes.json")
     if err != nil {
-        fmt.Printf("error on open file ./conf/routes.json: %v\n", err)
+        fmt.Printf("error open route config file ./conf/routes.json: %v\n", err)
         return
     }
 
@@ -23,7 +23,7 @@ func init() {
     
     err = json.Unmarshal(file, &data)
     if err != nil {
-        fmt.Printf("JSON error: %v\n", err)
+        fmt.Printf("JSON error parse route config file: %v\n", err)
         return
     }
 
@@ -42,7 +42,7 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 	var routeConfigured bool
 	requestedUrl := ctx.Input.URL()
 
-	fmt.Println("** check route %v, roles %v", requestedUrl, currentAuthUserRoles)
+	fmt.Println(fmt.Sprintf("check route %v, roles %v", requestedUrl, currentAuthUserRoles))
 
 
 	for route, value := range routes{
@@ -77,13 +77,13 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 			roleNames := value.(string)
 
 			if roleNames == "anonymous" {
-				fmt.Println("** route %v anonymous allowed", requestedUrl)
+				fmt.Println(fmt.Sprintf("route %v anonymous allowed", requestedUrl))
 				return true
 			}
 
 			if roleNames == "authenticated" {
 				// authService is nil, so not auth
-				fmt.Println("** route %v authenticated user allowed", requestedUrl)
+				fmt.Println(fmt.Sprintf("route %v authenticated user allowed", requestedUrl))
 				return len(currentAuthUserRoles) > 0
 			}
 
@@ -92,10 +92,10 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 			for _, roleName := range values {
 				for _, role := range currentAuthUserRoles {
 					if role == roleName {
-						fmt.Println("** route %v authenticated user role allowed", requestedUrl)
+						fmt.Println(fmt.Sprintf("route %v authenticated user role allowed", requestedUrl))
 						return true
 					} else {
-            fmt.Println("** route %v not authenticated user role allowed for role ", requestedUrl, roleName)
+            fmt.Println(fmt.Sprintf("route %v not authenticated user role allowed for role ", requestedUrl, roleName))
           }
 				}
 			}
@@ -105,10 +105,10 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 	}
 
 	if !routeConfigured {
-		fmt.Println("** route %v not is configured in routes.json", requestedUrl)
+		fmt.Println(fmt.Sprintf("route %v not is configured in routes.json", requestedUrl))
 	}
 
-	fmt.Println("** route %v not allowed", requestedUrl)
+	fmt.Println(fmt.Sprintf("route %v not allowed", requestedUrl))
 	return false
 }
 
