@@ -78,24 +78,23 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
 
     this.SetAuthTenant(tenant)
 
-    this.baseController.Log("**********************************")
-    this.baseController.Log("** UserInfo.Id=%v", this.GetAuthUser().Id)
-    this.baseController.Log("** UserInfo.Name=%v", this.GetAuthUser().Name)
-    this.baseController.Log("** Tenant.Id=%v", this.GetAuthTenant().Id)
-    this.baseController.Log("** Tenant.Name=%v", this.GetAuthTenant().Name)
-    this.baseController.Log("** UserInfo.Authority=%v", this.GetAuthUser().Role.Authority)
-    this.baseController.Log("** UserInfo.Roles=%v", this.GetAuthUser().GetAuthorities())
-    this.baseController.Log("** IsLoggedIn=%v", this.IsLoggedIn)
-    this.baseController.Log("** IsTokenLoggedIn=%v", this.IsTokenLoggedIn)
-    this.baseController.Log("**********************************")
+    this.baseController.Log("--------------------------------------------------")
+    this.baseController.Log("### User Id = %v", this.GetAuthUser().Id)
+    this.baseController.Log("### User Name = %v", this.GetAuthUser().Name)
+    this.baseController.Log("### Tenant Id = %v", this.GetAuthTenant().Id)
+    this.baseController.Log("### Tenant Name = %v", this.GetAuthTenant().Name)
+    this.baseController.Log("### User Authority = %v", this.GetAuthUser().Role.Authority)
+    this.baseController.Log("### User Roles = %v", this.GetAuthUser().GetAuthorities())
+    this.baseController.Log("### User IsLoggedIn = %v", this.IsLoggedIn)
+    this.baseController.Log("### User IsTokenLoggedIn = %v", this.IsTokenLoggedIn)
+    this.baseController.Log("### User Auth Token = %v", this.baseController.GetToken())    
+    this.baseController.Log("--------------------------------------------------")
 
     this.baseController.Data["UserInfo"] = this.GetAuthUser()
     this.baseController.Data["Tenant"] = this.GetAuthTenant()
 
     this.Auth = services.NewAuthService(this.GetAuthUser())
-  } else {
-    base.Log("** user not is logged")
-  }
+  } 
 
   this.baseController.Data["IsLoggedIn"] = this.IsLoggedIn || this.IsTokenLoggedIn
 
@@ -111,8 +110,6 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
 func (this *BaseAuthController) AppAuth(){
 
   token := this.baseController.GetToken()
-
-  this.baseController.Log("AUTH TOKEN %v", token)
 
   if strings.TrimSpace(token) != "" {
 

@@ -248,7 +248,6 @@ func (this *BaseController) NestPrepareBase () {
   }
 
 
-  logs.Trace("Accept-Language is " + al)
   // 2. Default language is English.
   if len(this.Lang) == 0 {
     this.Lang = "pt-BR"
