@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/astaxie/beego/client/orm"
+	"github.com/beego/beego/v2/client/orm"
 	"reflect"
 	"strings"
 	"errors"
@@ -354,7 +354,7 @@ func (this *Criteria) Query() orm.QuerySeter {
 	  entity := this.Result
 
 	  if model, ok := entity.(Model); ok {
-	    this.query = this.Session.Db.QueryTable(model.TableName())
+	    this.query = this.Session.GetDb().QueryTable(model.TableName())
 		} else {
 			this.setError(errors.New("entity does not implements of Model")	)
 		}

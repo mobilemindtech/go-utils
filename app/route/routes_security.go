@@ -1,7 +1,7 @@
 package route
 
 import (
-	"github.com/astaxie/beego/server/web/context"
+	"github.com/beego/beego/v2/server/web/context"
   "encoding/json"
   "io/ioutil"
   "strings"

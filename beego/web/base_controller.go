@@ -5,11 +5,10 @@ import (
   "github.com/mobilemindtec/go-utils/beego/filters"
   "github.com/mobilemindtec/go-utils/beego/db"
   "github.com/mobilemindtec/go-utils/support"
-  "github.com/astaxie/beego/core/validation"
-  "github.com/leekchan/accounting"
-  "github.com/astaxie/beego/client/orm"
-  beego "github.com/astaxie/beego/server/web"
-  "github.com/astaxie/beego/core/logs"
+  "github.com/beego/beego/v2/core/validation"
+  "github.com/leekchan/accounting"  
+  beego "github.com/beego/beego/v2/server/web"
+  "github.com/beego/beego/v2/core/logs"
   "github.com/beego/i18n"
   "html/template"
   "strings"
@@ -33,8 +32,7 @@ type BaseController struct {
   Flash *beego.FlashData
   Session *db.Session
   support.JsonParser
-  ViewPath string
-  Db orm.Ormer
+  ViewPath string  
   i18n.Locale
 
   defaultPageLimit int64
@@ -270,7 +268,7 @@ func (this *BaseController) NestPrepareBase () {
 
   this.Session = db.NewSession()
   var err error
-  this.Db, err = this.Session.Open()
+  _, err = this.Session.Open()
 
   if err != nil {
     this.Log("***************************************************")

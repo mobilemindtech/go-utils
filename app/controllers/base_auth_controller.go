@@ -171,7 +171,10 @@ func (this *BaseAuthController) LoginPath() string {
 
 func (this *BaseAuthController) SetParams() {
   this.baseController.Data["Params"] = make(map[string]string)
-  for k, v := range this.baseController.Input() {
+
+  values, _ := this.baseController.Input()
+
+  for k, v := range  values {
     this.baseController.Data["Params"].(map[string]string)[k] = v[0]
   }
 }

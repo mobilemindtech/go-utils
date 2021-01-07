@@ -1,7 +1,7 @@
 package db
 
 import (
-  "github.com/astaxie/beego/client/orm"
+  "github.com/beego/beego/v2/client/orm"
   "reflect"
   "strings"
   "errors"
@@ -21,8 +21,8 @@ type Model interface {
 }
 
 type Session struct {
-  Db orm.Ormer
-  Tx orm.TxOrmer
+  db orm.Ormer
+  tx orm.TxOrmer
   State SessionState
   Tenant interface{}
   IgnoreTenatFilter bool
@@ -32,8 +32,7 @@ type Session struct {
   deepSetDefault map[string]int
   deepSaveOrUpdate map[string]int
   deepEager map[string]int
-  deepRemove map[string]int
-  transactional bool
+  deepRemove map[string]int  
 
   openDbError bool
 }
@@ -59,6 +58,18 @@ func OrmVerbose(verbose bool){
   orm.Debug = verbose
 }
 
+func (this *Session) GetDb() orm.TxOrmer {
+  return this.tx
+}
+
+func (this *Session) GetTx() orm.TxOrmer {
+  return this.tx
+}
+
+func (this *Session) GetOrmer() orm.Ormer {
+  return this.db
+}
+
 func (this *Session) SetTenant(tenant interface{}) *Session {
   this.Tenant = tenant
   return this
@@ -71,6 +82,11 @@ func (this *Session) SetDbName(dbName string) *Session {
 
 func (this *Session) OnError() *Session {
   this.State = SessionStateError
+  return this
+}
+
+func (this *Session) SetError() *Session {
+  this.OnError()
   return this
 }
 
@@ -92,57 +108,46 @@ func (this *Session) IsOpenDbError() bool{
   return this.openDbError
 }
 
-func (this *Session) Open() (orm.Ormer, error){
+func (this *Session) Open() (orm.TxOrmer, error){
   return this.Begin()
 }
 
 
-func (this *Session) OpenWithoutTransaction() (orm.Ormer, error){
-  return this.begin(false)
-}
-
 func (this *Session) Close() {
 
-  if this.transactional{
-    if this.State == SessionStateOk {
-      this.Commit()
-    } else {
-      this.Rollback()
-    }
+  if this.State == SessionStateOk {
+    this.Commit()
+  } else {
+    this.Rollback()
   }
 }
 
-func (this *Session) Begin() (orm.Ormer, error){
-  return this.begin(true)
+func (this *Session) Begin() (orm.TxOrmer, error){
+  return this.begin()
 }
 
-func (this *Session) begin(transaction bool) (orm.Ormer, error){
-  this.Db = orm.NewOrmUsingDB(this.DbName)
+func (this *Session) begin() (orm.TxOrmer, error){
+  this.db = orm.NewOrmUsingDB(this.DbName)
 
-  if transaction {
-    this.transactional = true
-    var err error
-    this.Tx ,err = this.Db.Begin()
-    if err != nil {
+  var err error
+  this.tx, err = this.db.Begin()
+  if err != nil {
 
-      this.openDbError = true
+    this.openDbError = true
 
-      fmt.Println("****************************************************************")
-      fmt.Println("****************************************************************")
-      fmt.Println("****************************************************************")
-      fmt.Println("************************ db begin error: %v", err.Error())
-      fmt.Println("****************************************************************")
-      fmt.Println("****************************************************************")
-      fmt.Println("****************************************************************")
+    fmt.Println("****************************************************************")
+    fmt.Println("****************************************************************")
+    fmt.Println("****************************************************************")
+    fmt.Println("************************ db begin error: %v", err.Error())
+    fmt.Println("****************************************************************")
+    fmt.Println("****************************************************************")
+    fmt.Println("****************************************************************")
 
-      return nil, err
-      //panic(err)
-    }
-  }else{
-    this.transactional = false
+    return nil, err
+    //panic(err)
   }
 
-  return this.Db, nil
+  return this.tx, nil
 }
 
 func (this *Session) Commit() error{
@@ -151,8 +156,9 @@ func (this *Session) Commit() error{
     fmt.Println("## session commit ")
   }
 
-  if this.Tx != nil{
-    err := this.Tx.Commit()
+  if this.tx != nil{
+    fmt.Println("** session commit ")
+    err := this.tx.Commit()
     if err != nil {
       fmt.Println("****************************************************************")
       fmt.Println("****************************************************************")
@@ -165,8 +171,8 @@ func (this *Session) Commit() error{
       //panic(err)
       return err
     }
-    this.Tx = nil
-    this.Db = nil
+    this.tx = nil
+    this.db = nil
   }
 
   return nil
@@ -178,9 +184,9 @@ func (this *Session) Rollback() error{
     fmt.Println("## session rollback ")
   }
 
-  if this.Tx != nil{
+  if this.tx != nil{
     fmt.Println("** Session Rollback ")
-    err := this.Tx.Rollback()
+    err := this.tx.Rollback()
     if err != nil {
       fmt.Println("****************************************************************")
       fmt.Println("****************************************************************")
@@ -191,8 +197,8 @@ func (this *Session) Rollback() error{
       fmt.Println("****************************************************************")
       return err
     }
-    this.Tx = nil
-    this.Db = nil
+    this.tx = nil
+    this.db = nil
   }
 
   return nil
@@ -208,7 +214,7 @@ func (this *Session) Save(entity interface{}) error {
     this.setTenant(entity)
   }
 
-  _, err := this.Db.Insert(entity)
+  _, err := this.GetDb().Insert(entity)
 
   if this.Debug {
     fmt.Println("## save data: %+v", entity)
@@ -232,7 +238,7 @@ func (this *Session) Update(entity interface{}) error {
     this.setTenant(entity)
   }
 
-  _, err := this.Db.Update(entity)
+  _, err := this.GetDb().Update(entity)
 
   if this.Debug {
     fmt.Println("## update data: %+v", entity)
@@ -249,7 +255,8 @@ func (this *Session) Update(entity interface{}) error {
 
 func (this *Session) Remove(entity interface{}) error {
 
-  _, err := this.Db.Delete(entity)
+
+  _, err := this.GetDb().Delete(entity)
 
   if err != nil {
     fmt.Println("## Session: error on remove: %v", err.Error())
@@ -268,7 +275,7 @@ func (this *Session) Get(entity interface{}) (bool, error) {
 
   if model, ok := entity.(Model); ok {
 
-    err := this.Db.Read(entity)
+    err := this.GetDb().Read(entity)
     
     if err == orm.ErrNoRows {
       //fmt.Println("## Session: error on load: %v", err.Error())
@@ -293,7 +300,7 @@ func (this *Session) Count(entity interface{}) (int64, error){
 
   if model, ok := entity.(Model); ok {
 
-    query := this.Db.QueryTable(model.TableName())
+    query := this.GetDb().QueryTable(model.TableName())
 
     query = this.setTenantFilter(entity, query)
 
@@ -313,7 +320,7 @@ func (this *Session) Count(entity interface{}) (int64, error){
 func (this *Session) HasById(entity interface{}, id int64) (bool, error) {
 
   if model, ok := entity.(Model); ok {
-    query := this.Db.QueryTable(model.TableName()).Filter("id", id)
+    query := this.GetDb().QueryTable(model.TableName()).Filter("id", id)
 
     query = this.setTenantFilter(entity, query)
 
@@ -327,7 +334,7 @@ func (this *Session) HasById(entity interface{}, id int64) (bool, error) {
 func (this *Session) FindById(entity interface{}, id int64) (interface{}, error) {
 
   if model, ok := entity.(Model); ok {
-    query := this.Db.QueryTable(model.TableName()).Filter("id", id)
+    query := this.GetDb().QueryTable(model.TableName()).Filter("id", id)
 
     query = this.setTenantFilter(entity, query)
 
@@ -385,7 +392,7 @@ func (this *Session) SaveOrUpdate(entity interface{}) error{
 func (this *Session) List(entity interface{}, entities interface{}) error {
   if model, ok := entity.(Model); ok {
 
-    query := this.Db.QueryTable(model.TableName())
+    query := this.GetDb().QueryTable(model.TableName())
 
     query = this.setTenantFilter(entity, query)
 
@@ -409,7 +416,7 @@ func (this *Session) PageQuery(query orm.QuerySeter, entity interface{}, entitie
   if model, ok := entity.(Model); ok {
 
     if query == nil {
-      query = this.Db.QueryTable(model.TableName())
+      query = this.GetDb().QueryTable(model.TableName())
     }
 
     query = query.Limit(page.Limit).Offset(page.Offset)
@@ -462,7 +469,7 @@ func (this *Session) PageQuery(query orm.QuerySeter, entity interface{}, entitie
 
 func (this *Session) Query(entity interface{}) (orm.QuerySeter, error) {
   if model, ok := entity.(Model); ok {
-    query := this.Db.QueryTable(model.TableName())
+    query := this.GetDb().QueryTable(model.TableName())
 
     query = this.setTenantFilter(entity, query)
 
@@ -619,7 +626,7 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
           fmt.Println("## eager field: ", field.Name, fieldValue)
         }
 
-        if _, err := this.Db.LoadRelated(reply, field.Name); err != nil {
+        if _, err := this.GetDb().LoadRelated(reply, field.Name); err != nil {
           fmt.Println("********* eager field error ", fullType, field.Name, fieldValue, err.Error())
         } else {
           // reload loaded value of field reference

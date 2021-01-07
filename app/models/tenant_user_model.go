@@ -2,7 +2,7 @@ package models
 
 import (
   "github.com/mobilemindtec/go-utils/beego/db"
-  "github.com/astaxie/beego/client/orm"
+  "github.com/beego/beego/v2/client/orm"
   "time"
 )
 
@@ -33,8 +33,8 @@ func (this *TenantUser) IsPersisted() bool{
 }
 
 func (this *TenantUser) LoadRelated(entity *TenantUser) {
-  this.Session.Db.LoadRelated(entity, "Tenant")
-  this.Session.Db.LoadRelated(entity, "User")
+  this.Session.GetDb().LoadRelated(entity, "Tenant")
+  this.Session.GetDb().LoadRelated(entity, "User")
 }
 
 func (this *TenantUser) ListByTenant(tenant *Tenant) (*[]*TenantUser , error) { 

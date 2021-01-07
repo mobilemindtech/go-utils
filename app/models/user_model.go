@@ -4,7 +4,7 @@ import (
   "github.com/mobilemindtec/go-utils/app/util"
   "github.com/mobilemindtec/go-utils/beego/db"
   "github.com/mobilemindtec/go-utils/support"
-  "github.com/astaxie/beego/client/orm"
+  "github.com/beego/beego/v2/client/orm"
   "github.com/satori/go.uuid"
 	"time"
   "fmt"
@@ -70,7 +70,7 @@ func (this *User) GetAuthorities() string {
 
 func (this *User) LoadIfExists() (bool, error) {
 
-  err := this.Session.Db.Read(this)
+  err := this.Session.GetDb().Read(this)
 
   if err == orm.ErrNoRows {
     return false, nil

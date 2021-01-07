@@ -3,7 +3,7 @@ package services
 import (
   "github.com/mobilemindtec/go-utils/app/models"
 	"github.com/mobilemindtec/go-utils/beego/db"
-	"github.com/astaxie/beego/core/logs"
+	"github.com/beego/beego/v2/core/logs"
   "github.com/mobilemindtec/go-utils/app/util"  
   "github.com/beego/i18n"
   "errors"

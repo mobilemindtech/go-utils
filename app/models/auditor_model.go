@@ -12,7 +12,7 @@ type Auditor struct{
   UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"-"`      
   Content string `orm:"type(text)"  valid:"Required;MaxSize(300)" form:""`
   
-  Tenant *Tenant `orm:"null;rel(fk);on_delete(do_nothing)" valid:"Required"`
+  Tenant *Tenant `orm:"null;rel(fk);on_delete(do_nothing)" valid:""`
   User *User `orm:"null;rel(fk);on_delete(do_nothing)"`
 
   Session *db.Session `orm:"-"`
@@ -40,8 +40,8 @@ func (this *Auditor) TableName() string{
 }
 
 func (this *Auditor) LoadRelated(entity *Auditor) {
-  this.Session.Db.LoadRelated(entity, "Tenant")
-  this.Session.Db.LoadRelated(entity, "User")
+  this.Session.GetDb().LoadRelated(entity, "Tenant")
+  this.Session.GetDb().LoadRelated(entity, "User")
 }
 
 func (this *Auditor) ListByTenant(tenant *Tenant) (*[]*Auditor , error) { 

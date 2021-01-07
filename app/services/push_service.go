@@ -2,7 +2,7 @@ package services
 
 import (
   "github.com/mobilemindtec/go-utils/beego/db"
-  "github.com/astaxie/beego/client/orm"
+  "github.com/beego/beego/v2/client/orm"
 	"encoding/json"
   "io/ioutil"
   "net/http"
@@ -200,7 +200,7 @@ func (this *PushService) NotificateUserName(username string, message string) err
 func (this *PushService) NotificateByQuery(query string, message string) error{
 
   var results orm.ParamsList
-	_, err := this.Session.Db.Raw(query).ValuesFlat(&results)
+	_, err := this.Session.GetDb().Raw(query).ValuesFlat(&results)
 
   if err != nil {
 		fmt.Println("PushService.sendToAppUsers %v", err)

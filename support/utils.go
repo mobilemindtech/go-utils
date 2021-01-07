@@ -1,7 +1,7 @@
 package support 
 
 import (
-  "github.com/astaxie/beego/server/web/context"
+  "github.com/beego/beego/v2/server/web/context"
   "github.com/leekchan/accounting"
   "strings"
   "regexp"

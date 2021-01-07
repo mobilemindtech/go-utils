@@ -2,7 +2,7 @@ package models
 
 import (
 	"github.com/mobilemindtec/go-utils/beego/db"
-  "github.com/astaxie/beego/client/orm"
+  "github.com/beego/beego/v2/client/orm"
   "errors"
   "time"
   "fmt"
@@ -49,7 +49,7 @@ func (this *UserRole) FindRoleByUser(user *User) *Role {
     return nil
   }  
 
-  this.Session.Db.LoadRelated(entity, "Role")
+  this.Session.GetDb().LoadRelated(entity, "Role")
 
   return entity.Role
 }
@@ -65,7 +65,7 @@ func (this *UserRole) FindAllRolesByUser(user *User) *[]*Role {
 	roles := []*Role{}
 
 	for _, it := range *results {
-		this.Session.Db.LoadRelated(it, "Role")
+		this.Session.GetDb().LoadRelated(it, "Role")
 
 		roles = append(roles, it.Role)
 	}
@@ -82,8 +82,8 @@ func (this *UserRole) FindAllByRole(role *Role) (*[]*UserRole, error) {
   _, err := query.Filter("Role", role).All(&results)
 
 	for _, it := range results {
-		this.Session.Db.LoadRelated(it, "Role")
-		this.Session.Db.LoadRelated(it, "User")
+		this.Session.GetDb().LoadRelated(it, "Role")
+		this.Session.GetDb().LoadRelated(it, "User")
 	}
 
   return &results, err
@@ -101,7 +101,7 @@ func (this *UserRole) FindByUser(user *User) (*UserRole, error) {
     return entity, nil  
   }  
 
-  this.Session.Db.LoadRelated(entity, "Role")
+  this.Session.GetDb().LoadRelated(entity, "Role")
 
   return entity, err
 }
