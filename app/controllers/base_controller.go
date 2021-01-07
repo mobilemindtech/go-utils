@@ -25,7 +25,7 @@ type BaseController struct {
 
 func (this *BaseController) NestPrepareAppBase() {
 
-  this.Log("** app.controllers.BaseController.NestPrepare")
+  //this.Log("** app.controllers.BaseController.NestPrepare")
 
   this.NestPrepareBase()
   this.LoadModels()

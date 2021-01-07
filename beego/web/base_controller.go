@@ -233,7 +233,7 @@ func LoadIl8n() {
 // It's used for language option check and setting.
 func (this *BaseController) NestPrepareBase () {
 
-  this.Log("** web.BaseController.NestPrepareBase")
+  //this.Log("** web.BaseController.NestPrepareBase")
 
   // Reset language option.
   this.Lang = "" // This field is from i18n.Locale.
@@ -254,7 +254,7 @@ func (this *BaseController) NestPrepareBase () {
     this.Lang = "pt-BR"
   }
 
-  this.Log(" ** use language %v", this.Lang)
+  //this.Log(" ** use language %v", this.Lang)
 
   this.Flash = beego.NewFlash()
 
@@ -285,7 +285,7 @@ func (this *BaseController) NestPrepareBase () {
 
   this.EntityValidator = validator.NewEntityValidator(this.Lang, this.ViewPath)
 
-  this.Log("use default time location America/Sao_Paulo")
+  //this.Log("use default time location America/Sao_Paulo")
   this.DefaultLocation, _ = time.LoadLocation("America/Sao_Paulo")
 
   this.defaultPageLimit = 25
@@ -332,7 +332,7 @@ func (this *BaseController) Finish() {
 
 func (this *BaseController) Finally(){
 
-  this.Log("-- Controller.Finally, Rollback, Session = %v", this.Session)
+  this.Log("* Controller.Finally, Rollback")
 
   if this.Session != nil {
     this.Session.OnError().Close()
@@ -533,7 +533,7 @@ func (this *BaseController) OnRedirectSuccess(action string, message string) {
 // executes redirect or OnJsonError
 func (this *BaseController) OnErrorAny(path string, message string) {
 
-  this.Log("** this.IsJson() %v", this.IsJson() )
+  //this.Log("** this.IsJson() %v", this.IsJson() )
 
   if this.IsJson() {
     this.OnJsonError(message)
@@ -750,7 +750,7 @@ func (this *BaseController) GetPage() *db.Page{
     if this.Ctx.Input.IsPost() {
       jsonMap, _ := this.JsonToMap(this.Ctx)
 
-      this.Log(" page jsonMap = %v", jsonMap)
+      //this.Log(" page jsonMap = %v", jsonMap)
 
       if _, ok := jsonMap["limit"]; ok {
         page.Limit = this.GetJsonInt64(jsonMap, "limit")

@@ -22,7 +22,7 @@ type BaseAuthController struct{
 
 func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
 
-  base.Log("** app.controllers.BaseAuthController.NestPrepareAuth")
+  //base.Log("** app.controllers.BaseAuthController.NestPrepareAuth")
 
   this.baseController = base
 
@@ -37,7 +37,7 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
   tenantUuid := this.baseController.GetHeaderByNames("tenant", "X-Auth-Tenant")
 
   if len(tenantUuid) > 0 {
-    this.baseController.Log("tenantUuid = %v", tenantUuid)
+    //this.baseController.Log("tenantUuid = %v", tenantUuid)
     ModelTenant := this.baseController.ModelTenant
     tenant, _ = ModelTenant.GetByUuidAndEnabled(tenantUuid)
     this.SetAuthTenant(tenant)
@@ -79,13 +79,14 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
     this.SetAuthTenant(tenant)
 
     this.baseController.Log("**********************************")
-    this.baseController.Log("** IsLoggedIn=%v", this.IsLoggedIn)
-    this.baseController.Log("** IsTokenLoggedIn=%v", this.IsTokenLoggedIn)
     this.baseController.Log("** UserInfo.Id=%v", this.GetAuthUser().Id)
     this.baseController.Log("** UserInfo.Name=%v", this.GetAuthUser().Name)
+    this.baseController.Log("** Tenant.Id=%v", this.GetAuthTenant().Id)
+    this.baseController.Log("** Tenant.Name=%v", this.GetAuthTenant().Name)
     this.baseController.Log("** UserInfo.Authority=%v", this.GetAuthUser().Role.Authority)
     this.baseController.Log("** UserInfo.Roles=%v", this.GetAuthUser().GetAuthorities())
-    this.baseController.Log("** Tenant.Name=%v", this.GetAuthTenant().Name)
+    this.baseController.Log("** IsLoggedIn=%v", this.IsLoggedIn)
+    this.baseController.Log("** IsTokenLoggedIn=%v", this.IsTokenLoggedIn)
     this.baseController.Log("**********************************")
 
     this.baseController.Data["UserInfo"] = this.GetAuthUser()
@@ -243,7 +244,7 @@ func (this *BaseAuthController) AuthCheckAdmin() {
 
 func (this *BaseAuthController) UpSecurityAuth() bool {
 
-  this.baseController.Log("** UpSecurityAuth")
+  //this.baseController.Log("** UpSecurityAuth")
 
   roles := []string{}
 
@@ -253,7 +254,7 @@ func (this *BaseAuthController) UpSecurityAuth() bool {
 
   if !route.IsRouteAuthorized(this.baseController.Ctx, roles) {
 
-    this.baseController.Log("** not authorized ")
+    this.baseController.Log("** path %v not authorized ", this.baseController.Ctx.Input.URL())
 
     if !this.IsLoggedIn && !this.IsTokenLoggedIn {
       if this.baseController.IsJson(){

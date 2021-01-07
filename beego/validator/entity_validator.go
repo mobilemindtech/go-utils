@@ -40,7 +40,7 @@ func (this *EntityValidator) IsValid(entity interface{}, action func(validator *
 
     typeName = support.Underscore(typeName)
 
-    fmt.Println("typeName = %v", typeName)
+    //fmt.Println("typeName = %v", typeName)
 
     ok, err := localValid.Valid(entity)
 
@@ -68,7 +68,7 @@ func (this *EntityValidator) IsValid(entity interface{}, action func(validator *
 
         //fmt.Println("## ViewPath %v", this.ViewPath)
         //fmt.Println("## lebel %v", label)
-        fmt.Println("## validator error field %v.%v error %v", typeName, err.Field, err)
+        fmt.Println(fmt.Sprintf("* validator error field %v.%v error %v", typeName, err.Field, err))
       }
 
       result.HasError = true
@@ -96,7 +96,7 @@ func (this *EntityValidator) IsValid(entity interface{}, action func(validator *
 
       result.ErrorsFields[err.Field] = err.Message
 
-      fmt.Println("## validator error field %v.%v error %v", typeName, err.Field, err)
+      fmt.Println(fmt.Sprintf("* validator error field %v.%v error %v", typeName, err.Field, err))
     }
 
     result.HasError = true

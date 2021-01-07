@@ -157,7 +157,7 @@ func (this *Session) Commit() error{
   }
 
   if this.tx != nil{
-    fmt.Println("** session commit ")
+    ///fmt.Println("** session commit ")
     err := this.tx.Commit()
     if err != nil {
       fmt.Println("****************************************************************")
@@ -185,7 +185,7 @@ func (this *Session) Rollback() error{
   }
 
   if this.tx != nil{
-    fmt.Println("** Session Rollback ")
+    //fmt.Println("** Session Rollback ")
     err := this.tx.Rollback()
     if err != nil {
       fmt.Println("****************************************************************")
