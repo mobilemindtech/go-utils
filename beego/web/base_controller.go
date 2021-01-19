@@ -479,6 +479,14 @@ func (this *BaseController) OnJson200() {
   this.OnJson(support.JsonResult{ CurrentUnixTime: this.GetCurrentTimeUnix() })
 }
 
+func (this *BaseController) OkAsJson(message string) {
+  this.OnJson(support.JsonResult{ CurrentUnixTime: this.GetCurrentTimeUnix(), Message: message })
+}
+
+func (this *BaseController) OkAsHtml(message string) {
+  this.Ctx.Output.Body([]byte(message))
+}
+
 func (this *BaseController) OnJsonValidationError() {
   this.Rollback()
   errors := this.Data["errors"].(map[string]string)
