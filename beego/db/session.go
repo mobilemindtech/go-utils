@@ -147,6 +147,8 @@ func (this *Session) begin() (orm.TxOrmer, error){
     //panic(err)
   }
 
+  //fmt.Println("tx openned = %v", this.tx)
+
   return this.tx, nil
 }
 
@@ -155,6 +157,8 @@ func (this *Session) Commit() error{
   if this.Debug {
     fmt.Println("## session commit ")
   }
+
+  //fmt.Println("## session commit, tx = %v ", this.tx)
 
   if this.tx != nil{
     ///fmt.Println("** session commit ")
@@ -183,6 +187,8 @@ func (this *Session) Rollback() error{
   if this.Debug {
     fmt.Println("## session rollback ")
   }
+
+  //fmt.Println("## session rollback ")
 
   if this.tx != nil{
     //fmt.Println("** Session Rollback ")

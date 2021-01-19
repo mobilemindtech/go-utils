@@ -322,6 +322,8 @@ func (this *BaseController) FlashRead() {
 
 func (this *BaseController) Finish() {
 
+  this.Log("* Controller.Finish, Commit")
+
   this.Session.Close()
 
   if app, ok := this.AppController.(NestFinisher); ok {
