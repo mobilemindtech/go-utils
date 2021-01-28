@@ -3,7 +3,7 @@ package db
 import (
   "github.com/beego/beego/v2/client/orm"
   "github.com/beego/beego/v2/core/utils"
-  "fmt"
+  _ "fmt"
 )
 
 
@@ -97,13 +97,13 @@ func (this *DataBase) Begin() error {
   this.Open()
   var err error
   this.tx, err = this.db.Begin()
-  fmt.Println("----- TX OPEN %v", this.tx)
+  //fmt.Println("----- TX OPEN %v", this.tx)
   return err
 }
 
 func (this *DataBase) Commit() error{	
 	if this.tx != nil {
-		fmt.Println("----- TX COMMIT")
+		///fmt.Println("----- TX COMMIT")
 		return this.tx.Commit()
 	}
 	return nil
@@ -111,7 +111,7 @@ func (this *DataBase) Commit() error{
 
 func (this *DataBase) Rollback() error{
 	if this.tx != nil {
-		fmt.Println("----- TX ROLLBACK")
+		//fmt.Println("----- TX ROLLBACK")
 		return this.tx.Rollback()
 	}
 	return nil
