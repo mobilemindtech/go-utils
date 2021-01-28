@@ -21,8 +21,6 @@ type Model interface {
 }
 
 type Session struct {
-  db orm.Ormer
-  tx orm.TxOrmer
   State SessionState
   Tenant interface{}
   IgnoreTenatFilter bool
@@ -35,38 +33,33 @@ type Session struct {
   deepRemove map[string]int  
 
   openDbError bool
+
+  db *DataBase
+  tx bool
 }
 
 
 func NewSession() *Session{
-  return &Session{ State: SessionStateOk, Debug: false, DbName: "default" }
+  return &Session{ State: SessionStateOk, Debug: false, db: NewDataBase("default") }
 }
 
 func NewSessionWithDbName(dbName string) *Session{
-  return &Session{ State: SessionStateOk, Debug: false,  DbName: dbName }
+  return &Session{ State: SessionStateOk, Debug: false,  db: NewDataBase(dbName) }
 }
 
 func NewSessionWithTenant(tenant interface{}) *Session{
-  return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false, DbName: "default" }
+  return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false, db: NewDataBase("default") }
 }
 
 func NewSessionWithTenantAndDbName(tenant interface{}, dbName string) *Session{
-  return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false, DbName: dbName }
+  return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false, db: NewDataBase(dbName) }
 }
 
 func OrmVerbose(verbose bool){
   orm.Debug = verbose
 }
 
-func (this *Session) GetDb() orm.TxOrmer {
-  return this.tx
-}
-
-func (this *Session) GetTx() orm.TxOrmer {
-  return this.tx
-}
-
-func (this *Session) GetOrmer() orm.Ormer {
+func (this *Session) GetDb() *DataBase {
   return this.db
 }
 
@@ -75,18 +68,13 @@ func (this *Session) SetTenant(tenant interface{}) *Session {
   return this
 }
 
-func (this *Session) SetDbName(dbName string) *Session {
-  this.DbName = dbName
-  return this
-}
-
 func (this *Session) OnError() *Session {
-  this.State = SessionStateError
+  this.SetError()
   return this
 }
 
 func (this *Session) SetError() *Session {
-  this.OnError()
+  this.State = SessionStateError
   return this
 }
 
@@ -100,38 +88,54 @@ func (this *Session) RunWithTenant(tenant interface{}, runner func()) {
   }()
 
   runner()
-
-
 }
 
 func (this *Session) IsOpenDbError() bool{
   return this.openDbError
 }
 
-func (this *Session) Open() (orm.TxOrmer, error){
-  return this.Begin()
+func (this *Session) Open(withTx bool) error {
+  if withTx {
+    return this.OpenWithTx()
+  } 
+  return this.OpenWithoutTx()
 }
 
+func (this *Session) OpenTx() error {
+  return this.OpenWithTx()
+}
+
+func (this *Session) OpenWithTx() error {
+  this.tx = true
+  return this.beginTx()
+}
+
+func (this *Session) OpenNoTx() error{  
+  return this.OpenWithoutTx()
+}
+
+func (this *Session) OpenWithoutTx() error{
+  this.tx = false
+  this.db.Open()
+  return nil
+}
 
 func (this *Session) Close() {
 
-  if this.State == SessionStateOk {
-    this.Commit()
+  if this.tx {
+    if this.State == SessionStateOk {
+      this.Commit()
+    } else {
+      this.Rollback()
+    }
   } else {
-    this.Rollback()
+    this.db = nil
   }
 }
 
-func (this *Session) Begin() (orm.TxOrmer, error){
-  return this.begin()
-}
-
-func (this *Session) begin() (orm.TxOrmer, error){
-  this.db = orm.NewOrmUsingDB(this.DbName)
-
-  var err error
-  this.tx, err = this.db.Begin()
-  if err != nil {
+func (this *Session) beginTx() error {
+  
+  if err := this.db.Begin(); err != nil {
 
     this.openDbError = true
 
@@ -143,13 +147,14 @@ func (this *Session) begin() (orm.TxOrmer, error){
     fmt.Println("****************************************************************")
     fmt.Println("****************************************************************")
 
-    return nil, err
+    return err
     //panic(err)
   }
 
   //fmt.Println("tx openned = %v", this.tx)
 
-  return this.tx, nil
+  return nil
+
 }
 
 func (this *Session) Commit() error{
@@ -158,12 +163,8 @@ func (this *Session) Commit() error{
     fmt.Println("## session commit ")
   }
 
-  //fmt.Println("## session commit, tx = %v ", this.tx)
-
-  if this.tx != nil{
-    ///fmt.Println("** session commit ")
-    err := this.tx.Commit()
-    if err != nil {
+  if this.db != nil {
+    if err := this.db.Commit(); err != nil {
       fmt.Println("****************************************************************")
       fmt.Println("****************************************************************")
       fmt.Println("****************************************************************")
@@ -174,8 +175,7 @@ func (this *Session) Commit() error{
       this.Rollback()
       //panic(err)
       return err
-    }
-    this.tx = nil
+    }  
     this.db = nil
   }
 
@@ -190,10 +190,10 @@ func (this *Session) Rollback() error{
 
   //fmt.Println("## session rollback ")
 
-  if this.tx != nil{
-    //fmt.Println("** Session Rollback ")
-    err := this.tx.Rollback()
-    if err != nil {
+  //fmt.Println("** Session Rollback ")
+  
+  if this.db != nil {
+    if err := this.db.Rollback(); err != nil {
       fmt.Println("****************************************************************")
       fmt.Println("****************************************************************")
       fmt.Println("****************************************************************")
@@ -203,7 +203,6 @@ func (this *Session) Rollback() error{
       fmt.Println("****************************************************************")
       return err
     }
-    this.tx = nil
     this.db = nil
   }
 
@@ -228,7 +227,7 @@ func (this *Session) Save(entity interface{}) error {
 
   if err != nil {
     fmt.Println("## Session: error on save: %v", err.Error())
-    this.OnError()
+    this.SetError()
     return err
   }
 
@@ -252,7 +251,7 @@ func (this *Session) Update(entity interface{}) error {
 
   if err != nil {
     fmt.Println("## Session: error on update: %v", err.Error())
-    this.OnError()
+    this.SetError()
     return err
   }
 
@@ -266,7 +265,7 @@ func (this *Session) Remove(entity interface{}) error {
 
   if err != nil {
     fmt.Println("## Session: error on remove: %v", err.Error())
-    this.OnError()
+    this.SetError()
     return err
   }
 
@@ -285,7 +284,7 @@ func (this *Session) Get(entity interface{}) (bool, error) {
     
     if err == orm.ErrNoRows {
       //fmt.Println("## Session: error on load: %v", err.Error())
-      //this.OnError()
+      //this.SetError()
       return false, nil
     }
     
@@ -298,7 +297,7 @@ func (this *Session) Get(entity interface{}) (bool, error) {
 
   }
 
-  this.OnError()
+  this.SetError()
   return false, errors.New("entity does not implements of Model")  
 }
 
@@ -314,12 +313,12 @@ func (this *Session) Count(entity interface{}) (int64, error){
 
     if err != nil {
       fmt.Println("## Session: error on count table %v: %v", model.TableName(), err.Error())
-      //this.OnError()
+      //this.SetError()
     }
     return num, err
   }
 
-  this.OnError()
+  this.SetError()
   return 0, errors.New("entity does not implements of Model")
 }
 
@@ -333,7 +332,7 @@ func (this *Session) HasById(entity interface{}, id int64) (bool, error) {
     return query.Exist(), nil
   }
 
-  this.OnError()
+  this.SetError()
   return false, errors.New("entity does not implements of Model")
 }
 
@@ -352,7 +351,7 @@ func (this *Session) FindById(entity interface{}, id int64) (interface{}, error)
 
     if err != nil{
       fmt.Println("## Session: error on find by id table %v: %v", model.TableName(), err.Error())
-      //this.OnError()
+      //this.SetError()
       return nil, err
     }
 
@@ -363,7 +362,7 @@ func (this *Session) FindById(entity interface{}, id int64) (interface{}, error)
     return entity, nil
   }
 
-  this.OnError()
+  this.SetError()
   return false, errors.New("entity does not implements of Model")
 }
 
@@ -391,7 +390,7 @@ func (this *Session) SaveOrUpdate(entity interface{}) error{
     return nil
   }
 
-  this.OnError()
+  this.SetError()
   return errors.New(fmt.Sprintf("entity %v does not implements of Model", entity))
 }
 
@@ -404,13 +403,13 @@ func (this *Session) List(entity interface{}, entities interface{}) error {
 
     if _, err := query.All(entities); err != nil {
       fmt.Println("## Session: error on list: %v", err.Error())
-      //this.OnError()
+      //this.SetError()
       return err
     }
     return nil
   }
 
-  this.OnError()
+  this.SetError()
   return errors.New("entity does not implements of Model 1")
 }
 
@@ -460,7 +459,7 @@ func (this *Session) PageQuery(query orm.QuerySeter, entity interface{}, entitie
 
     if _, err := query.All(entities); err != nil {
       fmt.Println("## Session: error on page: %v", err.Error())
-      //this.OnError()
+      //this.SetError()
       return err
     }
 
@@ -468,7 +467,7 @@ func (this *Session) PageQuery(query orm.QuerySeter, entity interface{}, entitie
     return nil
   }
 
-  this.OnError()
+  this.SetError()
   return errors.New("entity does not implements of Model")
 }
 
@@ -482,14 +481,14 @@ func (this *Session) Query(entity interface{}) (orm.QuerySeter, error) {
     return query, nil
   }
 
-  this.OnError()
+  this.SetError()
   return nil, errors.New("entity does not implements of Model")
 }
 
 func (this *Session) ToList(querySeter orm.QuerySeter, entities interface{}) error {
   if _, err := querySeter.All(entities); err != nil {
     fmt.Println("## Session: error on to list: %v", err.Error())
-    //this.OnError()
+    //this.SetError()
     return err
   }
   return nil
@@ -498,7 +497,7 @@ func (this *Session) ToList(querySeter orm.QuerySeter, entities interface{}) err
 func (this *Session) ToOne(querySeter orm.QuerySeter, entity interface{}) error {
   if err := querySeter.One(entity); err != nil {
     fmt.Println("## Session: error on to one: %v", err.Error())
-    //this.OnError()
+    //this.SetError()
     return err
   }
   return nil
@@ -509,7 +508,7 @@ func (this *Session) ToPage(querySeter orm.QuerySeter, entities interface{}, pag
   querySeter.Offset(page.Offset)
   if _, err := querySeter.All(entities); err != nil {
     fmt.Println("## Session: error on to page: %v", err.Error())
-    //this.OnError()
+    //this.SetError()
     return err
   }
   return nil
@@ -522,7 +521,7 @@ func (this *Session) ToCount(querySeter orm.QuerySeter) (int64, error) {
 
   if count, err = querySeter.Count(); err != nil {
     fmt.Println("## Session: error on to count: %v", err.Error())
-    //this.OnError()
+    //this.SetError()
     return count, err
   }
   return count, err
@@ -535,7 +534,7 @@ func (this *Session) ExecuteDelete(querySeter orm.QuerySeter) (int64, error) {
   
   if count, err = querySeter.Delete(); err != nil {
     fmt.Println("## Session: error on to list: %v", err.Error())
-    //this.OnError()
+    //this.SetError()
     return count, err
   }
   
@@ -554,11 +553,15 @@ func (this *Session) ExecuteUpdate(querySeter orm.QuerySeter, args map[string]in
   
   if _, err := querySeter.Update(params); err != nil {
     fmt.Println("## Session: error on to list: %v", err.Error())
-    //this.OnError()
+    //this.SetError()
     return count, err
   }
 
   return count, err
+}
+
+func (this *Session) Raw(query string, args ...interface{}) orm.RawSeter{  
+  return this.GetDb().Raw(query, args...)
 }
 
 

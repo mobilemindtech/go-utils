@@ -267,7 +267,7 @@ func (this *BaseController) NestPrepareBase () {
 
   this.Session = db.NewSession()
   var err error
-  _, err = this.Session.Open()
+  err = this.Session.OpenTx()
 
   if err != nil {
     this.Log("***************************************************")
