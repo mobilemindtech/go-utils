@@ -795,6 +795,20 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
 
   	case CriteriaOne:
 
+
+  		orders := []string{}
+  		for _, order := range this.orderBy {
+  			if order.Desc {
+  				orders = append(orders, fmt.Sprintf("-%v", order.Path))
+  			} else {
+  				orders = append(orders, fmt.Sprintf(order.Path))
+  			}  			
+  		}
+
+  		if len(orders) > 0 {
+  			query = query.OrderBy(orders...)
+  		}
+
 		  if len(this.RelatedSelList) > 0 {
 		  	if len(this.RelatedSelList) == 1 && this.RelatedSelList[0] == "all" {
 		  		query = query.RelatedSel()
