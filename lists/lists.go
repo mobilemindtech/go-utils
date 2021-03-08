@@ -109,3 +109,32 @@ func Map(vs interface{}, f func(interface{}) interface{}) []interface{} {
   }
   return vsm
 }
+
+func ListParts(vs interface{}, size int) [][]interface{} {
+
+  all := [][]interface{}{}
+  list := []interface{}{}
+
+  ss := reflect.ValueOf(vs)    
+  s := reflect.Indirect(ss)
+
+  for i := 0; i < s.Len(); i++ {
+
+    it := s.Index(i)
+    list = append(list, it)
+
+
+    if len(list) >= size {
+      all = append(all, list)
+      list = []interface{}{}
+    }
+
+  }
+
+  if len(list) > 0 {
+    all = append(all, list)
+  }
+
+  return all
+
+}

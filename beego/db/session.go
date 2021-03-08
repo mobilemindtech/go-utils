@@ -190,7 +190,7 @@ func (this *Session) Rollback() error{
 
   //fmt.Println("## session rollback ")
 
-  //fmt.Println("** Session Rollback ")
+  fmt.Println("** Session Rollback ")
   
   if this.db != nil {
     if err := this.db.Rollback(); err != nil {
