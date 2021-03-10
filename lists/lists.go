@@ -121,7 +121,7 @@ func ListParts(vs interface{}, size int) [][]interface{} {
   for i := 0; i < s.Len(); i++ {
 
     it := s.Index(i)
-    list = append(list, it)
+    list = append(list, it.interface())
 
 
     if len(list) >= size {
