@@ -23,7 +23,7 @@ type Model interface {
 type Session struct {
   State SessionState
   Tenant interface{}
-  IgnoreTenatFilter bool
+  IgnoreTenantFilter bool
   Debug bool
   DbName string
 
