@@ -1116,7 +1116,7 @@ func (this *Session) HasFilterTenant(reply interface{}) bool{
 		    return false
 		  }
 
-      if this.IgnoreTenatFilter {
+      if this.IgnoreTenantFilter {
         return false
       }
 

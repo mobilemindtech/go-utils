@@ -498,7 +498,7 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 			}
 		}
 
-	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) && !this.Session.IgnoreTenatFilter {
+	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) && !this.Session.IgnoreTenantFilter {
 			cond = cond.And("Tenant", this.Tenant)
 	  }
 
@@ -574,7 +574,7 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 
 		}
 
-	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) && !this.Session.IgnoreTenatFilter{
+	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) && !this.Session.IgnoreTenantFilter{
 			cond = cond.And("Tenant", this.Tenant)
 	  }			
 
@@ -663,7 +663,7 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 
 		}
 
-	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) && !this.Session.IgnoreTenatFilter{
+	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) && !this.Session.IgnoreTenantFilter{
 			cond = cond.And("Tenant", this.Tenant)
 	  }
 		condition = condition.OrCond(cond)
