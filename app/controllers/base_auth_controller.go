@@ -117,8 +117,19 @@ func (this *BaseAuthController) AppAuth(){
 
     user, err := auth.AuthenticateToken(token)
 
+    if err != nil {
+      this.baseController.Log("LOGIN ERROR: %v", err)
+      this.DelTokenLogin()
+      return
+    }
 
-    if err == nil && user != nil && user.Id > 0{
+    if user == nil {
+      this.baseController.Log("LOGIN ERROR: user not found!")
+      this.DelTokenLogin()
+      return      
+    }
+
+    if user != nil && user.Id > 0{
       this.baseController.ModelUser.LoadRelated(user)
       this.SetTokenLogin(user)
     }

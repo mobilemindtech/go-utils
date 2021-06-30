@@ -210,9 +210,7 @@ func (c JsonParser) GetJsonInt(json map[string]interface{}, key string) int{
     } else {
       val, _ = strconv.Atoi(c.GetJsonString(json, key))
     }
-  } else {
-    fmt.Println("not has int key %v", key)
-  }
+  } 
 
   return val
 }
@@ -231,9 +229,7 @@ func (c JsonParser) GetJsonInt64(json map[string]interface{}, key string) int64{
     } else {
       val, _ = strconv.Atoi(c.GetJsonString(json, key))
     }
-  } else {
-    fmt.Println("not has int key %v", key)
-  }
+  } 
 
   return int64(val)
 }
