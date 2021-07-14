@@ -207,6 +207,8 @@ func (c JsonParser) GetJsonInt(json map[string]interface{}, key string) int{
       val = int(json[key].(int64))
     } else if _, ok := json[key].(float64); ok {
       val = int(json[key].(float64))
+    } else if _, ok := json[key].(float32); ok {
+      val = int(json[key].(float32))
     } else {
       val, _ = strconv.Atoi(c.GetJsonString(json, key))
     }
@@ -226,12 +228,59 @@ func (c JsonParser) GetJsonInt64(json map[string]interface{}, key string) int64{
       val = int(json[key].(int64))
     } else if _, ok := json[key].(float64); ok {
       val = int(json[key].(float64))
+    } else if _, ok := json[key].(float32); ok {
+      val = int(json[key].(float32))
     } else {
       val, _ = strconv.Atoi(c.GetJsonString(json, key))
     }
   } 
 
   return int64(val)
+}
+
+
+func (c JsonParser) GetJsonFloat32(json map[string]interface{}, key string) float32{
+
+  var val float32
+
+  if c.HasJsonKey(json, key) {
+    if _, ok := json[key].(float32); ok {
+      val = json[key].(float32)
+    } else if _, ok := json[key].(float64); ok {
+      val = float32(json[key].(float64))
+    } else if _, ok := json[key].(int64); ok {
+      val = float32(json[key].(int64))
+    } else if _, ok := json[key].(int); ok {
+      val = float32(json[key].(int))
+    } else {
+      v, _ := strconv.ParseFloat(c.GetJsonString(json, key), 32)
+      val = float32(v)
+    }
+  } 
+
+  return float32(val)
+}
+
+func (c JsonParser) GetJsonFloat64(json map[string]interface{}, key string) float64{
+
+  var val float64
+
+  if c.HasJsonKey(json, key) {
+    if _, ok := json[key].(float64); ok {
+      val = json[key].(float64)
+    } else if _, ok := json[key].(float32); ok {
+      val = float64(json[key].(float32))
+    } else if _, ok := json[key].(int64); ok {
+      val = float64(json[key].(int64))
+    } else if _, ok := json[key].(int); ok {
+      val = float64(json[key].(int))
+    } else {
+      v, _ := strconv.ParseFloat(c.GetJsonString(json, key), 64)
+      val = float64(v)
+    }
+  } 
+
+  return float64(val)
 }
 
 func (c JsonParser) GetJsonBool(json map[string]interface{}, key string) bool{

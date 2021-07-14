@@ -75,7 +75,7 @@ func (this *Email) CreateWithCco(to string, cco string, subject string, body str
   return email, this.Session.Save(email)
 }
 
-func (this *Email) CreateOnly(to string, subject string, body string) (*Email, error){
+func (this *Email) CreateOnly(to string, subject string, body string) *Email {
   
   email := new(Email)
   email.To = to  
@@ -83,7 +83,7 @@ func (this *Email) CreateOnly(to string, subject string, body string) (*Email, e
   email.Body = body
   email.Enabled = true
 
-  return email, this.Session.Save(email)
+  return email
 }
 
 func (this *Email) CreateWithCcoOnly(to string, cco string, subject string, body string) *Email{

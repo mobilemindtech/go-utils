@@ -1,14 +1,14 @@
 package support
 
 type JsonResult struct {
-  Error bool
-  Message string
-  Results interface{}
-  Result interface{}
+  Error bool `jsonp:""`
+  Message string `jsonp:""`
+  Results interface{} `jsonp:""`
+  Result interface{} `jsonp:""`
 
-  Errors map[string]string
+  Errors map[string]string `jsonp:""`
 
-  TotalCount int64
+  TotalCount int64 `jsonp:""`
 
-  CurrentUnixTime int64
+  CurrentUnixTime int64 `jsonp:""`
 }

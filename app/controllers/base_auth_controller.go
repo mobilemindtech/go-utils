@@ -115,6 +115,8 @@ func (this *BaseAuthController) AppAuth(){
 
     auth := services.NewLoginService(this.baseController.Lang, this.baseController.Session)
 
+    this.baseController.Log("Authenticate by token %v", token)
+
     user, err := auth.AuthenticateToken(token)
 
     if err != nil {
