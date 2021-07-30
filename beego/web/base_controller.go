@@ -11,11 +11,11 @@ import (
   "github.com/beego/beego/v2/core/logs"
   "github.com/beego/i18n"
   "html/template"
+  "runtime/debug"
   "strings"
   "strconv"
   "time"
   "fmt"
-  "runtime/debug"
 )
 
 var (
@@ -86,7 +86,7 @@ func LoadFuncs(controller *BaseController) {
   }
 
   isZeroDate := func(date time.Time) bool{
-    return time.Time.IsZero(date)
+    return time.Time.IsZero(date) || date.Year() <= 1900
   }
 
   formatDate := func(date time.Time) string{
@@ -367,7 +367,8 @@ func (this *BaseController) OnEntity(viewName string, entity interface{}) {
   this.OnFlash(false)
 }
 
-func (this *BaseController) OnEntityError(viewName string, entity interface{}, message string) {
+func (this *BaseController) OnEntityError(viewName string, entity interface{}, format string, v ...interface{}) {
+  message := fmt.Sprintf(format, v...)
   this.Rollback()
   this.Flash.Error(message)
   this.Data["entity"] = entity
@@ -412,18 +413,21 @@ func (this *BaseController) OnJsonResult(result interface{}) {
   this.ServeJSON()
 }
 
-func (this *BaseController) OnJsonMessage(message string) {
+func (this *BaseController) OnJsonMessage(format string, v ...interface{}) {
+  message := fmt.Sprintf(format, v...)
   this.Data["json"] = support.JsonResult{ Message: message, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix() }
   this.ServeJSON()
 }
 
-func (this *BaseController) OnJsonResultError(result interface{}, message string) {
+func (this *BaseController) OnJsonResultError(result interface{}, format string, v ...interface{}) {
   this.Rollback()
+  message := fmt.Sprintf(format, v...)
   this.Data["json"] = support.JsonResult{ Result: result, Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix() }
   this.ServeJSON()
 }
 
-func (this *BaseController) OnJsonResultWithMessage(result interface{}, message string) {
+func (this *BaseController) OnJsonResultWithMessage(result interface{}, format string, v ...interface{}) {
+  message := fmt.Sprintf(format, v...)
   this.Data["json"] = support.JsonResult{ Result: result, Error: false, Message: message, CurrentUnixTime: this.GetCurrentTimeUnix() }
   this.ServeJSON()
 }
@@ -448,8 +452,9 @@ func (this *BaseController) OnJsonResultAndResultsWithTotalCount(result interfac
   this.ServeJSON()
 }
 
-func (this *BaseController) OnJsonResultsError(results interface{}, message string) {
+func (this *BaseController) OnJsonResultsError(results interface{}, format string, v ...interface{}) {
   this.Rollback()
+  message := fmt.Sprintf(format, v...)
   this.Data["json"] = support.JsonResult{ Results: results, Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix() }
   this.ServeJSON()
 }
@@ -464,16 +469,19 @@ func (this *BaseController) OnJsonMap(jsonMap map[string]interface{}) {
   this.ServeJSON()
 }
 
-func (this *BaseController) OnJsonError(message string) {
+func (this *BaseController) OnJsonError(format string, v ...interface{}) {
   this.Rollback()
+  message := fmt.Sprintf(format, v...)
   this.OnJson(support.JsonResult{ Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix() })
 }
 
-func (this *BaseController) OnJsonErrorNotRollback(message string) {  
+func (this *BaseController) OnJsonErrorNotRollback(format string, v ...interface{}) {  
+  message := fmt.Sprintf(format, v...)
   this.OnJson(support.JsonResult{ Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix() })
 }
 
-func (this *BaseController) OnJsonOk(message string) {
+func (this *BaseController) OnJsonOk(format string, v ...interface{}) {
+  message := fmt.Sprintf(format, v...)
   this.OnJson(support.JsonResult{ Message: message, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix() })
 }
 
@@ -481,12 +489,17 @@ func (this *BaseController) OnJson200() {
   this.OnJson(support.JsonResult{ CurrentUnixTime: this.GetCurrentTimeUnix() })
 }
 
-func (this *BaseController) OkAsJson(message string) {
+func (this *BaseController) OkAsJson(format string, v ...interface{}) {
+  message := fmt.Sprintf(format, v...)
   this.OnJson(support.JsonResult{ CurrentUnixTime: this.GetCurrentTimeUnix(), Message: message })
 }
 
 func (this *BaseController) OkAsHtml(message string) {
   this.Ctx.Output.Body([]byte(message))
+}
+
+func (this *BaseController) Ok() {
+  this.Ctx.Output.SetStatus(200)
 }
 
 func (this *BaseController) OnJsonValidationError() {
@@ -519,8 +532,9 @@ func (this *BaseController) OnRedirect(action string) {
   }
 }
 
-func (this *BaseController) OnRedirectError(action string, message string) {
+func (this *BaseController) OnRedirectError(action string, format string, v ...interface{}) {
   this.Rollback()
+  message := fmt.Sprintf(format, v...)
   this.Flash.Error(message)
   this.OnFlash(true)
   if this.Ctx.Input.URL() == "action" {
@@ -529,7 +543,8 @@ func (this *BaseController) OnRedirectError(action string, message string) {
     this.Redirect(action, 302)
   }}
 
-func (this *BaseController) OnRedirectSuccess(action string, message string) {
+func (this *BaseController) OnRedirectSuccess(action string, format string, v ...interface{}) {
+  message := fmt.Sprintf(format, v...)
   this.Flash.Success(message)
   this.OnFlash(true)
   if this.Ctx.Input.URL() == "action" {
@@ -540,10 +555,10 @@ func (this *BaseController) OnRedirectSuccess(action string, message string) {
 }
 
 // executes redirect or OnJsonError
-func (this *BaseController) OnErrorAny(path string, message string) {
+func (this *BaseController) OnErrorAny(path string, format string, v ...interface{}) {
 
   //this.Log("** this.IsJson() %v", this.IsJson() )
-
+  message := fmt.Sprintf(format, v...)
   if this.IsJson() {
     this.OnJsonError(message)
   } else {
@@ -552,8 +567,8 @@ func (this *BaseController) OnErrorAny(path string, message string) {
 }
 
 // executes redirect or OnJsonOk
-func (this *BaseController) OnOkAny(path string, message string) {
-
+func (this *BaseController) OnOkAny(path string, format string, v ...interface{}) {
+  message := fmt.Sprintf(format, v...)
   if this.IsJson() {
     this.OnJsonOk(message)
   } else {
@@ -576,8 +591,8 @@ func (this *BaseController) OnValidationErrorAny(view string, entity interface{}
 }
 
 // executes OnEntity or OnJsonError
-func (this *BaseController) OnEntityErrorAny(view string, entity interface{}, message string) {
-
+func (this *BaseController) OnEntityErrorAny(view string, entity interface{}, format string, v ...interface{}) {
+  message := fmt.Sprintf(format, v...)
   if this.IsJson() {
     this.OnJsonError(message)
   } else {
@@ -589,8 +604,8 @@ func (this *BaseController) OnEntityErrorAny(view string, entity interface{}, me
 }
 
 // executes OnEntity or OnJsonResultWithMessage
-func (this *BaseController) OnEntityAny(view string, entity interface{}, message string) {
-
+func (this *BaseController) OnEntityAny(view string, entity interface{}, format string, v ...interface{}) {
+  message := fmt.Sprintf(format, v...)
   if this.IsJson() {
     this.OnJsonResultWithMessage(entity, message)
   } else {

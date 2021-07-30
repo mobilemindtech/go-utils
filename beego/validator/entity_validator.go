@@ -14,6 +14,23 @@ type EntityValidatorResult struct {
   HasError bool
 }
 
+func (this *EntityValidatorResult) Merge(result *EntityValidatorResult){
+  for k, v := range result.Errors {
+    this.Errors[k] = v
+  }
+  for k, v := range result.ErrorsFields {
+    this.ErrorsFields[k] = v
+  }
+
+  if !this.HasError {
+    this.HasError = result.HasError
+  }
+}
+
+func NewEntityValidatorResult() *EntityValidatorResult {
+  return &EntityValidatorResult{ Errors: make(map[string]string), ErrorsFields: make(map[string]string) }
+}
+
 type EntityValidator struct {
   Lang string
   ViewPath string
@@ -23,14 +40,41 @@ func NewEntityValidator(lang string, viewPath string) *EntityValidator{
   return &EntityValidator{ Lang: lang, ViewPath: viewPath }
 }
 
-func (this *EntityValidator) IsValid(entity interface{}, action func(validator *validation.Validation)) (*EntityValidatorResult, error) {
+func (this *EntityValidator) ValidMult(entities []interface{}, action func(validator *validation.Validation)) (*EntityValidatorResult, error) {
 
-  result := new(EntityValidatorResult)
+  result := NewEntityValidatorResult()
+
+  funcApply := action
+
+  for _, it := range entities {
+
+    if it == nil {
+      continue
+    }
+
+    ev, err := this.IsValid(it, funcApply)
+    if err != nil {
+      return nil, err
+    }
+
+    funcApply = nil // aplica apenas para a primeira validação
+
+    result.Merge(ev)
+  }
+
+  return result, nil
+
+}
+func (this *EntityValidator) IsValid(entity interface{}, action func(validator *validation.Validation)) (*EntityValidatorResult, error) {
+  return this.Valid(entity, action)
+}
+
+func (this *EntityValidator) Valid(entity interface{}, action func(validator *validation.Validation)) (*EntityValidatorResult, error) {
+
+  result := NewEntityValidatorResult()
 
   localValid := validation.Validation{}
   callerValid := validation.Validation{}
-  result.Errors = make(map[string]string)
-  result.ErrorsFields = make(map[string]string)
 
   typeName := ""
 
@@ -45,7 +89,7 @@ func (this *EntityValidator) IsValid(entity interface{}, action func(validator *
     ok, err := localValid.Valid(entity)
 
     if  err != nil {
-      fmt.Println("## error on run validation %v", err.Error())
+      fmt.Println("## error on run validation = ", err.Error())
       return nil, err
     }
 
@@ -103,6 +147,12 @@ func (this *EntityValidator) IsValid(entity interface{}, action func(validator *
   }
 
   return result, nil
+}
+
+func (this *EntityValidator) GetValidationErrors(result *EntityValidatorResult) map[string]string{
+  data := make(map[interface{}]interface{})
+  this.CopyErrorsToView(result, data)
+  return data["errors"].(map[string]string)
 }
 
 func (this *EntityValidator) CopyErrorsToView(result *EntityValidatorResult, data map[interface{}]interface{}) {

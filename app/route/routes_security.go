@@ -2,20 +2,22 @@ package route
 
 import (
 	"github.com/beego/beego/v2/server/web/context"
-  "encoding/json"
-  "io/ioutil"
-  "strings"
-  "fmt"
+	beego "github.com/beego/beego/v2/server/web"
+	"encoding/json"
+	"io/ioutil"
+	"strings"
+	"fmt"
 )
 
 
 var routes map[string]interface{}
 
 func init() {
-
-    file, err := ioutil.ReadFile("./conf/routes.json")
+    
+    configpath := fmt.Sprintf("%v/conf/routes.json", beego.WorkPath)
+    file, err := ioutil.ReadFile(configpath)
     if err != nil {
-        fmt.Printf("error open route config file ./conf/routes.json: %v\n", err)
+        fmt.Printf("error open route config file %v: %v\n", configpath, err)
         return
     }
 
