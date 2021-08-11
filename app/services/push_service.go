@@ -131,7 +131,15 @@ func (this *PushService) LoadSubscribers() error{
 
 			//fmt.Println("value=%v", value)
 
-			jsonSubscribers := 	value.([]interface{})
+			if value == nil {
+				return
+			}
+
+			jsonSubscribers, ok := 	value.([]interface{})
+
+			if !ok {
+				return
+			}
 
 			for _, sub := range jsonSubscribers {
 
