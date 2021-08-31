@@ -48,9 +48,12 @@ func (this *Tenant) GenereteUuid() string{
 }
 
 func (this *Tenant) List() (*[]*Tenant , error) {
-  var results []*Tenant
-  err := this.Session.List(this, &results)
-  return &results, err
+  entities := []*Tenant{}
+  criteria := db.NewCriteria(this.Session, new(Tenant), &entities)
+  criteria.OrderAsc("Name")
+  criteria.List()
+
+  return &entities, criteria.Error
 }
 
 func (this *Tenant) Page(page *db.Page) (*[]*Tenant , error) {
