@@ -89,6 +89,21 @@ func (this *UserRole) FindAllByRole(role *Role) (*[]*UserRole, error) {
   return &results, err
 }
 
+func (this *UserRole) FindAllByUser(user *User) (*[]*UserRole, error) {
+
+  results := []*UserRole{}
+
+  query, _ := this.Session.Query(new(UserRole))
+
+  _, err := query.Filter("User", user).All(&results)
+
+  for _, it := range results {
+    this.Session.GetDb().LoadRelated(it, "Role")
+  }
+
+  return &results, err
+}
+
 func (this *UserRole) FindByUser(user *User) (*UserRole, error) {
 
   entity := new(UserRole)

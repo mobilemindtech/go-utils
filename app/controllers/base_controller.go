@@ -54,6 +54,11 @@ func (this *BaseController) loadTenants(){
 
 
       for _, it := range *list {
+
+        if !it.Enabled {
+          continue
+        }
+
         this.Session.Load(it.Tenant)
         tenants = append(tenants, it.Tenant)
       }
