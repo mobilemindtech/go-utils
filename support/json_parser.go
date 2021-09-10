@@ -36,6 +36,19 @@ func (c JsonParser) JsonToModel(ctx *context.Context, model interface{}) error {
   return nil
 }
 
+func (c JsonParser) FormJsonToModel(ctx *context.Context, model interface{}) error {
+  data := c.FormToJsonWithFieldsConfigs(ctx, nil);
+
+  jsonData, err := json.Marshal(data)
+
+  if err != nil {
+    return  err
+  }
+
+  return json.Unmarshal(jsonData, &model)
+
+}
+
 
 func (c JsonParser) FormToJson(ctx *context.Context) map[string]interface{} {
   return c.FormToJsonWithFieldsConfigs(ctx, nil);
