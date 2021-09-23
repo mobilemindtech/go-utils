@@ -835,7 +835,7 @@ func (this *BaseController) GetId() int64 {
 
 func (this *BaseController) GetParam(key string) string {
 
-  if !strings.HasSuffix(key, ":") {
+  if !strings.HasPrefix(key, ":") {
     key = fmt.Sprintf(":", key)
   }
 
