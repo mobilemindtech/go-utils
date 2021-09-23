@@ -833,14 +833,35 @@ func (this *BaseController) GetId() int64 {
   return this.GetIntParam(":id")
 }
 
+func (this *BaseController) GetParam(key string) string {
+
+  if !strings.HasSuffix(key, ":") {
+    key = fmt.Sprintf(":", key)
+  }
+
+  return this.Ctx.Input.Param(key)
+}
+
+func (this *BaseController) GetStringParam(key string) string {
+  return this.GetParam(key)
+}
+
 func (this *BaseController) GetIntParam(key string) int64 {
-  id := this.Ctx.Input.Param(key)
+  id := this.GetParam(key)
   intid, _ := strconv.ParseInt(id, 10, 64)
   return intid
 }
 
-func (this *BaseController) GetParam(key string) string {
-  return this.Ctx.Input.Param(key)
+
+func (this *BaseController) GetInt32Param(key string) int {
+  val := this.GetParam(key)
+  intid, _ := strconv.Atoi(val)
+  return intid
+}
+
+func (this *BaseController) GetBoolParam(key string) bool {
+  val := this.GetParam(key)
+  return val == "true"
 }
 
 func (this *BaseController) GetIntByKey(key string) int64{
