@@ -118,6 +118,7 @@ type Criteria struct {
 	RelatedSelList []string
 
 	Any bool
+	Empty bool
 	HasError bool
 
 	ForceAnd bool
@@ -792,6 +793,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   		this.setError(err)
 
   		this.Any = reflect.ValueOf(this.Results).Elem().Len() > 0
+  		this.Empty = !this.Any
 
   	case CriteriaOne:
 
@@ -830,6 +832,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
 			if model, ok := this.Result.(Model); ok {
 				this.Any = model.IsPersisted()
 			}
+			this.Empty = !this.Any
 
   	case CriteriaCount:
 
@@ -839,6 +842,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   		this.Count32 = int(count)
 
   		this.Any = count > 0
+  		this.Empty = !this.Any
 
   		this.setError(err)
 
@@ -850,7 +854,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   		this.Count32 = int(count)
 
   		this.Any = count > 0
-
+  		this.Empty = !this.Any
   		this.setError(err)
 
   	case CriteriaUpdate:
@@ -861,7 +865,8 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   		this.Count32 = int(count)
 
   		this.Any = count > 0
-
+  		this.Empty = !this.Any
+  		
   		this.setError(err)
   }
 

@@ -35,6 +35,10 @@ func (this *Tenant) IsPersisted() bool{
   return this.Id > 0
 }
 
+func (this *Tenant) GetId() int64{
+  return this.Id
+}
+
 func (this *Tenant) GenereteUuid() string{
 
   for true {

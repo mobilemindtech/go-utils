@@ -63,6 +63,11 @@ func (this *BaseController) loadTenants(){
         tenants = append(tenants, it.Tenant)
       }
     }
+    authorizeds := []interface{}{}
+    for _, it := range tenants {
+      authorizeds = append(authorizeds, it)
+    }
+    this.Session.SetAuthorizedTenants(authorizeds)
   }
 
   this.Data["AvailableTenants"] = tenants

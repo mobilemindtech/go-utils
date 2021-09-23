@@ -119,6 +119,13 @@ func (this *TenantUser) GetFirstTenant(user *User) (*Tenant , error) {
   return nil, nil
 }
 
+func (this *TenantUser) HasActiveTenant(user *User) (bool , error) { 
+
+  tenant, err := this.GetFirstTenant(user)
+
+  return tenant != nil && tenant.IsPersisted(), err
+}
+
 func (this *TenantUser) Create(user *User, tenant *Tenant) error { 
 
   entity, err := this.FindByUserAndTenant(user, tenant)

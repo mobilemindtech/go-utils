@@ -73,6 +73,26 @@ func (this *UserRole) FindAllRolesByUser(user *User) *[]*Role {
   return &roles
 }
 
+func (this *UserRole) HasRoles(user *User, roles ...string) bool {
+
+  userRoles := this.FindAllRolesByUser(user)
+
+  if userRoles != nil {
+    for _, it := range *userRoles {
+
+      for _, role := range roles {
+        if it.Authority == role {
+          return true
+        }
+      }
+
+    }
+  }
+
+  return false
+
+}
+
 func (this *UserRole) FindAllByRole(role *Role) (*[]*UserRole, error) {
 
   results := []*UserRole{}

@@ -20,10 +20,17 @@ type Model interface {
   TableName() string
 }
 
+
+type TenantModel interface {
+  GetId() int64
+}
+
 type Session struct {
   State SessionState
   Tenant interface{}
+  AuthorizedTenants []TenantModel
   IgnoreTenantFilter bool
+  IgnoreAuthorizedTenantCheck bool
   Debug bool
   DbName string
 
@@ -65,6 +72,21 @@ func (this *Session) GetDb() *DataBase {
 
 func (this *Session) SetTenant(tenant interface{}) *Session {
   this.Tenant = tenant
+  return this
+}
+
+func (this *Session) SetAuthorizedTenants(tenants []interface{}) *Session {
+  
+  this.AuthorizedTenants = []TenantModel{}
+
+  for _, it := range tenants {
+    if t, ok := it.(TenantModel); ok {
+      this.AuthorizedTenants = append(this.AuthorizedTenants, t)
+    }
+  }
+
+  fmt.Println("AuthorizedTenants count = ", len(this.AuthorizedTenants))
+
   return this
 }
 
@@ -219,6 +241,10 @@ func (this *Session) Save(entity interface{}) error {
     this.setTenant(entity)
   }
 
+  if !this.checkIsAuthorizedTenant(entity) {
+    return errors.New("Tenant not authorized for entity data access")
+  }  
+
   _, err := this.GetDb().Insert(entity)
 
   if this.Debug {
@@ -243,6 +269,10 @@ func (this *Session) Update(entity interface{}) error {
     this.setTenant(entity)
   }
 
+  if !this.checkIsAuthorizedTenant(entity) {
+    return errors.New("Tenant not authorized for entity data access")
+  }
+
   _, err := this.GetDb().Update(entity)
 
   if this.Debug {
@@ -260,6 +290,10 @@ func (this *Session) Update(entity interface{}) error {
 
 func (this *Session) Remove(entity interface{}) error {
 
+
+  if !this.checkIsAuthorizedTenant(entity) {
+    return errors.New("Tenant not authorized for entity data access")
+  }
 
   _, err := this.GetDb().Delete(entity)
 
@@ -290,6 +324,11 @@ func (this *Session) Get(entity interface{}) (bool, error) {
     
 
     if model.IsPersisted() {
+
+      if !this.checkIsAuthorizedTenant(model) {
+        return false, errors.New("Tenant not authorized for entity data access")
+      }
+
       return true, nil
     }
 
@@ -307,7 +346,9 @@ func (this *Session) Count(entity interface{}) (int64, error){
 
     query := this.GetDb().QueryTable(model.TableName())
 
-    query = this.setTenantFilter(entity, query)
+    if !this.IgnoreTenantFilter {
+      query = this.setTenantFilter(entity, query)
+    }
 
     num, err := query.Count()
 
@@ -327,7 +368,9 @@ func (this *Session) HasById(entity interface{}, id int64) (bool, error) {
   if model, ok := entity.(Model); ok {
     query := this.GetDb().QueryTable(model.TableName()).Filter("id", id)
 
-    query = this.setTenantFilter(entity, query)
+    if !this.IgnoreTenantFilter {
+      query = this.setTenantFilter(entity, query)
+    }
 
     return query.Exist(), nil
   }
@@ -341,7 +384,9 @@ func (this *Session) FindById(entity interface{}, id int64) (interface{}, error)
   if model, ok := entity.(Model); ok {
     query := this.GetDb().QueryTable(model.TableName()).Filter("id", id)
 
-    query = this.setTenantFilter(entity, query)
+    if !this.IgnoreTenantFilter {
+      query = this.setTenantFilter(entity, query)
+    }
 
     err := query.One(entity)
 
@@ -376,6 +421,9 @@ func (this *Session) SaveOrUpdate(entity interface{}) error{
     this.setTenant(entity)
   }
 
+  if !this.checkIsAuthorizedTenant(entity) {
+    return errors.New("Tenant not authorized for entity data access")
+  }
 
   if model, ok := entity.(Model); ok {
     if model.IsPersisted() {
@@ -399,7 +447,9 @@ func (this *Session) List(entity interface{}, entities interface{}) error {
 
     query := this.GetDb().QueryTable(model.TableName())
 
-    query = this.setTenantFilter(entity, query)
+    if !this.IgnoreTenantFilter {
+      query = this.setTenantFilter(entity, query)
+    }
 
     if _, err := query.All(entities); err != nil {
       fmt.Println("## Session: error on list: %v", err.Error())
@@ -455,7 +505,9 @@ func (this *Session) PageQuery(query orm.QuerySeter, entity interface{}, entitie
       }
     }
 
-    query = this.setTenantFilter(entity, query)
+    if !this.IgnoreTenantFilter {
+      query = this.setTenantFilter(entity, query)
+    }
 
     if _, err := query.All(entities); err != nil {
       fmt.Println("## Session: error on page: %v", err.Error())
@@ -476,7 +528,9 @@ func (this *Session) Query(entity interface{}) (orm.QuerySeter, error) {
   if model, ok := entity.(Model); ok {
     query := this.GetDb().QueryTable(model.TableName())
 
-    query = this.setTenantFilter(entity, query)
+    if !this.IgnoreTenantFilter {
+      query = this.setTenantFilter(entity, query)
+    }
 
     return query, nil
   }
@@ -1091,6 +1145,73 @@ func (this *Session) isSetTenant(reply interface{}) bool{
 
   //fmt.Println("## not set tenant")
 	return false
+}
+
+func (this *Session) checkIsAuthorizedTenant(reply interface{}) bool{
+
+
+  if this.IgnoreAuthorizedTenantCheck {    
+    return true
+  }
+
+  if !this.HasFilterTenant(reply) || this.isTenantNil() {
+    return true
+  }
+
+  // value e type of pointer
+  refValue := reflect.ValueOf(reply)
+  //refType := reflect.TypeOf(reply)
+
+
+  // value e type of instance
+  fullValue := refValue.Elem()
+  fullType := fullValue.Type()
+
+  if this.Debug {
+    fmt.Println("## check is same tenant ", fullType)
+  }
+
+  // return true if entity not has tenant, not is manager security
+  tenantFieldNotFound := true
+
+  for i := 0; i < fullType.NumField(); i++ {
+    field := fullType.Field(i)
+
+    if field.Name == "Tenant" {
+
+      tenantFieldNotFound = false
+
+      fieldStruct := fullValue.FieldByName(field.Name)
+      fieldValue := fieldStruct.Interface()
+
+      zero := reflect.Zero(reflect.TypeOf(fieldValue)).Interface() == fieldValue
+      if !zero {
+        if entityTenant, ok := fieldValue.(TenantModel); ok {
+
+          if this.AuthorizedTenants != nil {
+            for _, authorizedTenant := range this.AuthorizedTenants {
+              if entityTenant.GetId() == authorizedTenant.GetId() {
+                return true
+              }
+            }
+          }
+
+          if currentTenant, ok := this.Tenant.(TenantModel); ok {
+              return currentTenant.GetId() == entityTenant.GetId()
+          }
+
+        }
+      } else {
+        fmt.Println("=======================================================")
+        fmt.Println("=== ATTENTION!!! Tenant id empty for entity type = ", fullType, " content =", reply)
+        fmt.Println("=======================================================")
+      }
+    }
+  }
+
+  //fmt.Println("does not authorize data access")
+  //fmt.Println("## not set tenant")
+  return false || tenantFieldNotFound
 }
 
 func (this *Session) HasFilterTenant(reply interface{}) bool{

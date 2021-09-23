@@ -56,9 +56,12 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
 
       tenant = this.GetAuthTenantSession()
 
+      this.baseController.Log("SESSION TENANR = ", tenant)
+
       if tenant == nil {
         ModelTenantUser := this.baseController.ModelTenantUser
         tenant, _ = ModelTenantUser.GetFirstTenant(this.GetAuthUser())
+        this.baseController.Log("FIRST TENANR = ", tenant)
       }
 
     }
@@ -121,13 +124,13 @@ func (this *BaseAuthController) AppAuth(){
 
     if err != nil {
       this.baseController.Log("LOGIN ERROR: %v", err)
-      this.DelTokenLogin()
+      this.LogOut()
       return
     }
 
     if user == nil {
       this.baseController.Log("LOGIN ERROR: user not found!")
-      this.DelTokenLogin()
+      this.LogOut()
       return      
     }
 
@@ -160,8 +163,16 @@ func (this *BaseAuthController) GetTokenLogin() *models.User {
   return user
 }
 
-func (this *BaseAuthController) DelLogin() {
+
+func (this *BaseAuthController) SessionLogOut() {
+  this.LogOut()
+}
+
+func (this *BaseAuthController) LogOut() {
   this.baseController.DelSession("userinfo")
+  this.baseController.DelSession("appuserinfo")
+  this.baseController.DelSession("authtenantid")
+  this.baseController.DestroySession()
 }
 
 func (this *BaseAuthController) SetLogin(user *models.User) {
@@ -172,9 +183,6 @@ func (this *BaseAuthController) SetTokenLogin(user *models.User) {
   this.baseController.SetSession("appuserinfo", user.Id)
 }
 
-func (this *BaseAuthController) DelTokenLogin() {
-  this.baseController.DelSession("appuserinfo")
-}
 
 func (this *BaseAuthController) LoginPath() string {
   return this.baseController.URLFor("LoginController.Login")
