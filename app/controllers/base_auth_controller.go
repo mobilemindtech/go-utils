@@ -56,12 +56,12 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
 
       tenant = this.GetAuthTenantSession()
 
-      this.baseController.Log("SESSION TENANR = ", tenant)
+      //this.baseController.Log("SESSION TENANR = ", tenant)
 
       if tenant == nil {
         ModelTenantUser := this.baseController.ModelTenantUser
         tenant, _ = ModelTenantUser.GetFirstTenant(this.GetAuthUser())
-        this.baseController.Log("FIRST TENANR = ", tenant)
+        //this.baseController.Log("FIRST TENANR = ", tenant)
       }
 
     }

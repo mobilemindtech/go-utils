@@ -47,12 +47,34 @@ func (this *TenantUser) ListByTenant(tenant *Tenant) (*[]*TenantUser , error) {
     return nil, err
   }
 
-  if err := this.Session.ToList(query.Filter("Tenant", tenant), &results); err != nil {
+  query = query.Filter("Tenant", tenant).RelatedSel("User")
+
+  if err := this.Session.ToList(query, &results); err != nil {
     return nil, err
   }
 
   return &results, err
 }
+
+func (this *TenantUser) ListActivesByTenant(tenant *Tenant) (*[]*TenantUser , error) { 
+  var results []*TenantUser
+
+  query, err := this.Session.Query(this)
+
+
+  if err != nil {
+    return nil, err
+  }
+
+  query = query.Filter("Tenant", tenant).Filter("Enabled", true).RelatedSel("Tenant")
+
+  if err := this.Session.ToList(query, &results); err != nil {
+    return nil, err
+  }
+
+  return &results, err
+}
+
 
 func (this *TenantUser) ListByUser(user *User) (*[]*TenantUser , error) { 
   var results []*TenantUser
@@ -64,7 +86,28 @@ func (this *TenantUser) ListByUser(user *User) (*[]*TenantUser , error) {
     return nil, err
   }
 
-  if err := this.Session.ToList(query.Filter("User", user), &results); err != nil {
+  query = query.Filter("User", user).RelatedSel("Tenant")
+
+  if err := this.Session.ToList(query, &results); err != nil {
+    return nil, err
+  }
+
+  return &results, err
+}
+
+func (this *TenantUser) ListActivesByUser(user *User) (*[]*TenantUser , error) { 
+  var results []*TenantUser
+
+  query, err := this.Session.Query(this)
+
+
+  if err != nil {
+    return nil, err
+  }
+
+  query = query.Filter("User", user).Filter("Enabled", true).RelatedSel("Tenant")
+
+  if err := this.Session.ToList(query, &results); err != nil {
     return nil, err
   }
 
@@ -141,5 +184,116 @@ func (this *TenantUser) Create(user *User, tenant *Tenant) error {
   entity = &TenantUser{ User: user, Tenant: tenant, Enabled: true }
 
   return this.Session.Save(entity)
+}
 
+func (this *TenantUser) Remove(user *User, tenant *Tenant) error { 
+
+  entity, err := this.FindByUserAndTenant(user, tenant)
+
+  if err != nil && err != orm.ErrNoRows {
+    return err
+  }
+
+  if entity != nil && entity.IsPersisted() {
+    return this.Session.Remove(entity)
+  }
+
+  return nil
+}
+
+func (this *TenantUser) RemoveAllByUser(user *User) error { 
+
+  results, err := this.ListByUser(user)
+
+  if err != nil && err != orm.ErrNoRows {
+    return err
+  }
+
+  for _, it := range *results {
+    if err := this.Session.Remove(it); err != nil {
+      return err
+    }
+  }
+
+  return nil
+}
+
+func (this *TenantUser) RemoveAllByTenant(tenant *Tenant) error { 
+
+  results, err := this.ListByTenant(tenant)
+
+  if err != nil && err != orm.ErrNoRows {
+    return err
+  }
+
+  for _, it := range *results {
+    if err := this.Session.Remove(it); err != nil {
+      return err
+    }
+  }
+
+  return nil
+}
+
+
+func (this *TenantUser) ToUsers(results []*TenantUser) []*User {
+  users := []*User{}
+
+  for _, it := range results{
+    users = append(users, it.User)
+  }
+
+  return users
+}
+
+
+func (this *TenantUser) ToTenants(results []*TenantUser) []*Tenant {
+  tenants := []*Tenant{}
+
+  for _, it := range results{
+    tenants = append(tenants, it.Tenant)
+  }
+
+  return tenants
+}
+
+
+func (this *TenantUser) ListUsersByTenant(tenant *Tenant) ([]*User , error) { 
+  results, err := this.ListByTenant(tenant)
+
+  if err != nil {
+    return nil, err
+  }
+
+  return this.ToUsers(*results), nil
+}
+
+func (this *TenantUser) ListUsersActivesByTenant(tenant *Tenant) ([]*User , error) { 
+  results, err := this.ListActivesByTenant(tenant)
+
+  if err != nil {
+    return nil, err
+  }
+
+  return this.ToUsers(*results), nil
+}
+
+func (this *TenantUser) ListTenantsByUser(user *User) ([]*Tenant , error) { 
+  results, err := this.ListByUser(user)
+
+  if err != nil {
+    return nil, err
+  }
+
+  return this.ToTenants(*results), nil
+}
+
+func (this *TenantUser) ListTenantsActivesByUser(user *User) ([]*Tenant , error) { 
+  results, err := this.ListActivesByUser(user)
+
+  if err != nil {
+    return nil, err
+  }
+
+  return this.ToTenants(*results), nil
 }

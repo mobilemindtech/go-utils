@@ -31,6 +31,8 @@ type JSON struct {
 
 	DebugParse bool
 	DebugFormat bool
+
+	OmitEmpty bool 
 }
 
 func NewJSON() *JSON {
@@ -76,6 +78,7 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
   fullType := fullValue.Type()
   tagName := "jsonp"
   jsonResult := make(map[string]interface{})
+  empty := true
 
   for i := 0; i < fullType.NumField(); i++ {
     field := fullType.Field(i)
@@ -112,10 +115,50 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
   		fmt.Println("Attr = ", attr, ", Field = ", field.Name, ", Type = ", ftype , "Kind = ", fieldStruct.Type().Kind(), ", Real Kind", realKind, ", Value = ", fieldValue, "isPtr = ", isPtr)
   	}
   	
+
+  	if this.OmitEmpty {
+  		if fieldValue == nil || fieldValue == "" || fieldValue == 0 || fieldValue == 0.0  {
+  			continue
+  		}
+  	}
     
     switch realKind {
     	case reflect.Int64, reflect.Int, reflect.Bool, reflect.Float32, reflect.Float64, reflect.String:
 
+
+    		if this.OmitEmpty {
+	    		if realKind == reflect.Int64 {
+	    			var val interface{} = int64(1)			    
+				    typeOf := reflect.TypeOf(val)
+				    valueOf := reflect.ValueOf(fieldValue)
+				    converted := valueOf.Convert(typeOf)
+				    if converted.Interface().(int64) == 0 {
+				    	continue
+				    }
+	    		}
+
+	    		if realKind == reflect.Int {
+	    			var val interface{} = int(1)			    
+				    typeOf := reflect.TypeOf(val)
+				    valueOf := reflect.ValueOf(fieldValue)
+				    converted := valueOf.Convert(typeOf)
+				    if converted.Interface().(int) == 0 {
+				    	continue
+				    }
+	    		}
+
+	    		if realKind == reflect.String {
+	    			var val interface{} = string("")			    
+				    typeOf := reflect.TypeOf(val)
+				    valueOf := reflect.ValueOf(fieldValue)
+				    converted := valueOf.Convert(typeOf)
+				    if converted.Interface().(string) == "" {
+				    	continue
+				    }
+	    		}	    		
+    		}
+
+    		empty = false
     		jsonResult[attr] = fieldValue
 
     		break	    		
@@ -130,14 +173,15 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
     			continue
     		}
     		
-    		fmt.Println("slice", slice)
-
     		if isPtr {
 					slice = slice.Elem()    			
     		}
 
-    		fmt.Println("slice", slice)
-
+    		if this.OmitEmpty {
+    			if slice.Len() == 0 {
+    				continue
+    			}
+    		}
 
     		sliceData := []interface{}{}
     		for i := 0; i < slice.Len(); i++ {
@@ -158,7 +202,9 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
 		    			if e != nil {
 		    				return nil, e
 		    			}
-		    			sliceData = append(sliceData, it)
+		    			if it != nil {
+		    				sliceData = append(sliceData, it)
+		    			}
 		    			break
 		    		default:
 		    			fmt.Println("SLICE DATATYPE NOT FOUND: ", itype)
@@ -168,12 +214,20 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
 
     		//fmt.Println("sliceData = ", sliceData)
     		jsonResult[attr] = &sliceData
-
+    		empty = false
     		break
 
     	case reflect.Map:
 
+    		mapVal := reflect.ValueOf(fieldValue)
+    		zero := reflect.Zero(reflect.TypeOf(mapVal)).Interface() == mapVal
+
+    		if mapVal.IsNil() || zero {
+    			continue
+    		}
+
     		jsonResult[attr] = fieldValue
+    		empty = false
     	
     	case reflect.Struct:
 
@@ -199,17 +253,27 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
     			}
     			
 
-  				var e error
+  				//var e error
   				//fmt.Println("to map ", reflect.TypeOf(fieldValue))
-  				jsonResult[attr], e = this.ToMap(fieldValue)
+  				v, e := this.ToMap(fieldValue)
   				if e != nil {
   					return nil, e
+  				}
+
+  				if v != nil {
+  					jsonResult[attr] = v
+  					empty = false
   				}
 
     		}
     }      
 	}
 	//fmt.Println("## filter tenant")
+
+	if this.OmitEmpty && empty {
+		return nil, nil
+	}
+
 	return jsonResult, nil	
 }
 
@@ -598,6 +662,16 @@ func Encode(obj interface{}) ([]byte, error) {
 	return NewJSON().Encode(obj)
 }
 
+func EncodeOmitEmpty(obj interface{}) ([]byte, error) {
+	j := &JSON{OmitEmpty: true}
+	return j.Encode(obj)
+}
+
 func EncodeToString(obj interface{}) (string, error) {
 	return NewJSON().EncodeToString(obj)
+}
+
+func EncodeToStringOmitEmpty(obj interface{}) (string, error) {
+	j := &JSON{OmitEmpty: true}
+	return j.EncodeToString(obj)
 }

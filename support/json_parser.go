@@ -13,19 +13,54 @@ import (
 )
 
 
+
+type FormatType int64
+
+const (
+  FormatTypeFloat = iota + 1
+  FormatTypeInt
+  FormatTypeDate
+  FormatTypeBool
+)
+
+type FormJsonConfig struct {
+  FieldName string
+  Parser func(val string) interface{} 
+  FormatType FormatType 
+  Layout string
+}
+
+func NewFormJsonConfig(fieldName string, formatType FormatType) *FormJsonConfig{
+  return &FormJsonConfig{ FieldName: fieldName, FormatType: formatType }
+}
+
+func (this *FormJsonConfig) SetLayout(layout string) *FormJsonConfig {
+  this.Layout = layout
+  return this
+}
+
+func (this *FormJsonConfig) SetParser(parser func(val string) interface{} ) *FormJsonConfig {
+  this.Parser = parser
+  return this
+}
+
+func (this *FormJsonConfig) List() []*FormJsonConfig {  
+  return []*FormJsonConfig{ this, }
+}
+
 type JsonParser struct {
 
   DefaultLocation *time.Location
 
 }
 
-func (c JsonParser) JsonToMap(ctx *context.Context) (map[string]interface{}, error) {
+func (this *JsonParser) JsonToMap(ctx *context.Context) (map[string]interface{}, error) {
   data := make(map[string]interface{})
   err := json.Unmarshal(ctx.Input.RequestBody, &data)
   return data, err
 }
 
-func (c JsonParser) JsonToModel(ctx *context.Context, model interface{}) error {
+func (this *JsonParser) JsonToModel(ctx *context.Context, model interface{}) error {
 	//fmt.Println("### %s", string(ctx.Input.RequestBody))
   err := json.Unmarshal(ctx.Input.RequestBody, &model)
 
@@ -36,8 +71,21 @@ func (c JsonParser) JsonToModel(ctx *context.Context, model interface{}) error {
   return nil
 }
 
-func (c JsonParser) FormJsonToModel(ctx *context.Context, model interface{}) error {
-  data := c.FormToJsonWithFieldsConfigs(ctx, nil);
+func (this *JsonParser) FormJsonToModel(ctx *context.Context, model interface{}) error {
+  data := this.FormToJsonWithFieldsConfigs(ctx, nil);
+
+  jsonData, err := json.Marshal(data)
+
+  if err != nil {
+    return  err
+  }
+
+  return json.Unmarshal(jsonData, &model)
+
+}
+
+func (this *JsonParser) FormJsonToModelWithCOnfigs(ctx *context.Context, model interface{}, configs []*FormJsonConfig) error {
+  data := this.formToJsonWithFieldsConfigs(ctx, nil, configs);
 
   jsonData, err := json.Marshal(data)
 
@@ -50,15 +98,80 @@ func (c JsonParser) FormJsonToModel(ctx *context.Context, model interface{}) err
 }
 
 
-func (c JsonParser) FormToJson(ctx *context.Context) map[string]interface{} {
-  return c.FormToJsonWithFieldsConfigs(ctx, nil);
+func (this *JsonParser) FormToJson(ctx *context.Context) map[string]interface{} {
+  return this.formToJsonWithFieldsConfigs(ctx, nil, nil)
 }
 
-func (c JsonParser) FormToJsonWithFieldsConfigs(ctx *context.Context, configs map[string]string) map[string]interface{} {
+func (this *JsonParser) FormToJsonWithFieldsConfigs(ctx *context.Context, configs map[string]string) map[string]interface{} {
+  return this.formToJsonWithFieldsConfigs(ctx, configs, nil)
+}
+
+func (this *JsonParser) FormToJsonWithConfigs(ctx *context.Context, configs []*FormJsonConfig) map[string]interface{} {
+  return this.formToJsonWithFieldsConfigs(ctx, nil, configs)
+}
+
+func (this *JsonParser) formToJsonWithFieldsConfigs(ctx *context.Context, configsMap map[string]string, configs []*FormJsonConfig) map[string]interface{} {
 
   jsonMap := make(map[string]interface{})
 
   data := ctx.Request.Form
+
+  findConfig := func(fieldName string) *FormJsonConfig {
+    if configs != nil {
+      for _, config := range configs {
+        if config.FieldName == fieldName {
+          return config
+        }
+      }
+    }
+    return nil
+  }
+
+  processValue := func(currentConfig *FormJsonConfig, value string) interface{} {
+    if currentConfig != nil && len(value) > 0 {
+
+      if currentConfig.Parser != nil {
+        return currentConfig.Parser(value)
+      } else {
+        switch currentConfig.FormatType {
+            case FormatTypeFloat:
+
+              if strings.Contains(value, ",") && strings.Contains(value, ".")  {
+                return strings.Replace(value, ",", ".", -1)
+              } else if strings.Contains(value, ",") {
+                return strings.Replace(value, ",", "", -1)
+              }
+
+              return value
+              
+            case FormatTypeInt:
+              return value
+
+            case FormatTypeDate:
+              auxDate, _ := util.DateParse(currentConfig.Layout, value)
+              jsonDateLayout := "2006-01-02T15:04:05-07:00"
+
+              if !auxDate.IsZero() {
+                return auxDate.Format(jsonDateLayout)
+              }
+              return ""
+
+            case FormatTypeBool:
+              return value
+        }
+      }
+    }  
+
+    return value  
+  }
+
+  if configs == nil {
+    configs = []*FormJsonConfig{}
+  }
+
+  for key, val := range configsMap {
+    configs = append(configs, NewFormJsonConfig(key, FormatTypeDate).SetLayout(val))
+  }
 
   for k, v := range  data{
 
@@ -68,12 +181,19 @@ func (c JsonParser) FormToJsonWithFieldsConfigs(ctx *context.Context, configs ma
       continue
     }
 
+    currentConfig := findConfig(k)
+
+
     if strings.Contains(k, ".") {
       keys := strings.Split(k, ".")
 
       parent := jsonMap
 
       for i, key := range keys {
+
+        if currentConfig == nil {
+          currentConfig = findConfig(key)
+        }
 
         if _, ok := parent[key].(map[string]interface{}); !ok {
           parent[key] = make(map[string]interface{})
@@ -82,49 +202,50 @@ func (c JsonParser) FormToJsonWithFieldsConfigs(ctx *context.Context, configs ma
         if i < len(keys) -1 {
           parent = parent[key].(map[string]interface{})
         } else {
-          parent[key] = v[0]
+          parent[key] = v[0]          
 
-          if configs != nil {
-            for field, format := range configs {
-              if field == key {
-                if parent[key] != nil {
-                  auxDate, _ := util.DateParse(format, parent[key].(string))
-                  jsonDateLayout := "2006-01-02T15:04:05-07:00"
-                  parent[key] = auxDate.Format(jsonDateLayout)
-                }
+          if parent[key] != nil {
+
+            value := parent[key].(string)
+
+            if len(value) > 0 {
+              if currentConfig != nil {
+                parent[key] = processValue(currentConfig, value)
+              } else {
+                parent[key] = value
               }
             }
           }
-
         }
       }
 
     } else {
-      jsonMap[k] = v[0]
-      if configs != nil {
-        for field, format := range configs {
-          if field == k {
-            if jsonMap[k] != nil {
-              auxDate, _ := util.DateParse(format, jsonMap[k].(string))
-              jsonDateLayout := "2006-01-02T15:04:05-07:00"
-              jsonMap[k] = auxDate.Format(jsonDateLayout)
-            }
-          }
+
+      fmt.Println("k = ", k, " value = ", v[0])
+
+      value := v[0]
+
+      if len(value) > 0 {
+        if currentConfig != nil && len(value) > 0 {
+          jsonMap[k] = processValue(currentConfig, value)
+        } else {
+          jsonMap[k] = value
         }
       }
+
     }
   }
 
   return jsonMap
 }
 
-func (c JsonParser) FormToModel(ctx *context.Context, model interface{}) error {
-  return c.FormToModelWithFieldsConfigs(ctx, model, nil)
+func (this *JsonParser) FormToModel(ctx *context.Context, model interface{}) error {
+  return this.FormToModelWithFieldsConfigs(ctx, model, nil)
 }
 
-func (c JsonParser) FormToModelWithFieldsConfigs(ctx *context.Context, model interface{}, configs map[string]string) error {
+func (this *JsonParser) FormToModelWithFieldsConfigs(ctx *context.Context, model interface{}, configs map[string]string) error {
 
-  jsonMap := c.FormToJsonWithFieldsConfigs(ctx, configs)
+  jsonMap := this.FormToJsonWithFieldsConfigs(ctx, configs)
 
   jsonData, err := json.Marshal(jsonMap)
 
@@ -142,9 +263,9 @@ func (c JsonParser) FormToModelWithFieldsConfigs(ctx *context.Context, model int
 
 }
 
-func (c JsonParser) GetJsonObject(json map[string]interface{}, key string) map[string]interface{} {
+func (this *JsonParser) GetJsonObject(json map[string]interface{}, key string) map[string]interface{} {
 
-   if c.HasJsonKey(json, key) {
+   if this.HasJsonKey(json, key) {
     opt, _ := json[key]
     if opt != nil {
       return opt.(map[string]interface{})
@@ -154,9 +275,9 @@ func (c JsonParser) GetJsonObject(json map[string]interface{}, key string) map[s
    return nil
 }
 
-func (c JsonParser) GetJsonArray(json map[string]interface{}, key string) []map[string]interface{} {
+func (this *JsonParser) GetJsonArray(json map[string]interface{}, key string) []map[string]interface{} {
 
-   if c.HasJsonKey(json, key) {
+   if this.HasJsonKey(json, key) {
     opt, _ := json[key]
 
     items := new([]map[string]interface{})
@@ -175,9 +296,9 @@ func (c JsonParser) GetJsonArray(json map[string]interface{}, key string) []map[
    return nil
 }
 
-func (c JsonParser) GetJsonSimpleArray(json map[string]interface{}, key string) []interface{} {
+func (this *JsonParser) GetJsonSimpleArray(json map[string]interface{}, key string) []interface{} {
 
-   if c.HasJsonKey(json, key) {
+   if this.HasJsonKey(json, key) {
     opt, _ := json[key]
 
     if array, ok := opt.([]interface{}); ok {
@@ -189,9 +310,9 @@ func (c JsonParser) GetJsonSimpleArray(json map[string]interface{}, key string) 
    return nil
 }
 
-func (c JsonParser) GetArrayFromJson(json map[string]interface{}, key string) []interface{} {
+func (this *JsonParser) GetArrayFromJson(json map[string]interface{}, key string) []interface{} {
 
-   if c.HasJsonKey(json, key) {
+   if this.HasJsonKey(json, key) {
     opt, _ := json[key]
 
     items := new([]interface{})
@@ -210,10 +331,10 @@ func (c JsonParser) GetArrayFromJson(json map[string]interface{}, key string) []
    return nil
 }
 
-func (c JsonParser) GetJsonInt(json map[string]interface{}, key string) int{
+func (this *JsonParser) GetJsonInt(json map[string]interface{}, key string) int{
   var val int
 
-  if c.HasJsonKey(json, key) {
+  if this.HasJsonKey(json, key) {
     if _, ok := json[key].(int); ok {
       val = json[key].(int)
     } else if _, ok := json[key].(int64); ok {
@@ -223,18 +344,18 @@ func (c JsonParser) GetJsonInt(json map[string]interface{}, key string) int{
     } else if _, ok := json[key].(float32); ok {
       val = int(json[key].(float32))
     } else {
-      val, _ = strconv.Atoi(c.GetJsonString(json, key))
+      val, _ = strconv.Atoi(this.GetJsonString(json, key))
     }
   } 
 
   return val
 }
 
-func (c JsonParser) GetJsonInt64(json map[string]interface{}, key string) int64{
+func (this *JsonParser) GetJsonInt64(json map[string]interface{}, key string) int64{
 
   var val int
 
-  if c.HasJsonKey(json, key) {
+  if this.HasJsonKey(json, key) {
     if _, ok := json[key].(int); ok {
       val = json[key].(int)
     } else if _, ok := json[key].(int64); ok {
@@ -244,7 +365,7 @@ func (c JsonParser) GetJsonInt64(json map[string]interface{}, key string) int64{
     } else if _, ok := json[key].(float32); ok {
       val = int(json[key].(float32))
     } else {
-      val, _ = strconv.Atoi(c.GetJsonString(json, key))
+      val, _ = strconv.Atoi(this.GetJsonString(json, key))
     }
   } 
 
@@ -252,11 +373,11 @@ func (c JsonParser) GetJsonInt64(json map[string]interface{}, key string) int64{
 }
 
 
-func (c JsonParser) GetJsonFloat32(json map[string]interface{}, key string) float32{
+func (this *JsonParser) GetJsonFloat32(json map[string]interface{}, key string) float32{
 
   var val float32
 
-  if c.HasJsonKey(json, key) {
+  if this.HasJsonKey(json, key) {
     if _, ok := json[key].(float32); ok {
       val = json[key].(float32)
     } else if _, ok := json[key].(float64); ok {
@@ -266,7 +387,7 @@ func (c JsonParser) GetJsonFloat32(json map[string]interface{}, key string) floa
     } else if _, ok := json[key].(int); ok {
       val = float32(json[key].(int))
     } else {
-      v, _ := strconv.ParseFloat(c.GetJsonString(json, key), 32)
+      v, _ := strconv.ParseFloat(this.GetJsonString(json, key), 32)
       val = float32(v)
     }
   } 
@@ -274,11 +395,11 @@ func (c JsonParser) GetJsonFloat32(json map[string]interface{}, key string) floa
   return float32(val)
 }
 
-func (c JsonParser) GetJsonFloat64(json map[string]interface{}, key string) float64{
+func (this *JsonParser) GetJsonFloat64(json map[string]interface{}, key string) float64{
 
   var val float64
 
-  if c.HasJsonKey(json, key) {
+  if this.HasJsonKey(json, key) {
     if _, ok := json[key].(float64); ok {
       val = json[key].(float64)
     } else if _, ok := json[key].(float32); ok {
@@ -288,7 +409,7 @@ func (c JsonParser) GetJsonFloat64(json map[string]interface{}, key string) floa
     } else if _, ok := json[key].(int); ok {
       val = float64(json[key].(int))
     } else {
-      v, _ := strconv.ParseFloat(c.GetJsonString(json, key), 64)
+      v, _ := strconv.ParseFloat(this.GetJsonString(json, key), 64)
       val = float64(v)
     }
   } 
@@ -296,26 +417,26 @@ func (c JsonParser) GetJsonFloat64(json map[string]interface{}, key string) floa
   return float64(val)
 }
 
-func (c JsonParser) GetJsonBool(json map[string]interface{}, key string) bool{
+func (this *JsonParser) GetJsonBool(json map[string]interface{}, key string) bool{
 
   var val bool
 
-  if c.HasJsonKey(json, key) {
+  if this.HasJsonKey(json, key) {
     if _, ok := json[key].(bool); ok {
       val = json[key].(bool)
     } else {
-      val, _ = strconv.ParseBool(c.GetJsonString(json, key))
+      val, _ = strconv.ParseBool(this.GetJsonString(json, key))
     }
   }
 
   return val
 }
 
-func (c JsonParser) GetJsonString(json map[string]interface{}, key string) string{
+func (this *JsonParser) GetJsonString(json map[string]interface{}, key string) string{
 
   var val string
 
-  if !c.HasJsonKey(json, key) {
+  if !this.HasJsonKey(json, key) {
     return val
   }
 
@@ -331,7 +452,7 @@ func (c JsonParser) GetJsonString(json map[string]interface{}, key string) strin
   return val
 }
 
-func (c JsonParser) JsonInterfaceToInt64(item interface{}) int64{
+func (this *JsonParser) JsonInterfaceToInt64(item interface{}) int64{
 
   var val int = 0
 
@@ -348,13 +469,13 @@ func (c JsonParser) JsonInterfaceToInt64(item interface{}) int64{
   return int64(val)
 }
 
-func (c JsonParser) GetJsonDate(json map[string]interface{}, key string, layout string) time.Time{
-  date, _ := time.ParseInLocation(layout, c.GetJsonString(json, key), c.DefaultLocation)
+func (this *JsonParser) GetJsonDate(json map[string]interface{}, key string, layout string) time.Time{
+  date, _ := time.ParseInLocation(layout, this.GetJsonString(json, key), this.DefaultLocation)
   return date
 }
 
 
-func (c JsonParser) HasJsonKey(json map[string]interface{}, key string) bool{
+func (this *JsonParser) HasJsonKey(json map[string]interface{}, key string) bool{
   if _, ok := json[key]; ok {
     return true
   }
