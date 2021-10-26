@@ -744,20 +744,40 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
 
 func (this *Session) SaveCascade(reply interface{}) error{
   this.deepSaveOrUpdate = map[string]int{}
-  return this.saveOrUpdateCascadeDeep(reply)
+  return this.saveOrUpdateCascadeDeep(reply, true)
 }
 
 
 func (this *Session) SaveOrUpdateCascade(reply interface{}) error{
   this.deepSaveOrUpdate = map[string]int{}
-  return this.saveOrUpdateCascadeDeep(reply)
+  return this.saveOrUpdateCascadeDeep(reply, true)
 }
 
-func (this *Session) saveOrUpdateCascadeDeep(reply interface{}) error{
+func (this *Session) saveOrUpdateCascadeDeep(reply interface{}, firstTime bool) error{
 
   // value e type of pointer
   refValue := reflect.ValueOf(reply)
   //refType := reflect.TypeOf(reply)
+
+
+
+  ignoreAuthorizedTenantCheckBkp := this.IgnoreAuthorizedTenantCheck
+
+  // verifica apenas na entidade principal
+  if firstTime {
+
+    if !this.checkIsAuthorizedTenant(reply) {
+      return errors.New("Tenant not authorized for entity data access")
+    }
+
+    defer func() {
+      //fmt.Println("DEFER IgnoreAuthorizedTenantCheck value")
+      this.IgnoreAuthorizedTenantCheck = ignoreAuthorizedTenantCheckBkp
+    }()
+
+    this.IgnoreAuthorizedTenantCheck = true
+  }
+
 
 
   // value e type of instance
@@ -814,7 +834,7 @@ func (this *Session) saveOrUpdateCascadeDeep(reply interface{}) error{
         this.deepSaveOrUpdate[key] = 1
       }
 
-      if err := this.saveOrUpdateCascadeDeep(fieldValue); err != nil {
+      if err := this.saveOrUpdateCascadeDeep(fieldValue, false); err != nil {
         return err
       }
     }
@@ -830,10 +850,28 @@ func (this *Session) saveOrUpdateCascadeDeep(reply interface{}) error{
 
 func (this *Session) RemoveCascade(reply interface{}) error{
   this.deepRemove = map[string]int{}
-  return this.RemoveCascadeDeep(reply)
+  return this.RemoveCascadeDeep(reply, true)
 }
 
-func (this *Session) RemoveCascadeDeep(reply interface{}) error{
+func (this *Session) RemoveCascadeDeep(reply interface{}, firstTime bool) error{
+
+
+  ignoreAuthorizedTenantCheckBkp := this.IgnoreAuthorizedTenantCheck
+
+  // verifica apenas na entidade principal
+  if firstTime {
+
+    if !this.checkIsAuthorizedTenant(reply) {
+      return errors.New("Tenant not authorized for entity data access")
+    }
+
+    defer func() {
+      //fmt.Println("DEFER IgnoreAuthorizedTenantCheck value")
+      this.IgnoreAuthorizedTenantCheck = ignoreAuthorizedTenantCheckBkp
+    }()
+
+    this.IgnoreAuthorizedTenantCheck = true
+  }
 
   // value e type of pointer
   refValue := reflect.ValueOf(reply)
@@ -913,7 +951,7 @@ func (this *Session) RemoveCascadeDeep(reply interface{}) error{
   }
 
   for _, it := range itensToRemove {
-    if err := this.RemoveCascadeDeep(it); err != nil {
+    if err := this.RemoveCascadeDeep(it, false); err != nil {
       return err
     }    
   }
@@ -1197,7 +1235,8 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}) bool{
           }
 
           if currentTenant, ok := this.Tenant.(TenantModel); ok {
-              return currentTenant.GetId() == entityTenant.GetId()
+            fmt.Println("+++ WARN: unautorized tenant for type ", fullType, " content =", reply)
+            return currentTenant.GetId() == entityTenant.GetId()
           }
 
         }
