@@ -50,9 +50,29 @@ func EndOfMonth(date time.Time) time.Time{
 	return BeginningOfMonth(date).AddDate(0, 1, 0).Add(time.Nanosecond * -1)	
 }
 
- 
+
+func ClearTimeNow() time.Time {
+	return ClearTime(DateNow())
+} 
+
 func ClearTime(date time.Time) time.Time {
 	return time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, GetDefaultLocation())
+}
+
+func FirstTimeNow() time.Time {
+	return FirstTime(DateNow())
+}
+
+func FirstTime(date time.Time) time.Time {
+	return time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, GetDefaultLocation())
+}
+
+func LastTimeNow() time.Time {
+	return LastTime(DateNow())
+}
+
+func LastTime(date time.Time) time.Time {
+	return time.Date(date.Year(), date.Month(), date.Day(), 23, 59, 59, 999, GetDefaultLocation())
 }
 
 func IsSameDate(date1 time.Time, date2 time.Time) bool {

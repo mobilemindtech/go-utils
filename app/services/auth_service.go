@@ -15,7 +15,7 @@ func NewAuthService(user *models.User) *AuthService{
 }
 
 func (this *AuthService) IsAdmin() bool{
-	if this.UserInfo != nil && this.UserInfo.Role != nil {
+	if this.UserInfo != nil && this.UserInfo.Roles != nil {
 		for _, it := range *this.UserInfo.Roles {
 			if it.Authority == "ROLE_ADMIN" {
 				return true
@@ -27,13 +27,14 @@ func (this *AuthService) IsAdmin() bool{
 }
 
 func (this *AuthService) IsRoot() bool{
-	if this.UserInfo != nil && this.UserInfo.Role != nil {
+	if this.UserInfo != nil && this.UserInfo.Roles != nil {
 		for _, it := range *this.UserInfo.Roles {
 			if it.Authority == "ROLE_ROOT" {
 				return true
 			}
 		}
 	}
+	
 	return false
 }
 

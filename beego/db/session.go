@@ -90,6 +90,12 @@ func (this *Session) SetAuthorizedTenants(tenants []interface{}) *Session {
   return this
 }
 
+func (this *Session) SetNoAuthSession() {
+  this.IgnoreAuthorizedTenantCheck = true
+  this.IgnoreTenantFilter = true
+}
+
+
 func (this *Session) OnError() *Session {
   this.SetError()
   return this
@@ -759,22 +765,15 @@ func (this *Session) saveOrUpdateCascadeDeep(reply interface{}, firstTime bool) 
   refValue := reflect.ValueOf(reply)
   //refType := reflect.TypeOf(reply)
 
-
-
   ignoreAuthorizedTenantCheckBkp := this.IgnoreAuthorizedTenantCheck
 
   // verifica apenas na entidade principal
+  // nas filhas, ignora verificação
   if firstTime {
-
-    if !this.checkIsAuthorizedTenant(reply) {
-      return errors.New("Tenant not authorized for entity data access")
-    }
-
-    defer func() {
+    defer func() { // em caso de erro, restaura confiuração
       //fmt.Println("DEFER IgnoreAuthorizedTenantCheck value")
       this.IgnoreAuthorizedTenantCheck = ignoreAuthorizedTenantCheckBkp
     }()
-
     this.IgnoreAuthorizedTenantCheck = true
   }
 
@@ -845,6 +844,12 @@ func (this *Session) saveOrUpdateCascadeDeep(reply interface{}, firstTime bool) 
     fmt.Println("## save or update: ", fullType)
   }
 
+  // Volta a configuração para verificação da entidade principal.
+  // No SaveOrUpdate é verificado
+  if firstTime {
+    this.IgnoreAuthorizedTenantCheck = ignoreAuthorizedTenantCheckBkp
+  }
+
   return this.SaveOrUpdate(reply)
 }
 
@@ -854,24 +859,6 @@ func (this *Session) RemoveCascade(reply interface{}) error{
 }
 
 func (this *Session) RemoveCascadeDeep(reply interface{}, firstTime bool) error{
-
-
-  ignoreAuthorizedTenantCheckBkp := this.IgnoreAuthorizedTenantCheck
-
-  // verifica apenas na entidade principal
-  if firstTime {
-
-    if !this.checkIsAuthorizedTenant(reply) {
-      return errors.New("Tenant not authorized for entity data access")
-    }
-
-    defer func() {
-      //fmt.Println("DEFER IgnoreAuthorizedTenantCheck value")
-      this.IgnoreAuthorizedTenantCheck = ignoreAuthorizedTenantCheckBkp
-    }()
-
-    this.IgnoreAuthorizedTenantCheck = true
-  }
 
   // value e type of pointer
   refValue := reflect.ValueOf(reply)

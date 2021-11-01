@@ -138,3 +138,29 @@ func ListParts(vs interface{}, size int) [][]interface{} {
   return all
 
 }
+
+func UniqueValues(vs interface{}, uniqueValueResolver func(data interface{}) interface{}) []interface{} {
+  return RemoveDuplicates(vs, uniqueValueResolver)
+}
+
+func RemoveDuplicates(vs interface{}, uniqueValueResolver func(data interface{}) interface{}) []interface{} {
+
+  result := []interface{}{}
+  ss := reflect.ValueOf(vs)    
+  s := reflect.Indirect(ss)
+
+  for i := 0; i < s.Len(); i++ {
+
+    it := s.Index(i)
+
+    any := Any(result, func (item interface{}) bool { 
+      return uniqueValueResolver(item) == uniqueValueResolver(it.Interface()) 
+    })
+
+    if !any {
+      result = append(result, it.Interface())
+    }
+  }
+
+  return result
+}
