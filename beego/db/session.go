@@ -1178,7 +1178,6 @@ func (this *Session) isSetTenant(reply interface{}) bool{
 
 func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) bool{
 
-
   return true
 
   ignoreAuthorizedTenantCheckError := false
@@ -1221,7 +1220,9 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
       if !zero {
         if entityTenant, ok := fieldValue.(TenantModel); ok {
 
-          if this.AuthorizedTenants != nil {
+          nilEntityTenant := reflect.Zero(reflect.TypeOf(entityTenant)).Interface() == entityTenant
+
+          if this.AuthorizedTenants != nil && !nilEntityTenant {
             for _, authorizedTenant := range this.AuthorizedTenants {
               if entityTenant.GetId() == authorizedTenant.GetId() {
                 //fmt.Println("check entity tenant = ", entityTenant.GetId(), ", auth tenant = ", authorizedTenant.GetId())
@@ -1230,21 +1231,31 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
             }
           }
 
-          if currentTenant, ok := this.Tenant.(TenantModel); ok {
+          if currentTenant, ok := this.Tenant.(TenantModel); ok && !nilEntityTenant {
 
-            authorized := currentTenant.GetId() == entityTenant.GetId()
-            
+            nilCurrentTenant := reflect.Zero(reflect.TypeOf(currentTenant)).Interface() == currentTenant
 
-            if ignoreAuthorizedTenantCheckError {
-              return true
+              if !nilCurrentTenant {
+
+              authorized := currentTenant.GetId() == entityTenant.GetId()
+              
+
+              if ignoreAuthorizedTenantCheckError {
+                return true
+              }
+
+              if !authorized {
+                fmt.Println("+++ WARN: unautorized tenant ", currentTenant.GetId(), "to entity tenant = ", entityTenant.GetId(), " for type ", fullType, " content = ", reply, ", action = ", action)
+              }
+
+              return authorized
+
             }
-
-            if !authorized {
-              fmt.Println("+++ WARN: unautorized tenant ", currentTenant.GetId(), "to entity tenant = ", entityTenant.GetId(), " for type ", fullType, " content = ", reply, ", action = ", action)
-            }
-
-            return authorized
             
+          } else {
+            fmt.Println("=======================================================")
+            fmt.Println("=== WARN!!! Current Tenant id empty for entity type = ", fullType, " content = ", reply, ", action = ", action)
+            fmt.Println("=======================================================")            
           }
 
         }
