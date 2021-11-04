@@ -247,8 +247,8 @@ func (this *Session) Save(entity interface{}) error {
     this.setTenant(entity)
   }
 
-  if !this.checkIsAuthorizedTenant(entity) {
-    return errors.New("Tenant not authorized for entity data access")
+  if !this.checkIsAuthorizedTenant(entity, "Session.Save") {
+    return errors.New("Tenant not authorized for entity data access. Operation: Session.Save.")
   }  
 
   _, err := this.GetDb().Insert(entity)
@@ -275,8 +275,8 @@ func (this *Session) Update(entity interface{}) error {
     this.setTenant(entity)
   }
 
-  if !this.checkIsAuthorizedTenant(entity) {
-    return errors.New("Tenant not authorized for entity data access")
+  if !this.checkIsAuthorizedTenant(entity, "Session.Update") {
+    return errors.New("Tenant not authorized for entity data access. Operation: Session.Update.")
   }
 
   _, err := this.GetDb().Update(entity)
@@ -297,8 +297,8 @@ func (this *Session) Update(entity interface{}) error {
 func (this *Session) Remove(entity interface{}) error {
 
 
-  if !this.checkIsAuthorizedTenant(entity) {
-    return errors.New("Tenant not authorized for entity data access")
+  if !this.checkIsAuthorizedTenant(entity, "Session.Remove") {
+    return errors.New("Tenant not authorized for entity data access. Operation: Session.Remove.")
   }
 
   _, err := this.GetDb().Delete(entity)
@@ -331,8 +331,8 @@ func (this *Session) Get(entity interface{}) (bool, error) {
 
     if model.IsPersisted() {
 
-      if !this.checkIsAuthorizedTenant(model) {
-        return false, errors.New("Tenant not authorized for entity data access")
+      if !this.checkIsAuthorizedTenant(model, "Session.Get") {
+        return false, errors.New("Tenant not authorized for entity data access. Operation: Session.Get.")
       }
 
       return true, nil
@@ -421,14 +421,16 @@ func (this *Session) SaveOrUpdate(entity interface{}) error{
 
 
   if !this.isTenantNil() && this.isSetTenant(entity) {
-    if this.Debug {
-      fmt.Println("## Save set tenant")
-    }
+    //if this.Debug {
+      fmt.Println("## SaveOrUpdate set tenant")
+    //}
     this.setTenant(entity)
+  } else {
+    fmt.Println("## SaveOrUpdate not set tenant")
   }
 
-  if !this.checkIsAuthorizedTenant(entity) {
-    return errors.New("Tenant not authorized for entity data access")
+  if !this.checkIsAuthorizedTenant(entity, "Session.SaveOrUpdate") {
+    return errors.New("Tenant not authorized for entity data access. Operation: Session.SaveOrUpdate.")
   }
 
   if model, ok := entity.(Model); ok {
@@ -1121,13 +1123,15 @@ func (this *Session) setTenantFilter(entity interface{}, query orm.QuerySeter) o
 }
 
 func (this *Session) isTenantNil() bool{
+
+  isNil := true
+
   if this.Tenant != nil {
     value := reflect.ValueOf(this.Tenant)
-
-    return value.IsNil()
+    isNil = value.IsNil()
   }
 
-  return true
+  return isNil
 }
 
 func (this *Session) isSetTenant(reply interface{}) bool{
@@ -1172,15 +1176,17 @@ func (this *Session) isSetTenant(reply interface{}) bool{
 	return false
 }
 
-func (this *Session) checkIsAuthorizedTenant(reply interface{}) bool{
+func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) bool{
 
+
+  ignoreAuthorizedTenantCheckError := false
 
   if this.IgnoreAuthorizedTenantCheck {    
-    return true
+    ignoreAuthorizedTenantCheckError = true
   }
 
   if !this.HasFilterTenant(reply) || this.isTenantNil() {
-    return true
+    ignoreAuthorizedTenantCheckError = true
   }
 
   // value e type of pointer
@@ -1216,20 +1222,32 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}) bool{
           if this.AuthorizedTenants != nil {
             for _, authorizedTenant := range this.AuthorizedTenants {
               if entityTenant.GetId() == authorizedTenant.GetId() {
+                fmt.Println("check entity tenant = ", entityTenant.GetId(), ", auth tenant = ", authorizedTenant.GetId())
                 return true
               }
             }
           }
 
           if currentTenant, ok := this.Tenant.(TenantModel); ok {
-            fmt.Println("+++ WARN: unautorized tenant for type ", fullType, " content =", reply)
-            return currentTenant.GetId() == entityTenant.GetId()
+
+            authorized := currentTenant.GetId() == entityTenant.GetId()
+            
+            if !authorized {
+              fmt.Println("+++ WARN: unautorized tenant ", currentTenant.GetId(), " for type ", fullType, " content = ", reply, ", action = ", action, ", ignore not auth = ", ignoreAuthorizedTenantCheckError)
+            }
+
+            if ignoreAuthorizedTenantCheckError {
+              return true
+            }
+
+            return authorized
+            
           }
 
         }
       } else {
         fmt.Println("=======================================================")
-        fmt.Println("=== ATTENTION!!! Tenant id empty for entity type = ", fullType, " content =", reply)
+        fmt.Println("=== ATTENTION!!! Tenant id empty for entity type = ", fullType, " content = ", reply, ", action = ", action)
         fmt.Println("=======================================================")
       }
     }
