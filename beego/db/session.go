@@ -1233,7 +1233,7 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
             authorized := currentTenant.GetId() == entityTenant.GetId()
             
             if !authorized {
-              fmt.Println("+++ WARN: unautorized tenant ", currentTenant.GetId(), " for type ", fullType, " content = ", reply, ", action = ", action, ", ignore not auth = ", ignoreAuthorizedTenantCheckError)
+              fmt.Println("+++ WARN: unautorized tenant ", currentTenant.GetId(), "to entity tenant = ", entityTenant.GetId(), " for type ", fullType, " content = ", reply, ", action = ", action, ", ignore not auth = ", ignoreAuthorizedTenantCheckError)
             }
 
             if ignoreAuthorizedTenantCheckError {
@@ -1255,7 +1255,7 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
 
   //fmt.Println("does not authorize data access")
   //fmt.Println("## not set tenant")
-  return false || tenantFieldNotFound
+  return false || tenantFieldNotFound || ignoreAuthorizedTenantCheckError
 }
 
 func (this *Session) HasFilterTenant(reply interface{}) bool{
