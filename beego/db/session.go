@@ -1222,7 +1222,7 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
           if this.AuthorizedTenants != nil {
             for _, authorizedTenant := range this.AuthorizedTenants {
               if entityTenant.GetId() == authorizedTenant.GetId() {
-                fmt.Println("check entity tenant = ", entityTenant.GetId(), ", auth tenant = ", authorizedTenant.GetId())
+                //fmt.Println("check entity tenant = ", entityTenant.GetId(), ", auth tenant = ", authorizedTenant.GetId())
                 return true
               }
             }
@@ -1247,7 +1247,7 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
         }
       } else {
         fmt.Println("=======================================================")
-        fmt.Println("=== ATTENTION!!! Tenant id empty for entity type = ", fullType, " content = ", reply, ", action = ", action)
+        fmt.Println("=== WARN!!! Tenant id empty for entity type = ", fullType, " content = ", reply, ", action = ", action)
         fmt.Println("=======================================================")
       }
     }
