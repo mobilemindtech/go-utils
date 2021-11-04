@@ -1179,6 +1179,8 @@ func (this *Session) isSetTenant(reply interface{}) bool{
 func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) bool{
 
 
+  return true
+
   ignoreAuthorizedTenantCheckError := false
 
   if this.IgnoreAuthorizedTenantCheck {    
@@ -1232,12 +1234,13 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
 
             authorized := currentTenant.GetId() == entityTenant.GetId()
             
-            if !authorized {
-              fmt.Println("+++ WARN: unautorized tenant ", currentTenant.GetId(), "to entity tenant = ", entityTenant.GetId(), " for type ", fullType, " content = ", reply, ", action = ", action, ", ignore not auth = ", ignoreAuthorizedTenantCheckError)
-            }
 
             if ignoreAuthorizedTenantCheckError {
               return true
+            }
+
+            if !authorized {
+              fmt.Println("+++ WARN: unautorized tenant ", currentTenant.GetId(), "to entity tenant = ", entityTenant.GetId(), " for type ", fullType, " content = ", reply, ", action = ", action)
             }
 
             return authorized
