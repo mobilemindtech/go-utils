@@ -53,3 +53,11 @@ func (this *Role) FindByAuthority(authority string) (role *Role, err error) {
 
   return result, err
 }
+
+
+func (this *Role) Exists(authority string) bool {
+
+  role, _ := this.FindByAuthority(authority)
+
+  return role != nil
+}
