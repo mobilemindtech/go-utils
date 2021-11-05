@@ -51,6 +51,21 @@ func (this *Tenant) GenereteUuid() string{
   return ""
 }
 
+func (this *Tenant) First() *Tenant{
+
+  first := new(Tenant)
+  criteria := db.NewCriteria(this.Session, first , nil)
+  criteria.OrderAsc("Id")
+  criteria.One()
+
+  if criteria.Empty {
+    return nil
+  }
+
+  return first
+}
+
+
 func (this *Tenant) List() (*[]*Tenant , error) {
   entities := []*Tenant{}
   criteria := db.NewCriteria(this.Session, new(Tenant), &entities)

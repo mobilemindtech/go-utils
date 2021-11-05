@@ -90,9 +90,14 @@ func (this *Session) SetAuthorizedTenants(tenants []interface{}) *Session {
   return this
 }
 
-func (this *Session) SetNoAuthSession() {
+func (this *Session) SetNoAuthSession() *Session{
   this.IgnoreAuthorizedTenantCheck = true
+  return this
+}
+
+func (this *Session) SetIgnoreTenantFilter() *Session{
   this.IgnoreTenantFilter = true
+  return this
 }
 
 
@@ -421,13 +426,11 @@ func (this *Session) SaveOrUpdate(entity interface{}) error{
 
 
   if !this.isTenantNil() && this.isSetTenant(entity) {
-    //if this.Debug {
+    if this.Debug {
       fmt.Println("## SaveOrUpdate set tenant")
-    //}
+    }
     this.setTenant(entity)
-  } else {
-    fmt.Println("## SaveOrUpdate not set tenant")
-  }
+  } 
 
   if !this.checkIsAuthorizedTenant(entity, "Session.SaveOrUpdate") {
     return errors.New("Tenant not authorized for entity data access. Operation: Session.SaveOrUpdate.")
@@ -1177,6 +1180,7 @@ func (this *Session) isSetTenant(reply interface{}) bool{
 }
 
 func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) bool{
+
 
   return true
 
