@@ -47,19 +47,19 @@ type Session struct {
 
 
 func NewSession() *Session{
-  return &Session{ State: SessionStateOk, Debug: false, db: NewDataBase("default") }
+  return &Session{ State: SessionStateOk, Debug: false, db: NewDataBase("default"), IgnoreAuthorizedTenantCheck: true }
 }
 
 func NewSessionWithDbName(dbName string) *Session{
-  return &Session{ State: SessionStateOk, Debug: false,  db: NewDataBase(dbName) }
+  return &Session{ State: SessionStateOk, Debug: false,  db: NewDataBase(dbName), IgnoreAuthorizedTenantCheck: true }
 }
 
 func NewSessionWithTenant(tenant interface{}) *Session{
-  return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false, db: NewDataBase("default") }
+  return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false, db: NewDataBase("default"), IgnoreAuthorizedTenantCheck: true }
 }
 
 func NewSessionWithTenantAndDbName(tenant interface{}, dbName string) *Session{
-  return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false, db: NewDataBase(dbName) }
+  return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false, db: NewDataBase(dbName), IgnoreAuthorizedTenantCheck: true }
 }
 
 func OrmVerbose(verbose bool){
@@ -85,13 +85,16 @@ func (this *Session) SetAuthorizedTenants(tenants []interface{}) *Session {
     }
   }
 
-  fmt.Println("AuthorizedTenants count = ", len(this.AuthorizedTenants))
-
   return this
 }
 
 func (this *Session) SetNoAuthSession() *Session{
   this.IgnoreAuthorizedTenantCheck = true
+  return this
+}
+
+func (this *Session) SetCheckAuthorizedTenant() *Session{
+  this.IgnoreAuthorizedTenantCheck = false
   return this
 }
 
@@ -1185,8 +1188,6 @@ func (this *Session) isSetTenant(reply interface{}) bool{
 
 func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) bool{
 
-
-  //return true
 
   ignoreAuthorizedTenantCheckError := false
 
