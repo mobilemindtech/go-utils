@@ -31,6 +31,19 @@ func GetTodayWithTime(newTime time.Time) time.Time{
 	return time.Date(now.Year(), now.Month(), now.Day(), newTime.Hour(), newTime.Minute(), newTime.Second(), newTime.Nanosecond(), GetDefaultLocation())
 }
 
+
+func ChangeDateWithDay(date time.Time, day int) time.Time{ 
+	return time.Date(date.Year(), date.Month(), day, date.Hour(), date.Minute(), date.Second(), date.Nanosecond(), GetDefaultLocation())
+}
+
+func ChangeDateWithMonth(date time.Time, month int) time.Time{ 
+	return time.Date(date.Year(), time.Month(month), date.Day(), date.Hour(), date.Minute(), date.Second(), date.Nanosecond(), GetDefaultLocation())
+}
+
+func ChangeDateWithYear(date time.Time, year int) time.Time{ 
+	return time.Date(year, date.Month(), date.Day(), date.Hour(), date.Minute(), date.Second(), date.Nanosecond(), GetDefaultLocation())
+}
+
 func GetTodayWithStrTime(layout string, newTime string) (time.Time, error){ 
 	d, err := DateParse(layout, newTime)  
 

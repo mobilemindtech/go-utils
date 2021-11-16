@@ -1125,6 +1125,10 @@ func (this *Session) setTenantFilter(entity interface{}, query orm.QuerySeter) o
   return query
 }
 
+func (this *Session) HasTenant() bool {
+  return !this.isTenantNil()
+}
+
 func (this *Session) isTenantNil() bool{
 
   isNil := true
@@ -1182,7 +1186,7 @@ func (this *Session) isSetTenant(reply interface{}) bool{
 func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) bool{
 
 
-  return true
+  //return true
 
   ignoreAuthorizedTenantCheckError := false
 
