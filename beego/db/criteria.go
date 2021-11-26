@@ -113,8 +113,6 @@ type Criteria struct {
 
 	query orm.QuerySeter
 
-	Tenant interface{}
-
 	RelatedSelList []string
 
 	Any bool
@@ -126,14 +124,12 @@ type Criteria struct {
 	Distinct bool
 
 	Debug bool
+
+	tenantCopy interface{}
 }
 
 func NewCriteria(session *Session, entity interface{}, entities interface{}) *Criteria {
-	return &Criteria{ criaterias: []*Criteria{}, criateriasOr: []*Criteria{}, criateriasAnd: []*Criteria{}, criateriasAndOr: []*Criteria{}, criateriasAndOrAnd: []*CriteriaSet{}, criateriasOrAnd: []*Criteria{}, Session: session, Result: entity, Results: entities, Tenant: session.Tenant, RelatedSelList: []string{}  }
-}
-
-func NewCriteriaWithTenant(session *Session, tenant interface{}, entity interface{}, entities interface{}) *Criteria {
-	return &Criteria{ criaterias: []*Criteria{}, criateriasOr: []*Criteria{}, criateriasAnd: []*Criteria{}, criateriasAndOr: []*Criteria{}, criateriasAndOrAnd: []*CriteriaSet{}, criateriasOrAnd: []*Criteria{}, Session: session, Result: entity, Results: entities, Tenant: tenant, RelatedSelList: []string{}  }
+	return &Criteria{ criaterias: []*Criteria{}, criateriasOr: []*Criteria{}, criateriasAnd: []*Criteria{}, criateriasAndOr: []*Criteria{}, criateriasAndOrAnd: []*CriteriaSet{}, criateriasOrAnd: []*Criteria{}, Session: session, Result: entity, Results: entities, RelatedSelList: []string{}  }
 }
 
 
@@ -151,6 +147,18 @@ func (this *Criteria) SetEntity(entity interface{}) *Criteria {
 	this.Result = entity
 	return this
 }
+
+func (this *Criteria) RunWithTenant(tenant interface{}, runner func(c *Criteria)) {
+	this.Session.RunWithTenant(tenant, func(){
+		runner(this)
+	})
+} 
+
+func (this *Criteria) WithTenant(tenant interface{}) *Criteria{
+	this.tenantCopy = tenant
+	this.Session.SetTenant(tenant)
+	return this
+} 
 
 func (this *Criteria) SetResult(result interface{}) *Criteria {
 	this.Result = result
@@ -178,11 +186,6 @@ func (this *Criteria) SetOffset(offset int64) *Criteria {
 
 func (this *Criteria) SetLimit(limit int64) *Criteria {
 	this.Limit = limit
-	return this
-}
-
-func (this *Criteria) SetTenant(tenant interface{}) *Criteria {
-	this.Tenant = tenant
 	return this
 }
 
@@ -499,8 +502,8 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 			}
 		}
 
-	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) && !this.Session.IgnoreTenantFilter {
-			cond = cond.And("Tenant", this.Tenant)
+	  if this.Session.HasTenant() && this.Session.HasFilterTenant(this.Result) && !this.Session.IgnoreTenantFilter {
+			cond = cond.And("Tenant", this.Session.Tenant)
 	  }
 
 		condition = condition.OrCond(cond)
@@ -575,8 +578,8 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 
 		}
 
-	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) && !this.Session.IgnoreTenantFilter{
-			cond = cond.And("Tenant", this.Tenant)
+	  if this.Session.HasTenant() && this.Session.HasFilterTenant(this.Result) && !this.Session.IgnoreTenantFilter{
+			cond = cond.And("Tenant", this.Session.Tenant)
 	  }			
 
 		condition = condition.AndCond(cond)
@@ -664,8 +667,8 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 
 		}
 
-	  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) && !this.Session.IgnoreTenantFilter{
-			cond = cond.And("Tenant", this.Tenant)
+	  if this.Session.HasTenant() && this.Session.HasFilterTenant(this.Result) && !this.Session.IgnoreTenantFilter{
+			cond = cond.And("Tenant", this.Session.Tenant)
 	  }
 		condition = condition.OrCond(cond)
 
@@ -738,14 +741,21 @@ func (this *Criteria) getPathName(criteria *Criteria) string {
 
 func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
 
+	defer func(){
+		if this.tenantCopy != nil {
+			this.Session.SetTenant(this.tenantCopy)
+			this.tenantCopy = nil
+		}
+	}()
+
   query := this.Query()
 
   if this.Limit > 0 {
   	query = query.Limit(this.Limit).Offset(this.Offset)
 	}
 
-  if this.Tenant != nil && this.Session.HasFilterTenant(this.Result) {
-		this.Eq("Tenant", this.Tenant)
+  if this.Session.HasTenant() && this.Session.HasFilterTenant(this.Result) {
+		this.Eq("Tenant", this.Session.Tenant)
   }
 
   this.buildPage()

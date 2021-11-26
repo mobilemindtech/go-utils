@@ -31,6 +31,10 @@ func NewTenant(session *db.Session) *Tenant{
   return &Tenant{ Session: session }
 }
 
+func NewTenantWithId(id int64) *Tenant{
+  return &Tenant{ Id: id }
+}
+
 func (this *Tenant) IsPersisted() bool{
   return this.Id > 0
 }

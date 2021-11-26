@@ -126,6 +126,18 @@ func (this *Session) RunWithTenant(tenant interface{}, runner func()) {
   runner()
 }
 
+func (this *Session) WithTenant(tenant interface{}, runner func() error) error{
+
+  tmp := this.Tenant
+  this.Tenant = tenant
+
+  defer func() {
+    this.Tenant = tmp
+  }()
+
+  return runner()
+}
+
 func (this *Session) IsOpenDbError() bool{
   return this.openDbError
 }
@@ -1268,7 +1280,7 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
           }
 
         }
-      } else {
+      } else if !ignoreAuthorizedTenantCheckError {
         fmt.Println("=======================================================")
         fmt.Println("=== WARN!!! Tenant id empty for entity type = ", fullType, " content = ", reply, ", action = ", action)
         fmt.Println("=======================================================")

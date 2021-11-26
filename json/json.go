@@ -75,6 +75,7 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
   defer func() {
     if r := recover(); r != nil {
       fmt.Println("JSON TO MAP ERROR: ", r)
+      panic(r)
     }
   }()
 
@@ -118,21 +119,42 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
     	attr = Underscore(field.Name)
     }
 
+    //fmt.Println("Field ", attr)
+
     
     fieldStruct := fullValue.FieldByName(field.Name)
     fieldValue := fieldStruct.Interface()
   	
     ftype := fieldStruct.Type()
     isPtr := ftype.Kind() == reflect.Ptr
-    isIterface := ftype.Kind() == reflect.Interface
+    isInterface := ftype.Kind() == reflect.Interface
     realKind := ftype.Kind()
     realType := ftype
+
+		if reflect.TypeOf(fieldValue) == nil {
+			continue
+		}
+
+    // retorn true para &[]*Entity{}
+    realTypePrt := false
+    if isInterface {
+    	realTypePrt = reflect.TypeOf(fieldValue).Kind() == reflect.Ptr
+  	}
+    
     if isPtr {
     	realKind = ftype.Elem().Kind()
     	realType = ftype.Elem()
+    } else if isInterface && realTypePrt {
+  		realKind = reflect.TypeOf(fieldValue).Elem().Kind()
+  		realType = reflect.TypeOf(fieldValue).Elem()    	    	
+    } else if isInterface {
+    	realKind = reflect.TypeOf(fieldValue).Kind()
+    	realType = reflect.TypeOf(fieldValue)    	
     }
 
-    if isIterface {
+    //fmt.Println("real type ", realType, "real kind ", realKind, "is ptr ", isPtr, "is interface ", isInterface, "is real type ptr", realTypePrt)
+
+   /* if isInterface {
 
     	//fmt.Println("is interface, ", attr, reflect.TypeOf(fieldValue))
 
@@ -160,10 +182,10 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
     	} else {
     		fieldValue = reflect.ValueOf(fieldValue)
     	}
-    }
+    }*/
 
   	if this.Debug {
-  		fmt.Println("Attr = ", attr, ", Field = ", field.Name, ", Type = ", ftype , "Kind = ", fieldStruct.Type().Kind(), ", Real Kind", realKind, ", Value = ", fieldValue, "isPtr = ", isPtr)
+  		fmt.Println("Attr = ", attr, ", Field = ", field.Name, ", Type = ", ftype , "Kind = ", fieldStruct.Type().Kind(), ", Real Kind", realKind, "isPtr = ", isPtr) //, ", Value = ", fieldValue)
   	}
   	
     
@@ -178,17 +200,18 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
 
     		
     		slice := reflect.ValueOf(fieldValue)
+    		//fmt.Println("slice 1 ", slice)
     		zero := reflect.Zero(reflect.TypeOf(slice)).Interface() == slice
 
     		if slice.IsNil() || zero {
     			continue
     		}
     		
-    		//fmt.Println("slice", slice)
+    		//fmt.Println("slice 2 ", slice)
 
-    		if isPtr {
+    		if isPtr || (isInterface && realTypePrt) {
 					slice = slice.Elem()    			
-    		}
+    		} 
 
     		//fmt.Println("slice", slice)
 

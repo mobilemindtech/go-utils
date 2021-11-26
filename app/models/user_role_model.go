@@ -156,6 +156,21 @@ func (this *UserRole) FindByUserAndRole(user *User, role *Role) (*UserRole, erro
   return entity, err
 }
 
+func (this *UserRole) FindByUserAndAuthority(user *User, autority string) (*UserRole, error) {
+
+  entity := new(UserRole)
+
+  query, _ := this.Session.Query(entity)
+
+  err := query.Filter("User", user).Filter("Role__Authority", autority).One(entity)
+
+  if err == orm.ErrNoRows {
+    return entity, nil  
+  }
+
+  return entity, err
+}
+
 func (this *UserRole) Create(user *User, autority string) error { 
 
   search := NewRole(this.Session)
