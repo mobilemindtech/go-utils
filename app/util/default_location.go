@@ -104,3 +104,10 @@ func IsSameDateTime(date1 time.Time, date2 time.Time) bool {
 	return IsSameDate(date1, date2) && IsSameTime(date1, date2)
 }
 
+func ContainsWithSame(begin time.Time, end time.Time, date time.Time) bool {
+	return IsSameDateTime(begin, date) || IsSameDateTime(end, date) || (date.After(begin) && date.Before(end))
+}
+
+func Contains(begin time.Time, end time.Time, date time.Time) bool {
+	return date.After(begin) && date.Before(end)
+}
