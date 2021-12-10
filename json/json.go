@@ -83,20 +83,28 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
   fullValue := refValue
   fullType := fullValue.Type()
   
-  //fmt.Println("fullType ", fullType, " fullValue ", fullValue)
+  //fmt.Println("1 fullType ", fullType, " fullValue ", fullValue)
 
   if reflect.TypeOf(obj).Kind() == reflect.Ptr {
+  	//fmt.Println("IS PTR")
   	fullValue = refValue.Elem()
   	fullType = refValue.Elem().Type()
-
   }
+
+  //fmt.Println("2 fullType ", fullType, " fullValue ", fullValue)
 
   if fullValue.Kind() == reflect.Interface {
+  	//fmt.Println("IS INTERFACE")
   	fullValue = refValue.Elem().Elem()
   	fullType = refValue.Elem().Elem().Type()  	
+
+  	if fullValue.Kind() == reflect.Ptr {
+	  	fullValue = refValue.Elem().Elem().Elem()
+	  	fullType = refValue.Elem().Elem().Elem().Type()  	
+  	}
   }
 
-  //fmt.Println("fullType ", fullType, " fullValue ", fullValue )
+  //fmt.Println("3 fullType ", fullType, " fullValue ", fullValue )
 
   tagName := "jsonp"
   jsonResult := make(map[string]interface{})
@@ -272,7 +280,12 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
     		} else {
 
     			if !isPtr {
-    				fieldValue = fieldStruct.Addr().Interface()
+
+    				if fieldStruct.CanAddr() {
+	    				addr := fieldStruct.Addr()
+	    				fieldValue = addr.Interface()
+    				}
+
     			}
     			
 
