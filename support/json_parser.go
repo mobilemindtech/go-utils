@@ -60,6 +60,12 @@ func (this *JsonParser) JsonToMap(ctx *context.Context) (map[string]interface{},
   return data, err
 }
 
+func (this *JsonParser) JsonBytesToMap(body []byte) (map[string]interface{}, error) {
+  data := make(map[string]interface{})
+  err := json.Unmarshal(body, &data)
+  return data, err
+}
+
 func (this *JsonParser) JsonToModel(ctx *context.Context, model interface{}) error {
 	//fmt.Println("### %s", string(ctx.Input.RequestBody))
   err := json.Unmarshal(ctx.Input.RequestBody, &model)
