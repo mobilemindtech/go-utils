@@ -484,6 +484,11 @@ func (this *WebController) OnTemplate(viewName string) {
   this.OnFlash(false)
 }
 
+func (this *WebController) OnFullTemplate(tplName string) {
+  this.TplName = fmt.Sprintf("%s.tpl", tplName)
+  this.OnFlash(false)
+}
+
 func (this *WebController) OnPureTemplate(templateName string) {
   this.TplName = templateName
   this.OnFlash(false)
