@@ -479,6 +479,16 @@ func (this *WebController) OnJsonValidationMessageWithErrors(message string, err
   this.OnJson(&support.JsonResult{  Message: message, Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix() })
 }
 
+func (this *WebController) OnJsonValidationWithResultAndMessageAndErrors(result interface{}, message string, errors map[string]string) {
+  this.Rollback()  
+  this.OnJson(&support.JsonResult{  Message: message, Result: result, Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix() })
+}
+
+func (this *WebController) OnJsonValidationWithResultsAndMessageAndErrors(results interface{}, message string, errors map[string]string) {
+  this.Rollback()  
+  this.OnJson(&support.JsonResult{  Message: message, Results: results, Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix() })
+}
+
 func (this *WebController) OnTemplate(viewName string) {
   this.TplName = fmt.Sprintf("%s/%s.tpl", this.ViewPath, viewName)
   this.OnFlash(false)
