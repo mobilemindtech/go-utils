@@ -227,7 +227,7 @@ func (this *JsonParser) formToJsonWithFieldsConfigs(ctx *context.Context, config
 
     } else {
 
-      fmt.Println("k = ", k, " value = ", v[0])
+      //fmt.Println("k = ", k, " value = ", v[0])
 
       value := v[0]
 
