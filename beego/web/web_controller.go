@@ -918,7 +918,7 @@ func (this *WebController) LoadTenants(){
       its, _ := this.ModelTenant.List()
       tenants = *its
     } else {
-      list, _ := this.ModelTenantUser.ListByUser(this.GetAuthUser())
+      list, _ := this.ModelTenantUser.ListByUserAdmin(this.GetAuthUser())
 
 
       for _, it := range *list {

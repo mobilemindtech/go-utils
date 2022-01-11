@@ -97,6 +97,25 @@ func (this *TenantUser) ListByUser(user *User) (*[]*TenantUser , error) {
   return &results, err
 }
 
+func (this *TenantUser) ListByUserAdmin(user *User) (*[]*TenantUser , error) { 
+  var results []*TenantUser
+
+  query, err := this.Session.Query(this)
+
+
+  if err != nil {
+    return nil, err
+  }
+
+  query = query.Filter("User", user).Filter("Admin", true).RelatedSel("Tenant")
+
+  if err := this.Session.ToList(query, &results); err != nil {
+    return nil, err
+  }
+
+  return &results, err
+}
+
 func (this *TenantUser) ListActivesByUser(user *User) (*[]*TenantUser , error) { 
   var results []*TenantUser
 
