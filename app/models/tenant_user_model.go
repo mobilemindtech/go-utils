@@ -16,6 +16,8 @@ type TenantUser struct{
   Tenant *Tenant `orm:"rel(fk);on_delete(do_nothing)" valid:"Required" form:"" goutils:"no_set_tenant;no_filter_tenant"`
   User *User `orm:"rel(fk);on_delete(do_nothing)" valid:"Required" form:",select"`
 
+  Admin bool `orm:"" valid:"Required;" form:"" json:",string,omitempty"`
+
   Session *db.Session `orm:"-"`
 }
 
@@ -130,6 +132,26 @@ func (this *TenantUser) FindByUserAndTenant(user *User, tenant *Tenant) (*Tenant
   }
 
   err = query.Filter("User", user).Filter("Tenant", tenant).One(result)
+
+  if err == orm.ErrNoRows {
+    return nil, nil
+  } else if err == orm.ErrMultiRows {
+    return nil, err
+  }
+
+  return result, err
+}
+
+func (this *TenantUser) FindByAdminUserAndTenant(user *User, tenant *Tenant) (*TenantUser, error) {
+  result := new(TenantUser)
+
+  query, err := this.Session.Query(this)
+
+  if err != nil {
+    return nil, err
+  }
+
+  err = query.Filter("User", user).Filter("Tenant", tenant).Filter("Admin", true).One(result)
 
   if err == orm.ErrNoRows {
     return nil, nil
