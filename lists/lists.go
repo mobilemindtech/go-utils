@@ -1,6 +1,9 @@
 package lists
 
-import "reflect"
+import (
+  "reflect"
+  _ "fmt"
+)
 
 
 // Index returns the first index of the target interface{} `t`, or
@@ -108,6 +111,30 @@ func Map(vs interface{}, f func(interface{}) interface{}) []interface{} {
     vsm[i] = f(it.Interface())
   }
   return vsm
+}
+
+func Sort(vs interface{}, f func(interface{}, interface{}) int) {    
+
+  ss := reflect.ValueOf(vs)    
+  s := reflect.Indirect(ss)
+  swap := reflect.Swapper(vs)
+
+  for i := s.Len(); i > 0; i-- {
+  //The inner loop will first iterate through the full length
+  //the next iteration will be through n-1
+  // the next will be through n-2 and so on
+    for j := 1; j < i; j++ {
+
+      v1 := ss.Index(j-1)
+      v2 := ss.Index(j)
+
+      if f(v1.Interface(), v2.Interface()) > 0 {
+
+        swap(j-1, j)
+
+      }          
+    }
+  }  
 }
 
 func ListParts(vs interface{}, size int) [][]interface{} {
