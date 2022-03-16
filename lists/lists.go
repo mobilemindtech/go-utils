@@ -129,9 +129,7 @@ func Sort(vs interface{}, f func(interface{}, interface{}) int) {
       v2 := ss.Index(j)
 
       if f(v1.Interface(), v2.Interface()) > 0 {
-
         swap(j-1, j)
-
       }          
     }
   }  

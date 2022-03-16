@@ -15,15 +15,7 @@ const (
   SessionStateError
 )
 
-type Model interface {
-  IsPersisted() bool
-  TableName() string
-}
 
-
-type TenantModel interface {
-  GetId() int64
-}
 
 type Session struct {
   State SessionState
@@ -271,6 +263,12 @@ func (this *Session) Save(entity interface{}) error {
     return errors.New("Tenant not authorized for entity data access. Operation: Session.Save.")
   }  
 
+  if hook, ok := entity.(ModelHookBeforeSave); ok {
+    if err := hook.BeforeSave(); err != nil {
+      return err
+    }
+  }
+
   _, err := this.GetDb().Insert(entity)
 
   if this.Debug {
@@ -282,6 +280,13 @@ func (this *Session) Save(entity interface{}) error {
     this.SetError()
     return err
   }
+
+  if hook, ok := entity.(ModelHookAfterSave); ok {
+    if err := hook.AfterSave(); err != nil {
+      return err
+    }
+  }
+
 
   return nil
 }
@@ -299,6 +304,12 @@ func (this *Session) Update(entity interface{}) error {
     return errors.New("Tenant not authorized for entity data access. Operation: Session.Update.")
   }
 
+  if hook, ok := entity.(ModelHookBeforeUpdate); ok {
+    if err := hook.BeforeUpdate(); err != nil {
+      return err
+    }
+  }
+
   _, err := this.GetDb().Update(entity)
 
   if this.Debug {
@@ -311,6 +322,13 @@ func (this *Session) Update(entity interface{}) error {
     return err
   }
 
+  if hook, ok := entity.(ModelHookAfterUpdate); ok {
+    if err := hook.AfterUpdate(); err != nil {
+      return err
+    }
+  }
+
+
   return nil
 }
 
@@ -321,6 +339,12 @@ func (this *Session) Remove(entity interface{}) error {
     return errors.New("Tenant not authorized for entity data access. Operation: Session.Remove.")
   }
 
+  if hook, ok := entity.(ModelHookBeforeRemove); ok {
+    if err := hook.BeforeRemove(); err != nil {
+      return err
+    }
+  }
+
   _, err := this.GetDb().Delete(entity)
 
   if err != nil {
@@ -328,6 +352,12 @@ func (this *Session) Remove(entity interface{}) error {
     this.SetError()
     return err
   }
+
+  if hook, ok := entity.(ModelHookAfterRemove); ok {
+    if err := hook.AfterRemove(); err != nil {
+      return err
+    }
+  }  
 
   return nil
 }
@@ -356,6 +386,20 @@ func (this *Session) Get(entity interface{}) (bool, error) {
       }
 
       return true, nil
+    }
+
+    if hook, ok := entity.(ModelHookAfterLoad); ok {
+      if next, err := hook.AfterLoad(entity); !next || err != nil {
+
+        if err != nil {
+          return false, err
+        }
+
+        if !next {
+          return false, nil
+        }
+
+      }
     }
 
     return false, nil
@@ -430,6 +474,20 @@ func (this *Session) FindById(entity interface{}, id int64) (interface{}, error)
       return nil, nil
     }
 
+    if hook, ok := entity.(ModelHookAfterLoad); ok {
+      if next, err := hook.AfterLoad(entity); !next || err != nil {
+
+        if err != nil {
+          return nil, err
+        }
+
+        if !next {
+          return nil, nil
+        }
+
+      }
+    }    
+
     return entity, nil
   }
 
@@ -477,6 +535,10 @@ func (this *Session) List(entity interface{}, entities interface{}) error {
       query = this.setTenantFilter(entity, query)
     }
 
+    if hook, ok := entity.(ModelHookBeforeQuery); ok {
+      query = hook.BeforeQuery(query)
+    }      
+
     if _, err := query.All(entities); err != nil {
       fmt.Println("## Session: error on list: %v", err.Error())
       //this.SetError()
@@ -484,6 +546,10 @@ func (this *Session) List(entity interface{}, entities interface{}) error {
     }
     return nil
   }
+
+  if hook, ok := entity.(ModelHookAfterList); ok {
+    hook.AfterList(entities)
+  }  
 
   this.SetError()
   return errors.New("entity does not implements of Model 1")
@@ -535,12 +601,19 @@ func (this *Session) PageQuery(query orm.QuerySeter, entity interface{}, entitie
       query = this.setTenantFilter(entity, query)
     }
 
+    if hook, ok := entity.(ModelHookBeforeQuery); ok {
+       query = hook.BeforeQuery(query)
+    }      
+
     if _, err := query.All(entities); err != nil {
       fmt.Println("## Session: error on page: %v", err.Error())
       //this.SetError()
       return err
     }
 
+    if hook, ok := entity.(ModelHookAfterList); ok {
+      hook.AfterList(entities)
+    }  
 
     return nil
   }

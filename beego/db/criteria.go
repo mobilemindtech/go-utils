@@ -355,9 +355,9 @@ func (this *Criteria) Query() orm.QuerySeter {
 
 	if this.query == nil {
 
-	  entity := this.Result
+	  //entity := this.Result
 
-	  if model, ok := entity.(Model); ok {
+	  if model, ok := this.Result.(Model); ok {
 	    this.query = this.Session.GetDb().QueryTable(model.TableName())
 		} else {
 			this.setError(errors.New("entity does not implements of Model")	)
@@ -748,6 +748,12 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
 		}
 	}()
 
+
+  if hook, ok := this.Result.(ModelHookBeforeCriteria); ok {
+    hook.BeforeCriteria(this)
+  }      
+
+
   query := this.Query()
 
   if this.Limit > 0 {
@@ -805,6 +811,10 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   		this.Any = reflect.ValueOf(this.Results).Elem().Len() > 0
   		this.Empty = !this.Any
 
+	    if hook, ok := this.Result.(ModelHookAfterList); ok {
+	      hook.AfterList(this.Results)
+	    }   		
+
   	case CriteriaOne:
 
 
@@ -839,10 +849,28 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
     		this.setError(nil)
     	}
 
+    	if !this.HasError {
+		    if hook, ok := this.Result.(ModelHookAfterLoad); ok {
+		      if next, err := hook.AfterLoad(this.Result); !next || err != nil {
+
+		        if err != nil {
+		          this.setError(err)
+		          this.Result = nil
+		        }
+
+		        if !next {
+		          this.Result = nil
+		        }
+
+		      }
+		    }    		
+    	}
+
 			if model, ok := this.Result.(Model); ok {
 				this.Any = model.IsPersisted()
 			}
 			this.Empty = !this.Any
+
 
   	case CriteriaCount:
 
@@ -895,9 +923,9 @@ func (this *Criteria) setError(err error) {
 
 func (this *Criteria) getErrorDescription(err error) string {
 
-	  entity := this.Result
+	  //entity := this.Result
 
-	  if model, ok := entity.(Model); ok {
+	  if model, ok := this.Result.(Model); ok {
 	    return fmt.Sprintf("Table: %v - Message: %v", model.TableName(), err)
 		} else {
 			return "entity does not implements of Model"
