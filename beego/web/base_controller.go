@@ -582,6 +582,10 @@ func (this *BaseController) GetCurrentTime() time.Time {
 }
 
 func (this *BaseController) GetPage() *db.Page{
+  return this.GetPageWithDefaultLimit(this.defaultPageLimit)
+} 
+
+func (this *BaseController) GetPageWithDefaultLimit(defaultLimit int64) *db.Page{
   page := new(db.Page)
 
   if this.IsJson() {
@@ -619,7 +623,7 @@ func (this *BaseController) GetPage() *db.Page{
   }
 
   if page.Limit <= 0 {
-    page.Limit = this.defaultPageLimit
+    page.Limit = defaultLimit
   }
 
   return page
