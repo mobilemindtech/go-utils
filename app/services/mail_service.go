@@ -52,12 +52,18 @@ func (this *MailService) Send(email *models.Email) error{
 }
 
 func (this *MailService) SendPasswordRecover(to string, name string, token string) error {
+	url := fmt.Sprintf("%v/password/change?token=%v", this.AppUrl, token)
+	return this.SendPasswordRecoverWithUrl(to, name, url)
+}
+
+
+func (this *MailService) SendPasswordRecoverWithUrl(to string, name string, url string) error {
 
 
   this.Controller.TplName = this.PasswordRecoverTemplateName
 
 	this.Controller.Data["user_name"] = name
-	this.Controller.Data["recover_url"] = fmt.Sprintf("%v/password/change?token=%v", this.AppUrl, token)
+	this.Controller.Data["recover_url"] = url
 
 	content, err := this.Controller.RenderString()
 
