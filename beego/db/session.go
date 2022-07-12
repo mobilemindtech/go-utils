@@ -38,6 +38,8 @@ type Session struct {
 }
 
 
+
+
 func NewSession() *Session{
   return &Session{ State: SessionStateOk, Debug: false, db: NewDataBase("default"), IgnoreAuthorizedTenantCheck: true }
 }
@@ -622,7 +624,6 @@ func (this *Session) PageQuery(query orm.QuerySeter, entity interface{}, entitie
   return errors.New("entity does not implements of Model")
 }
 
-
 func (this *Session) Query(entity interface{}) (orm.QuerySeter, error) {
   if model, ok := entity.(Model); ok {
     query := this.GetDb().QueryTable(model.TableName())
@@ -712,11 +713,6 @@ func (this *Session) ExecuteUpdate(querySeter orm.QuerySeter, args map[string]in
 
   return count, err
 }
-
-func (this *Session) Raw(query string, args ...interface{}) orm.RawSeter{  
-  return this.GetDb().Raw(query, args...)
-}
-
 
 func (this *Session) Eager(reply interface{}) error{
   this.deepEager = map[string]int{}
