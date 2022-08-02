@@ -6,6 +6,7 @@ import (
   "strings"
   "errors"
   "fmt"
+  "runtime/debug"
 )
 
 type SessionState int
@@ -105,6 +106,12 @@ func (this *Session) OnError() *Session {
 
 func (this *Session) SetError() *Session {
   this.State = SessionStateError
+  fmt.Println("DEBUG: Session.SetError")
+  if this.Debug {
+    fmt.Println("------------------------ DEBUG STACK TRACE BEGIN")
+    debug.PrintStack()
+    fmt.Println("------------------------ DEBUG STACK TRACE END")
+  }
   return this
 }
 
