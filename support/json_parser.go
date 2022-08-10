@@ -231,12 +231,10 @@ func (this *JsonParser) formToJsonWithFieldsConfigs(ctx *context.Context, config
 
       value := v[0]
 
-      if len(value) > 0 {
-        if currentConfig != nil && len(value) > 0 {
-          jsonMap[k] = processValue(currentConfig, value)
-        } else {
-          jsonMap[k] = value
-        }
+      if currentConfig != nil && len(value) > 0 {
+        jsonMap[k] = processValue(currentConfig, value)
+      } else {
+        jsonMap[k] = value
       }
 
     }
