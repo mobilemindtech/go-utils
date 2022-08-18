@@ -303,6 +303,10 @@ func (this *BaseController) OkAsHtml(message string) {
   this.Ctx.Output.Body([]byte(message))
 }
 
+func (this *BaseController) OkAsText(message string) {
+  this.Ctx.Output.Body([]byte(message))
+}
+
 func (this *BaseController) Ok() {
   this.Ctx.Output.SetStatus(200)
 }

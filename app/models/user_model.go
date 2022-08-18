@@ -268,6 +268,16 @@ func (this *User) GetByUuidAndEnabled(uuid string) (*User , error) {
   criteria := db.NewCriteria(this.Session, entity, nil).Eq("Uuid", uuid).Eq("Enabled", true).One()
 
   return entity, criteria.Error
+}
 
+func (this *User) UpdateLastLogin() {
+  query := "update users set last_login = now() where id = ?"
+  _, err := db.NewRawQueryArgs(this.Session, query, this.Id).Execute()
+
+  if err != nil {
+    fmt.Println("erro ao atualizar last logn user")
+  } else {
+    fmt.Println("last login update success")
+  }
 }
 

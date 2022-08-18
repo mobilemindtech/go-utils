@@ -4,10 +4,10 @@ import (
   "github.com/mobilemindtec/go-utils/app/models"
 	"github.com/mobilemindtec/go-utils/beego/db"
 	"github.com/beego/beego/v2/core/logs"
-  "github.com/mobilemindtec/go-utils/app/util"  
+  _ "github.com/mobilemindtec/go-utils/app/util"  
   "github.com/beego/i18n"
   "errors"
-  "time"  
+  _ "time"  
 )
 
 type LoginService struct {
@@ -70,10 +70,10 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 			return user, errors.New("user does not has active tenant related")	
 		}		
 
-		user.LastLogin = time.Now().In(util.GetDefaultLocation())
-		if err := this.Session.Update(user); err != nil {
-			logs.Debug("### update user login error %v", err)
-		}
+
+		models.NewUser(this.Session).UpdateLastLogin()
+
+
 		return user, nil
 
 	}	
