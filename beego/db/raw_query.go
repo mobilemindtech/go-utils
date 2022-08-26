@@ -6,7 +6,6 @@ import (
 	"fmt"
 )
 
-
 type RawQuery struct {
 
   Query string
@@ -16,9 +15,6 @@ type RawQuery struct {
 
   Error error
   RowsAffected int64
-
-  valuesTransformFunc func(map[string]interface{}) (interface{}, error)
-  valuesListTransformFunc func([]interface{}) (interface{}, error)
 
   values []orm.Params
   valuesList []orm.ParamsList
@@ -44,6 +40,12 @@ func (this *RawQuery) HasError() bool {
 	return this.Error != nil
 }
 
+func (this *RawQuery) WithSession(session *Session) *RawQuery {
+	this.Session = session
+	return this
+}
+
+
 func (this *RawQuery) WithQuery(query string) *RawQuery {
 	this.Query = query
 	return this
@@ -51,16 +53,6 @@ func (this *RawQuery) WithQuery(query string) *RawQuery {
 
 func (this *RawQuery) WithArgs(args ...interface{}) *RawQuery{
 	this.Args = args
-	return this
-}
-
-func (this *RawQuery) WithValuesTransformer(tr func(map[string]interface{}) (interface{}, error)) *RawQuery{
-	this.valuesTransformFunc = tr
-	return this
-}
-
-func (this *RawQuery) WithValuesListTransformer(tr func([]interface{}) (interface{}, error)) *RawQuery{
-	this.valuesListTransformFunc = tr
 	return this
 }
 
@@ -153,24 +145,60 @@ func (this *RawQuery) GetValuesList() [][]interface{} {
 }
 
 
-func (this *RawQuery) TransformValues() ([]interface{}, error){ 
+type RawQueryTransformer[T any ] struct {
+  
+  RawQuery
+  ValuesTransFn func(map[string]interface{}) (T, error)
+  ListTransFn func([]interface{}) (T, error)	
 
-	if this.valuesListTransformFunc == nil && this.valuesTransformFunc == nil {
+}
+
+func NewRawQueryTransformerSession[T any](session *Session) *RawQueryTransformer[T] {
+	q := &RawQueryTransformer[T] { }
+	q.WithSession(session)
+	return q
+}
+
+func NewRawQueryTransformer[T any](session *Session, query string) *RawQueryTransformer[T] {
+	q := &RawQueryTransformer[T] { }
+	q.WithSession(session).WithQuery(query)
+	return q
+}
+
+func NewRawQueryTransformerArgs[T any](session *Session, query string, args ...interface{}) *RawQueryTransformer[T] {
+	q := &RawQueryTransformer[T] { }
+	q.WithSession(session).WithQuery(query).WithArgs(args...)
+	return q
+}
+
+func (this *RawQueryTransformer[T]) WithValuesTransformer(tr func(map[string]interface{}) (T, error)) *RawQueryTransformer[T]{
+	this.ValuesTransFn = tr
+	return this
+}
+
+func (this *RawQueryTransformer[T]) WithListTransformer(tr func([]interface{}) (T, error)) *RawQueryTransformer[T]{
+	this.ListTransFn = tr
+	return this
+}
+
+func (this *RawQueryTransformer[T]) List() ([]T, error){ 
+
+	if this.ListTransFn == nil && this.ValuesTransFn == nil {
 		return nil, fmt.Errorf("use values or value list transformer function")
 	}
 
-	if this.valuesListTransformFunc != nil && this.valuesTransformFunc != nil {
+	if this.ListTransFn != nil && this.ValuesTransFn != nil {
 		return nil, fmt.Errorf("use values or value list transformer function")
 	}
 
-	results := []interface{}{}
+	results := []T{}
 
-	if this.valuesTransformFunc != nil {
+	if this.ValuesTransFn != nil {
 
 		values := this.GetValues()
 
 		for _, it := range values {
-			result, err := this.valuesTransformFunc(it)
+			result, err := this.ValuesTransFn(it)
 
 			if err != nil {
 				return nil, err
@@ -185,7 +213,7 @@ func (this *RawQuery) TransformValues() ([]interface{}, error){
 	  values := this.GetValuesList()
 
 	  for _, item := range values {
-	    result, err := this.valuesListTransformFunc(item)
+	    result, err := this.ListTransFn(item)
 
 	    if err != nil {
 	      return nil, err
@@ -196,8 +224,22 @@ func (this *RawQuery) TransformValues() ([]interface{}, error){
 
 	}
 
- 
-
   return results, nil
+}
+
+func (this *RawQueryTransformer[T]) First() (T, error){ 
+
+	results, err := this.List()
+	var r T
+
+	if err != nil {
+		return r, err
+	}
+
+	if len(results) > 0 {
+		return results[0], nil
+	}
+
+	return r, nil
 
 }

@@ -58,6 +58,7 @@ type WebController struct {
 
   InheritedController interface{}
 
+  DoNotLoadTenantsOnSession bool
 
 }
 
@@ -95,7 +96,7 @@ func (this *WebController) loadLang(){
 // Prepare implemented Prepare() method for WebController.
 // It's used for language option check and setting.
 func (this *WebController) Prepare() {
-
+  
   this.EntityValidator = validator.NewEntityValidator(this.Lang, this.ViewPath)
   this.DefaultLocation, _ = time.LoadLocation("America/Sao_Paulo")
   this.defaultPageLimit = 25
@@ -344,6 +345,30 @@ func (this *WebController) OnResults(viewName string, results interface{}) {
   this.OnFlash(false)
 }
 
+func (this *WebController) SetViewModel(name string, data interface{}) *WebController {
+  this.Data[name] = data
+  return this
+}
+
+func (this *WebController) SetResults(results interface{}) *WebController {
+  this.Data["results"] = results
+  this.Data["entities"] = results
+  return this
+}
+
+func (this *WebController) SetResultsAndTotalCount(results interface{}, totalCount int64) *WebController{
+  this.Data["results"] = results
+  this.Data["entities"] = results
+  this.Data["totalCount"] = totalCount
+  return this
+}
+
+func (this *WebController) SetResult(result interface{}) *WebController{
+  this.Data["result"] = result
+  this.Data["entity"] = result
+  return this
+}
+
 func (this *WebController) OnResultsWithTotalCount(viewName string, results interface{}, totalCount int64) {
   this.Data["results"] = results
   this.Data["totalCount"] = totalCount
@@ -435,6 +460,38 @@ func (this *WebController) ServeJSON(){
   }
 }
 
+
+func (this *WebController) RenderTemplate(viewName string) {
+  this.OnTemplate(viewName)
+}
+
+func (this *WebController) RenderJson(json *support.JsonResult) {
+  this.OnJson(json)
+}
+
+func (this *WebController) RenderJsonMap(jsonMap map[string]interface{}) {
+  this.OnJsonMap(jsonMap)
+}
+
+func (this *WebController) OnRender(data interface{}) {
+  switch data.(type) {
+    case string:
+      this.OnTemplate(data.(string))
+      break
+    case map[string]interface{}:
+      this.OnJsonMap(data.(map[string]interface{}))
+      break
+    case *support.JsonResult:
+      this.OnJson(data.(*support.JsonResult))
+      break
+    default:
+      panic("no render selected")
+  }
+}
+
+func (this *WebController) RenderJsonError(format string, v ...interface{}) {
+  this.OnJsonError(format, v...)
+}
 
 func (this *WebController) OnJsonErrorNotRollback(format string, v ...interface{}) {  
   message := fmt.Sprintf(format, v...)
@@ -912,7 +969,7 @@ func (this *WebController) LoadModels() {
 func (this *WebController) LoadTenants(){
   tenants := []*models.Tenant{}
   
-  if this.IsLoggedIn {
+  if this.IsLoggedIn && !this.DoNotLoadTenantsOnSession {
 
     if this.Auth.IsRoot() {
       its, _ := this.ModelTenant.List()

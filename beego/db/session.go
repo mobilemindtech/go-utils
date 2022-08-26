@@ -34,7 +34,7 @@ type Session struct {
 
   openDbError bool
 
-  db *DataBase
+  database *DataBase
   tx bool
 }
 
@@ -42,19 +42,24 @@ type Session struct {
 
 
 func NewSession() *Session{
-  return &Session{ State: SessionStateOk, Debug: false, db: NewDataBase("default"), IgnoreAuthorizedTenantCheck: true }
+  return &Session{ State: SessionStateOk, Debug: false, database: NewDataBase("default"), IgnoreAuthorizedTenantCheck: true }
 }
 
 func NewSessionWithDbName(dbName string) *Session{
-  return &Session{ State: SessionStateOk, Debug: false,  db: NewDataBase(dbName), IgnoreAuthorizedTenantCheck: true }
+  return &Session{ State: SessionStateOk, Debug: false,  database: NewDataBase(dbName), IgnoreAuthorizedTenantCheck: true }
 }
 
 func NewSessionWithTenant(tenant interface{}) *Session{
-  return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false, db: NewDataBase("default"), IgnoreAuthorizedTenantCheck: true }
+  return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false, database: NewDataBase("default"), IgnoreAuthorizedTenantCheck: true }
 }
 
 func NewSessionWithTenantAndDbName(tenant interface{}, dbName string) *Session{
-  return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false, db: NewDataBase(dbName), IgnoreAuthorizedTenantCheck: true }
+  return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false, database: NewDataBase(dbName), IgnoreAuthorizedTenantCheck: true }
+}
+
+func (this *Session) SetDatabase(dt *DataBase) *Session{
+  this.database = dt
+  return this
 }
 
 func OrmVerbose(verbose bool){
@@ -62,7 +67,7 @@ func OrmVerbose(verbose bool){
 }
 
 func (this *Session) GetDb() *DataBase {
-  return this.db
+  return this.database
 }
 
 func (this *Session) SetTenant(tenant interface{}) *Session {
@@ -165,7 +170,7 @@ func (this *Session) OpenNoTx() error{
 
 func (this *Session) OpenWithoutTx() error{
   this.tx = false
-  this.db.Open()
+  this.database.Open()
   return nil
 }
 
@@ -178,13 +183,13 @@ func (this *Session) Close() {
       this.Rollback()
     }
   } else {
-    this.db = nil
+    this.database = nil
   }
 }
 
 func (this *Session) beginTx() error {
   
-  if err := this.db.Begin(); err != nil {
+  if err := this.database.Begin(); err != nil {
 
     this.openDbError = true
 
@@ -212,8 +217,8 @@ func (this *Session) Commit() error{
     fmt.Println("## session commit ")
   }
 
-  if this.db != nil {
-    if err := this.db.Commit(); err != nil {
+  if this.database != nil {
+    if err := this.database.Commit(); err != nil {
       fmt.Println("****************************************************************")
       fmt.Println("****************************************************************")
       fmt.Println("****************************************************************")
@@ -225,7 +230,7 @@ func (this *Session) Commit() error{
       //panic(err)
       return err
     }  
-    this.db = nil
+    this.database = nil
   }
 
   return nil
@@ -241,8 +246,8 @@ func (this *Session) Rollback() error{
 
   fmt.Println("** Session Rollback ")
   
-  if this.db != nil {
-    if err := this.db.Rollback(); err != nil {
+  if this.database != nil {
+    if err := this.database.Rollback(); err != nil {
       fmt.Println("****************************************************************")
       fmt.Println("****************************************************************")
       fmt.Println("****************************************************************")
@@ -252,7 +257,7 @@ func (this *Session) Rollback() error{
       fmt.Println("****************************************************************")
       return err
     }
-    this.db = nil
+    this.database = nil
   }
 
   return nil

@@ -137,6 +137,16 @@ func NewCondition() *Criteria{
 	return &Criteria{ criaterias: []*Criteria{}  }
 }
 
+func (this *Criteria) Defaults() *Criteria {
+	this.criaterias = []*Criteria{}
+	this.criateriasOr = []*Criteria{}
+	this.criateriasAnd = []*Criteria{}
+	this.criateriasAndOr = []*Criteria{}
+	this.criateriasAndOrAnd = []*CriteriaSet{}
+	this.criateriasOrAnd = []*Criteria{}
+	this.RelatedSelList = []string{}
+	return this
+}
 
 func (this *Criteria) add(path string, value interface{}, expression CriteriaExpression, forceAnd bool, forceOr bool) *Criteria{
 	this.criaterias = append(this.criaterias, &Criteria{ Path: path, Value: value, Expression: expression, ForceAnd: forceAnd, ForceOr: forceOr } )
