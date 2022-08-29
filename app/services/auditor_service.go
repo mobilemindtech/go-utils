@@ -3,6 +3,7 @@ package services
 import (
   "github.com/mobilemindtec/go-utils/app/models"  
   "github.com/mobilemindtec/go-utils/beego/db"
+  "github.com/beego/beego/v2/core/logs"
   "fmt"
 )
 
@@ -27,7 +28,7 @@ func (this *AuditorService) OnAudit(format string, v ...interface{}) {
   auditor.User = this.AuditorInfo.User  
   
   if err := this.Session.Save(auditor); err != nil {
-    fmt.Println("## error on save auditor: ", err.Error())
+    logs.Debug("## error on save auditor: ", err.Error())
   }   
 }
 
@@ -42,14 +43,14 @@ func (this *AuditorService) OnAuditWithNewDbSession(format string, v ...interfac
     err := session.OpenNoTx()  
 
     if err != nil {
-      fmt.Println("## error on open session: ", err.Error())
+      logs.Debug("## error on open session: ", err.Error())
       return
     }
 
     defer session.Close()
     
     if err := session.Save(auditor); err != nil {
-      fmt.Println("## error on save auditor: ", err.Error())
+      logs.Debug("## error on save auditor: ", err.Error())
     }       
   }
 

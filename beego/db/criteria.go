@@ -2,6 +2,8 @@ package db
 
 import (
 	"github.com/beego/beego/v2/client/orm"
+	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/beego/beego/v2/core/logs"
 	"reflect"
 	"strings"
 	"errors"
@@ -464,9 +466,9 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 		}
 
 		if this.Debug {
-			fmt.Println("*********************************************************")
-			fmt.Println("** set condition default %v ", pathName)
-			fmt.Println("*********************************************************")
+			logs.Debug("*********************************************************")
+			logs.Debug("** set condition default %v ", pathName)
+			logs.Debug("*********************************************************")
 		}
 
 		condition = condition.AndCond(cond)
@@ -506,9 +508,9 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 			}
 
 			if this.Debug {
-				fmt.Println("*********************************************************")
-				fmt.Println("** set condition or %v ", pathName)
-				fmt.Println("*********************************************************")
+				logs.Debug("*********************************************************")
+				logs.Debug("** set condition or %v ", pathName)
+				logs.Debug("*********************************************************")
 			}
 		}
 
@@ -541,9 +543,9 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 					cond = cond.And(pathName, criteria.Value)
 			}
 			if this.Debug {
-				fmt.Println("*********************************************************")
-				fmt.Println("** set condition and %v ", pathName)
-				fmt.Println("*********************************************************")
+				logs.Debug("*********************************************************")
+				logs.Debug("** set condition and %v ", pathName)
+				logs.Debug("*********************************************************")
 			}
 		}
 
@@ -581,9 +583,9 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 
 
 			if this.Debug {
-				fmt.Println("*********************************************************")
-				fmt.Println("** set condition and or %v ", pathName)
-				fmt.Println("*********************************************************")
+				logs.Debug("*********************************************************")
+				logs.Debug("** set condition and or %v ", pathName)
+				logs.Debug("*********************************************************")
 			}
 
 		}
@@ -628,9 +630,9 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 
 
 					if this.Debug {
-						fmt.Println("*********************************************************")
-						fmt.Println("** set condition and or %v ", pathName)
-						fmt.Println("*********************************************************")
+						logs.Debug("*********************************************************")
+						logs.Debug("** set condition and or %v ", pathName)
+						logs.Debug("*********************************************************")
 					}
 
 				}
@@ -670,9 +672,9 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 
 
 			if this.Debug {
-				fmt.Println("*********************************************************")
-				fmt.Println("** set condition and or and %v ", pathName)
-				fmt.Println("*********************************************************")
+				logs.Debug("*********************************************************")
+				logs.Debug("** set condition and or and %v ", pathName)
+				logs.Debug("*********************************************************")
 			}
 
 		}
@@ -933,16 +935,43 @@ func (this *Criteria) setError(err error) {
 
 func (this *Criteria) getErrorDescription(err error) string {
 
-	  //entity := this.Result
-
-	  if model, ok := this.Result.(Model); ok {
-	    return fmt.Sprintf("Table: %v - Message: %v", model.TableName(), err)
-		} else {
-			return "entity does not implements of Model"
-		}
-
-
-	
+  //entity := this.Result
+  if model, ok := this.Result.(Model); ok {
+    return fmt.Sprintf("Table: %v - Message: %v", model.TableName(), err)
+	} else {
+		return "entity does not implements of Model"
+	}
 }
 
+func (this *Criteria) TryOneById(id int64) interface {} {
+	this.Eq("Id", id)
+	return this.TryOne()
+}
 
+func (this *Criteria) TryOne() interface{} {
+	this.One()
+
+	if this.HasError {
+		return optional.NewFail(this.Error)
+	}
+
+	if this.Empty {
+		return optional.NewNone()
+	}
+
+	return optional.NewSome(this.Result)
+}
+
+func (this *Criteria) TryList() interface{} {
+	this.One()
+
+	if this.HasError {
+		return optional.NewFail(this.Error)
+	}
+
+	if this.Empty {
+		return optional.NewNone()
+	}
+
+	return optional.NewSome(this.Results)
+}

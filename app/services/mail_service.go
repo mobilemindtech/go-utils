@@ -3,6 +3,7 @@ package services
 import (
 	"github.com/mobilemindtec/go-utils/app/models"
   beego "github.com/beego/beego/v2/server/web"  
+  "github.com/beego/beego/v2/core/logs"
 	"encoding/json"
   "encoding/base64"
   "encoding/hex"
@@ -68,7 +69,7 @@ func (this *MailService) SendPasswordRecoverWithUrl(to string, name string, url 
 	content, err := this.Controller.RenderString()
 
 	if err != nil {
-		fmt.Println("error Controller.RenderString ", err.Error())
+		logs.Debug("error Controller.RenderString ", err.Error())
 		return err
 	}
 
@@ -92,7 +93,7 @@ func (this *MailService) SendPasswordRecoverCode(to string, name string, code st
 	content, err := this.Controller.RenderString()
 
 	if err != nil {
-		fmt.Println("error Controller.RenderString ", err.Error())
+		logs.Debug("error Controller.RenderString ", err.Error())
 		return err
 	}
 
@@ -120,7 +121,7 @@ func (this *MailService) PostEmail(email map[string]string) error {
 	jsonData, err := json.Marshal(email)
 
 	if err != nil {
-		fmt.Println("error json.Marshal ", err.Error())
+		logs.Debug("error json.Marshal ", err.Error())
 		return err
 	}
 
@@ -128,13 +129,13 @@ func (this *MailService) PostEmail(email map[string]string) error {
 
 	data := bytes.NewBuffer(jsonData)
 
-  fmt.Println("MAIL SERVER URL %v TO %v", this.MailServerUrl, email["to"])
+  logs.Debug("MAIL SERVER URL %v TO %v", this.MailServerUrl, email["to"])
 
   client := &http.Client{}
   req, err := http.NewRequest("POST", this.MailServerUrl, data)
 
   if err != nil {
-    fmt.Println("error http.NewRequest ", err.Error())
+    logs.Debug("error http.NewRequest ", err.Error())
     return err
   }
 
@@ -144,7 +145,7 @@ func (this *MailService) PostEmail(email map[string]string) error {
   r, err := client.Do(req)
 
 	if err != nil {
-		fmt.Println("error http.Do ", err.Error())
+		logs.Debug("error http.Do ", err.Error())
 		return err
 	}
 
@@ -152,11 +153,11 @@ func (this *MailService) PostEmail(email map[string]string) error {
 	response, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
-		fmt.Println("error ioutil.ReadAll ", err.Error())
+		logs.Debug("error ioutil.ReadAll ", err.Error())
 		return err
 	}
 
-	fmt.Println(string(response))
+	logs.Debug(string(response))
 
 	return nil
 }

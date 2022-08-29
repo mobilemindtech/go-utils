@@ -3,6 +3,7 @@ package services
 import (
   "github.com/mobilemindtec/go-utils/beego/db"
   "github.com/beego/beego/v2/client/orm"
+  "github.com/beego/beego/v2/core/logs"
 	"encoding/json"
   "io/ioutil"
   "net/http"
@@ -68,7 +69,7 @@ func (this *PushService) GetSubscribersFromPushServer(url string) (map[string]in
 	req, err := http.NewRequest("GET", url, nil)
 
 	if err != nil {
-		fmt.Println("PushService.FindUsers error http.NewRequest ", err.Error())
+		logs.Debug("PushService.FindUsers error http.NewRequest ", err.Error())
 		return nil, err
 	}
 	req.SetBasicAuth(this.pushServerUser, this.pushServerKey)
@@ -76,32 +77,32 @@ func (this *PushService) GetSubscribersFromPushServer(url string) (map[string]in
 	r, err := client.Do(req)
 
 	if err != nil {
-		fmt.Println("PushService.FindUsers error client.Do ", err.Error())
+		logs.Debug("PushService.FindUsers error client.Do ", err.Error())
 		return nil, err
 	}
 
   jsonData := make(map[string]interface{})
 
   if r.StatusCode != 200 {
-		fmt.Println("error on get subscribers: %v - Code: %v, Status: %v", url, r.StatusCode, r.Status)
+		logs.Debug("error on get subscribers: %v - Code: %v, Status: %v", url, r.StatusCode, r.Status)
 		return nil, errors.New(fmt.Sprintf("error on get subscribers: %v - Code: %v, Status: %v", url, r.StatusCode, r.Status))
   }
 
   body, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
-		fmt.Println("PushService.FindUsers error ioutil.ReadAll ", err.Error())
+		logs.Debug("PushService.FindUsers error ioutil.ReadAll ", err.Error())
 		return nil, err
 	}
 
   err = json.Unmarshal(body, &jsonData)
 
 	if err != nil {
-		fmt.Println("PushService.FindUsers error json.Unmarshal ", err.Error())
+		logs.Debug("PushService.FindUsers error json.Unmarshal ", err.Error())
 		return nil, err
 	}
 
-	//fmt.Println("data=%v", jsonData)
+	//logs.Debug("data=%v", jsonData)
 
 	return jsonData, nil
 
@@ -111,25 +112,25 @@ func (this *PushService) LoadSubscribers() error{
 
 	this.Subscribers = map[string][]*Subscriber{}
 
-  //fmt.Println("PushService.LoadSubscribers run")
+  //logs.Debug("PushService.LoadSubscribers run")
 
 
   process := func(jsonData map[string]interface{}, dev bool){
 
-  	//fmt.Println("PushService.LoadSubscribers process %v", jsonData)
+  	//logs.Debug("PushService.LoadSubscribers process %v", jsonData)
 
 		for key, value := range jsonData {
 
 			// key = username
 			// value = list of subscriptions
 
-			//fmt.Println("key=%v", key)
+			//logs.Debug("key=%v", key)
 
 			if _, ok := this.Subscribers[key]; !ok {
 				this.Subscribers[key] = []*Subscriber{}
 			}
 
-			//fmt.Println("value=%v", value)
+			//logs.Debug("value=%v", value)
 
 			if value == nil {
 				return
@@ -149,13 +150,13 @@ func (this *PushService) LoadSubscribers() error{
 				subscrible_id := subJson["subscrible_id"].(string)
 
 				if len(strings.TrimSpace(subscrible_id)) == 0 {
-					fmt.Println("subscrible_id to %v is empty", email)
+					logs.Debug("subscrible_id to %v is empty", email)
 					continue
 				}
 
 				subscriber := Subscriber{ Name: name, Email: email, Id: subscrible_id, Dev: dev }
 
-				//fmt.Println("subscriber=%v", subscriber)
+				//logs.Debug("subscriber=%v", subscriber)
 
 				this.Subscribers[key] = append(this.Subscribers[key], &subscriber)
 			}
@@ -189,7 +190,7 @@ func (this *PushService) LoadSubscribers() error{
 	}
 
 
-	//fmt.Println("subscribers=%v", this.Subscribers)
+	//logs.Debug("subscribers=%v", this.Subscribers)
 
 	return nil
 }
@@ -211,7 +212,7 @@ func (this *PushService) NotificateByQuery(query string, message string) error{
 	_, err := this.Session.GetDb().Raw(query).ValuesFlat(&results)
 
   if err != nil {
-		fmt.Println("PushService.sendToAppUsers %v", err)
+		logs.Debug("PushService.sendToAppUsers %v", err)
 		return err
 	}
 
@@ -222,7 +223,7 @@ func (this *PushService) NotificateByQuery(query string, message string) error{
   }
 
   if len(list) == 0 {
-  	fmt.Println("subscribers not found from query")
+  	logs.Debug("subscribers not found from query")
   	return nil
   }
 
@@ -256,13 +257,13 @@ func (this *PushService) NotificateByUserNameList(usernameList *[]string, messag
 
 		for _, username := range *usernameList {
 
-	    //fmt.Println("this.Subscribers=%v", this.Subscribers)
+	    //logs.Debug("this.Subscribers=%v", this.Subscribers)
 
 			subscribers, ok := this.Subscribers[username]
 
 			if !ok {
 
-				fmt.Println("subscriber_id not found to %v", username)
+				logs.Debug("subscriber_id not found to %v", username)
 
 				continue
 			}
@@ -271,11 +272,11 @@ func (this *PushService) NotificateByUserNameList(usernameList *[]string, messag
 			for _, subscriber := range subscribers {
 
 				if len(strings.TrimSpace(subscriber.Id)) == 0 {
-					fmt.Println("not sent notification to subscriber %v, name %v, email %v.. subscriber_id is empty", subscriber.Id, subscriber.Name, subscriber.Email)
+					logs.Debug("not sent notification to subscriber %v, name %v, email %v.. subscriber_id is empty", subscriber.Id, subscriber.Name, subscriber.Email)
 					continue
 				}
 
-				//fmt.Println("sent notification to subscriber %v, name %v, email %v", subscriber.Id, subscriber.Name, subscriber.Email)
+				//logs.Debug("sent notification to subscriber %v, name %v, email %v", subscriber.Id, subscriber.Name, subscriber.Email)
 
 				notification["data.user_id"] = subscriber.Id
 				if err := this.post(notification, subscriber); err != nil {
@@ -313,7 +314,7 @@ func (this *PushService) post(notification map[string]string, subscriber *Subscr
 		jsonData, err := json.Marshal(notification)
 
 		if err != nil {
-			fmt.Println("PushService.sendToAppUsers json.Marshal %v", err.Error())
+			logs.Debug("PushService.sendToAppUsers json.Marshal %v", err.Error())
 			return err
 		}
 
@@ -324,12 +325,12 @@ func (this *PushService) post(notification map[string]string, subscriber *Subscr
 
 		url := fmt.Sprintf("%v%v", this.pushServerUrl, action)
 		
-		fmt.Println("** send notification %v, channel %v, to %v", notification, url, subscriber.Email)
+		logs.Debug("** send notification %v, channel %v, to %v", notification, url, subscriber.Email)
 
 		req, err := http.NewRequest("POST", url, data)
 
 		if err != nil {
-			fmt.Println("PushService.FindUsers error http.NewRequest ", err.Error())
+			logs.Debug("PushService.FindUsers error http.NewRequest ", err.Error())
 			return err
 		}
 
@@ -339,18 +340,18 @@ func (this *PushService) post(notification map[string]string, subscriber *Subscr
 		r, err := client.Do(req)
 
 		if err != nil {
-			fmt.Println("PushService.FindUsers error client.Do ", err.Error())
+			logs.Debug("PushService.FindUsers error client.Do ", err.Error())
 			return err
 		}
 
 		response, err := ioutil.ReadAll(r.Body)
 
 		if err != nil {
-			fmt.Println("PushService.sendToAppUsers ioutil.ReadAll %v", err.Error())
+			logs.Debug("PushService.sendToAppUsers ioutil.ReadAll %v", err.Error())
 			return err
 		}
 
-		fmt.Println("PushService.sendToAppUsers post result %v", string(response))	
+		logs.Debug("PushService.sendToAppUsers post result %v", string(response))	
 
 		return nil
 }

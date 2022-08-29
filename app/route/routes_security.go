@@ -3,6 +3,7 @@ package route
 import (
 	"github.com/beego/beego/v2/server/web/context"
 	beego "github.com/beego/beego/v2/server/web"
+	"github.com/beego/beego/v2/core/logs"
 	"encoding/json"
 	"io/ioutil"
 	"strings"
@@ -17,7 +18,7 @@ func init() {
     configpath := fmt.Sprintf("%v/conf/routes.json", beego.WorkPath)
     file, err := ioutil.ReadFile(configpath)
     if err != nil {
-        fmt.Printf("error open route config file %v: %v\n", configpath, err)
+        logs.Debug("error open route config file %v: %v\n", configpath, err)
         return
     }
 
@@ -25,17 +26,17 @@ func init() {
     
     err = json.Unmarshal(file, &data)
     if err != nil {
-        fmt.Printf("JSON error parse route config file: %v\n", err)
+        logs.Debug("JSON error parse route config file: %v\n", err)
         return
     }
 
     routes = data["routes"].(map[string]interface{})	
 
-    fmt.Println("****************** routes ******************")
+    logs.Debug("****************** routes ******************")
     for route, value := range routes{
-    	fmt.Println(" path: %v, role: %v", route, value)
+    	logs.Debug(" path: %v, role: %v", route, value)
   	}
-  	fmt.Println("****************** routes ******************")
+  	logs.Debug("****************** routes ******************")
 }
 
 func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool {
@@ -44,7 +45,7 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 	var routeConfigured bool
 	requestedUrl := ctx.Input.URL()
 
-	fmt.Println(fmt.Sprintf("check route %v, roles %v", requestedUrl, currentAuthUserRoles))
+	logs.Debug(fmt.Sprintf("check route %v, roles %v", requestedUrl, currentAuthUserRoles))
 
 
 	for route, value := range routes{
@@ -79,13 +80,13 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 			roleNames := value.(string)
 
 			if roleNames == "anonymous" {
-				fmt.Println(fmt.Sprintf("route %v anonymous allowed", requestedUrl))
+				logs.Debug(fmt.Sprintf("route %v anonymous allowed", requestedUrl))
 				return true
 			}
 
 			if roleNames == "authenticated" {
 				// authService is nil, so not auth
-				fmt.Println(fmt.Sprintf("route %v authenticated user allowed", requestedUrl))
+				logs.Debug(fmt.Sprintf("route %v authenticated user allowed", requestedUrl))
 				return len(currentAuthUserRoles) > 0
 			}
 
@@ -94,10 +95,10 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 			for _, roleName := range values {
 				for _, role := range currentAuthUserRoles {
 					if role == roleName {
-						fmt.Println(fmt.Sprintf("route %v authenticated user role allowed", requestedUrl))
+						logs.Debug(fmt.Sprintf("route %v authenticated user role allowed", requestedUrl))
 						return true
 					} else {
-            fmt.Println(fmt.Sprintf("route %v not authenticated user role allowed for role ", requestedUrl, roleName))
+            logs.Debug(fmt.Sprintf("route %v not authenticated user role allowed for role ", requestedUrl, roleName))
           }
 				}
 			}
@@ -107,10 +108,10 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 	}
 
 	if !routeConfigured {
-		fmt.Println(fmt.Sprintf("route %v not is configured in routes.json", requestedUrl))
+		logs.Debug(fmt.Sprintf("route %v not is configured in routes.json", requestedUrl))
 	}
 
-	fmt.Println(fmt.Sprintf("route %v not allowed", requestedUrl))
+	logs.Debug(fmt.Sprintf("route %v not allowed", requestedUrl))
 	return false
 }
 

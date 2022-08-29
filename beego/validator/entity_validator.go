@@ -3,6 +3,7 @@ package validator
 import (
   "github.com/mobilemindtec/go-utils/support"
   "github.com/beego/beego/v2/core/validation"
+  "github.com/beego/beego/v2/core/logs"
   "github.com/beego/i18n"
   "reflect"
   "fmt"
@@ -84,12 +85,12 @@ func (this *EntityValidator) Valid(entity interface{}, action func(validator *va
 
     typeName = support.Underscore(typeName)
 
-    //fmt.Println("typeName = %v", typeName)
+    //logs.Debug("typeName = %v", typeName)
 
     ok, err := localValid.Valid(entity)
 
     if  err != nil {
-      fmt.Println("## error on run validation = ", err.Error())
+      logs.Debug("## error on run validation = ", err.Error())
       return nil, err
     }
 
@@ -110,9 +111,9 @@ func (this *EntityValidator) Valid(entity interface{}, action func(validator *va
 
         result.ErrorsFields[err.Field] = err.Message
 
-        //fmt.Println("## ViewPath %v", this.ViewPath)
-        //fmt.Println("## lebel %v", label)
-        fmt.Println(fmt.Sprintf("* validator error field %v.%v error %v", typeName, err.Field, err))
+        //logs.Debug("## ViewPath %v", this.ViewPath)
+        //logs.Debug("## lebel %v", label)
+        logs.Debug(fmt.Sprintf("* validator error field %v.%v error %v", typeName, err.Field, err))
       }
 
       result.HasError = true
@@ -140,7 +141,7 @@ func (this *EntityValidator) Valid(entity interface{}, action func(validator *va
 
       result.ErrorsFields[err.Field] = err.Message
 
-      fmt.Println(fmt.Sprintf("* validator error field %v.%v error %v", typeName, err.Field, err))
+      logs.Debug(fmt.Sprintf("* validator error field %v.%v error %v", typeName, err.Field, err))
     }
 
     result.HasError = true

@@ -3,6 +3,7 @@ package json
 import(
 	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-utils/app/util"
+	"github.com/beego/beego/v2/core/logs"
 	"encoding/json"
 	"reflect"
 	"strings"
@@ -63,7 +64,7 @@ func (this *JSON) Encode(obj interface{}) ([]byte, error) {
 	result, err := json.MarshalIndent(data, "", " ")
 
 	if this.DebugFormat {
-		fmt.Println("JSON = ", string(result))
+		logs.Debug("JSON = ", string(result))
 	}
 
 	return result, err
@@ -74,7 +75,7 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
 
   defer func() {
     if r := recover(); r != nil {
-      fmt.Println("JSON TO MAP ERROR: ", r)
+      logs.Debug("JSON TO MAP ERROR: ", r)
       panic(r)
     }
   }()
@@ -83,18 +84,18 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
   fullValue := refValue
   fullType := fullValue.Type()
   
-  //fmt.Println("1 fullType ", fullType, " fullValue ", fullValue)
+  //logs.Debug("1 fullType ", fullType, " fullValue ", fullValue)
 
   if reflect.TypeOf(obj).Kind() == reflect.Ptr {
-  	//fmt.Println("IS PTR")
+  	//logs.Debug("IS PTR")
   	fullValue = refValue.Elem()
   	fullType = refValue.Elem().Type()
   }
 
-  //fmt.Println("2 fullType ", fullType, " fullValue ", fullValue)
+  //logs.Debug("2 fullType ", fullType, " fullValue ", fullValue)
 
   if fullValue.Kind() == reflect.Interface {
-  	//fmt.Println("IS INTERFACE")
+  	//logs.Debug("IS INTERFACE")
   	fullValue = refValue.Elem().Elem()
   	fullType = refValue.Elem().Elem().Type()  	
 
@@ -104,7 +105,7 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
   	}
   }
 
-  //fmt.Println("3 fullType ", fullType, " fullValue ", fullValue )
+  //logs.Debug("3 fullType ", fullType, " fullValue ", fullValue )
 
   tagName := "jsonp"
   jsonResult := make(map[string]interface{})
@@ -127,7 +128,7 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
     	attr = Underscore(field.Name)
     }
 
-    //fmt.Println("Field ", attr)
+    //logs.Debug("Field ", attr)
 
     
     fieldStruct := fullValue.FieldByName(field.Name)
@@ -160,11 +161,11 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
     	realType = reflect.TypeOf(fieldValue)    	
     }
 
-    //fmt.Println("real type ", realType, "real kind ", realKind, "is ptr ", isPtr, "is interface ", isInterface, "is real type ptr", realTypePrt)
+    //logs.Debug("real type ", realType, "real kind ", realKind, "is ptr ", isPtr, "is interface ", isInterface, "is real type ptr", realTypePrt)
 
    /* if isInterface {
 
-    	//fmt.Println("is interface, ", attr, reflect.TypeOf(fieldValue))
+    	//logs.Debug("is interface, ", attr, reflect.TypeOf(fieldValue))
 
     	if fieldValue == nil {
     		continue
@@ -176,12 +177,12 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
 
     	if realKind == reflect.Ptr {
 	    	tValue := reflect.TypeOf(fieldValue).Elem()
-	    	//fmt.Println("is interface, ", attr, reflect.TypeOf(fieldValue))
+	    	//logs.Debug("is interface, ", attr, reflect.TypeOf(fieldValue))
 
 	  		realKind = reflect.TypeOf(tValue).Kind()
 	  		realType = reflect.TypeOf(tValue)
 	    	isPtr = realKind == reflect.Ptr
-	    	//fmt.Println("is ptr, ", attr, isPtr)
+	    	//logs.Debug("is ptr, ", attr, isPtr)
 	    	if isPtr {
 	    		fieldValue = reflect.ValueOf(fieldValue).Interface()
 	    		realKind = realType.Elem().Kind()
@@ -193,7 +194,7 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
     }*/
 
   	if this.Debug {
-  		fmt.Println("Attr = ", attr, ", Field = ", field.Name, ", Type = ", ftype , "Kind = ", fieldStruct.Type().Kind(), ", Real Kind", realKind, "isPtr = ", isPtr) //, ", Value = ", fieldValue)
+  		logs.Debug("Attr = ", attr, ", Field = ", field.Name, ", Type = ", ftype , "Kind = ", fieldStruct.Type().Kind(), ", Real Kind", realKind, "isPtr = ", isPtr) //, ", Value = ", fieldValue)
   	}
   	
     
@@ -208,20 +209,20 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
 
     		
     		slice := reflect.ValueOf(fieldValue)
-    		//fmt.Println("slice 1 ", slice)
+    		//logs.Debug("slice 1 ", slice)
     		zero := reflect.Zero(reflect.TypeOf(slice)).Interface() == slice
 
     		if slice.IsNil() || zero {
     			continue
     		}
     		
-    		//fmt.Println("slice 2 ", slice)
+    		//logs.Debug("slice 2 ", slice)
 
     		if isPtr || (isInterface && realTypePrt) {
 					slice = slice.Elem()    			
     		} 
 
-    		//fmt.Println("slice", slice)
+    		//logs.Debug("slice", slice)
 
 
     		sliceData := []interface{}{}
@@ -246,12 +247,12 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
 		    			sliceData = append(sliceData, it)
 		    			break
 		    		default:
-		    			fmt.Println("SLICE DATATYPE NOT FOUND: ", itype)
+		    			logs.Debug("SLICE DATATYPE NOT FOUND: ", itype)
     			}
 
     		}
 
-    		//fmt.Println("sliceData = ", sliceData)
+    		//logs.Debug("sliceData = ", sliceData)
     		jsonResult[attr] = &sliceData
 
     		break
@@ -290,7 +291,7 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
     			
 
   				var e error
-  				//fmt.Println("to map ", reflect.TypeOf(fieldValue))
+  				//logs.Debug("to map ", reflect.TypeOf(fieldValue))
   				jsonResult[attr], e = this.ToMap(fieldValue)
   				if e != nil {
   					return nil, e
@@ -299,7 +300,7 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
     		}
     }      
 	}
-	//fmt.Println("## filter tenant")
+	//logs.Debug("## filter tenant")
 	return jsonResult, nil	
 }
 
@@ -316,7 +317,7 @@ func (this *JSON) Decode(b []byte, obj interface{}) error {
 	}
 
 	if this.DebugParse {
-		fmt.Println("JSON = ", string(b))
+		logs.Debug("JSON = ", string(b))
 	}
 
 	return this.DecodeFromMap(dataMap, obj)
@@ -326,7 +327,7 @@ func (this *JSON) DecodeFromMap(jsonData map[string]interface{}, obj interface{}
 
   defer func() {
     if r := recover(); r != nil {
-      fmt.Println("DECODE FROM MAP ERROR: ", r)
+      logs.Debug("DECODE FROM MAP ERROR: ", r)
     }
   }()
 
@@ -345,7 +346,7 @@ func (this *JSON) DecodeFromMap(jsonData map[string]interface{}, obj interface{}
 		exists, tags := this.getTagsByTagName(field, tagName)
 	  attr := ""
 
-	   //fmt.Println("get value ", field.Name)
+	   //logs.Debug("get value ", field.Name)
     if !exists {
       continue
     }
@@ -381,7 +382,7 @@ func (this *JSON) DecodeFromMap(jsonData map[string]interface{}, obj interface{}
 	    }
 
     	if this.Debug {
-    		fmt.Println("Attr = ", attr, ", Field = ", field.Name, ", Type = ", ftype , "Kind = ", fieldStruct.Type().Kind(), ", Real Kind", realKind, ", Value = ", val, "isPtr = ", isPtr)
+    		logs.Debug("Attr = ", attr, ", Field = ", field.Name, ", Type = ", ftype , "Kind = ", fieldStruct.Type().Kind(), ", Real Kind", realKind, ", Value = ", val, "isPtr = ", isPtr)
     	}
 	    	    
 	    switch realKind {	    	   	
@@ -465,7 +466,7 @@ func (this *JSON) DecodeFromMap(jsonData map[string]interface{}, obj interface{}
 
 
 	    		mapData := reflect.MakeMap(realType)
-	    		//fmt.Println("mapData = ", mapData, " key ", realType.Key(), " elem ", realType.Elem())
+	    		//logs.Debug("mapData = ", mapData, " key ", realType.Key(), " elem ", realType.Elem())
 
 	    		var reflectValue reflect.Value
 	    		var mapRef interface{}
@@ -538,7 +539,7 @@ func (this *JSON) DecodeFromMap(jsonData map[string]interface{}, obj interface{}
 			        fieldValue = newRefValue.Interface()
 
 				      this.DecodeFromMap(data, fieldValue)
-			        //fmt.Println("value of = ", fieldFullType, "%#v", fieldValue)
+			        //logs.Debug("value of = ", fieldFullType, "%#v", fieldValue)
 			        if isPtr {
 			        	fieldStruct.Set(newRefValue)
 			        } else {
@@ -546,7 +547,7 @@ func (this *JSON) DecodeFromMap(jsonData map[string]interface{}, obj interface{}
 			        }
 				     
 			    	} else {
-			    		fmt.Println("Type not found to parse: field = ", field.Name, " type = ", fieldStruct.Type(), " value = ", val)		    			
+			    		logs.Debug("Type not found to parse: field = ", field.Name, " type = ", fieldStruct.Type(), " value = ", val)		    			
 		    		}
 
 	    		}
@@ -555,7 +556,7 @@ func (this *JSON) DecodeFromMap(jsonData map[string]interface{}, obj interface{}
 
     }   
 	}
-	//fmt.Println("## filter tenant")
+	//logs.Debug("## filter tenant")
 	return nil
 }
 
@@ -633,7 +634,7 @@ func (this *JSON) getJsonValue(rtype reflect.Type, jsonData map[string]interface
   //timePtr := reflect.TypeOf(new(time.Time)).Kind()
 	var value interface{}
 
-	//fmt.Println("attr = ", attr,  " rtype.Kind() = ", rtype.Kind())
+	//logs.Debug("attr = ", attr,  " rtype.Kind() = ", rtype.Kind())
 
 	switch rtype.Kind() {
   	case reflect.Int64:
@@ -700,7 +701,7 @@ func (this *JSON) getJsonValue(rtype reflect.Type, jsonData map[string]interface
 	    		value = data
 
 	    	} else {
-	    		fmt.Println("Type not found to parse: attr = ", attr, " type = ", rtype)		    			
+	    		logs.Debug("Type not found to parse: attr = ", attr, " type = ", rtype)		    			
     		}
 
   		}

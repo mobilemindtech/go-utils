@@ -1,10 +1,22 @@
-package v2
+package criteria
 
 import (
 	"github.com/mobilemindtec/go-utils/beego/db"
+	_ "github.com/mobilemindtec/go-utils/v2/optional"
 	"reflect"
-	"fmt"
+	_ "fmt"
 )
+
+type DataCount[T any] struct {
+	TotalCount int64
+	Count32 int
+	Count64 int64
+	Results []*T
+}
+
+func NewDataCount[T any](totalCount int64, results []*T) *DataCount[T] {
+	return &DataCount[T] { TotalCount: totalCount, Count64: totalCount, Count32: int(totalCount), Results: results }
+}
 
 type Criteria[T any] struct {
 	db.Criteria
@@ -18,12 +30,9 @@ type Criteria[T any] struct {
 	noneFn func()
 }
 
-func NewCriteria[T any](session *db.Session) *Criteria[T] {
+func New[T any](session *db.Session) *Criteria[T] {
 	var entity T
-
-
 	entities := []*T{}
-	fmt.Println("----------- entity ", entity, &entity, entities)
 	criteria := &Criteria[T]{}
 	criteria.Defaults()
 	criteria.Session = session 
@@ -132,6 +141,12 @@ func (this *Criteria[T]) List() ([]*T, error) {
 	return this.GetResults()
 }
 
+func (this *Criteria[T]) ListAndCount() (int64, []*T, error) {
+	this.Criteria.ListAndCount()
+	r, err := this.GetResults()
+	return this.Count64, r, err
+}
+
 func (this *Criteria[T]) One() (*T, error) {
 	this.Criteria.One()
 	return this.GetResult()
@@ -195,11 +210,6 @@ func (this *Criteria[T]) Get(id int64) (*T, bool, error) {
 	return nil, false, nil
 }
 
-func (this *Criteria[T]) Eq(path string, value interface{}) *Criteria[T] {
-	this.Criteria.Eq(path, value)
-	return this
-}
-
 func (this *Criteria[T]) OrderAsc(path string) *Criteria[T]{
 	this.Criteria.OrderAsc(path)
 	return this
@@ -207,5 +217,90 @@ func (this *Criteria[T]) OrderAsc(path string) *Criteria[T]{
 
 func (this *Criteria[T]) OrderDesc(path string) *Criteria[T]{
 	this.Criteria.OrderDesc(path)
+	return this
+}
+
+func (this *Criteria[T]) Eq(path string, value interface{}) *Criteria[T] {
+	this.Criteria.Eq(path, value)
+	return this
+}
+
+func (this *Criteria[T]) Ne(path string, value interface{}) *Criteria[T] {
+	this.Criteria.Ne(path, value)
+	return this
+}
+
+func (this *Criteria[T]) Le(path string, value interface{}) *Criteria[T] {
+	this.Criteria.Le(path, value)
+	return this
+}
+
+func (this *Criteria[T]) Lt(path string, value interface{}) *Criteria[T] {
+	this.Criteria.Lt(path, value)
+	return this
+}
+
+func (this *Criteria[T]) Ge(path string, value interface{}) *Criteria[T] {
+	this.Criteria.Ge(path, value)
+	return this
+}
+
+func (this *Criteria[T]) Gt(path string, value interface{}) *Criteria[T] {
+	this.Criteria.Gt(path, value)
+	return this
+}
+
+func (this *Criteria[T]) Like(path string, value interface{}) *Criteria[T] {
+	this.Criteria.Like(path, value)
+	return this
+}
+
+func (this *Criteria[T]) NotLike(path string, value interface{}) *Criteria[T] {
+	this.Criteria.NotLike(path, value)
+	return this
+}
+
+func (this *Criteria[T]) Between(path string, value interface{}, value2 interface{}) *Criteria[T] {
+	this.Criteria.Between(path, value, value2)
+	return this
+}
+
+func (this *Criteria[T]) IsNull(path string) *Criteria[T] {
+	this.Criteria.IsNull(path)
+	return this
+}
+
+func (this *Criteria[T]) IsNotNull(path string) *Criteria[T] {
+	this.Criteria.IsNotNull(path)
+	return this
+}
+
+func (this *Criteria[T]) In(path string, values ...interface{}) *Criteria[T] {
+	this.Criteria.In(path, values)
+	return this
+}
+
+func (this *Criteria[T]) NotIn(path string, values ...interface{}) *Criteria[T] {
+	this.Criteria.In(path, values)
+	return this
+}
+
+func (this *Criteria[T]) Or(criteria *db.Criteria) *Criteria[T] {
+	this.Criteria.Or(criteria)
+	return this
+}
+
+func (this *Criteria[T]) AndOr(criteria *db.Criteria) *Criteria[T] {
+	this.Criteria.AndOr(criteria)
+	return this
+}
+
+func (this *Criteria[T]) OrAnd(criteria *db.Criteria) *Criteria[T] {
+	this.Criteria.OrAnd(criteria)
+	return this
+}
+
+func (this *Criteria[T]) AndOrAnd(criteria *db.CriteriaSet) *Criteria[T] {
+	this.Criteria.AndOrAnd(criteria)
 	return this
 }

@@ -142,8 +142,6 @@ func (this *WebController) CreateSession() *db.Session {
   if err != nil {
     this.Log("ERROR: db.NewSession: %v", err)
     this.Abort("505")
-  }else{
-    this.Log("INFO: Session created successful")
   }  
 
   return session

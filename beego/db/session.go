@@ -2,6 +2,7 @@ package db
 
 import (
   "github.com/beego/beego/v2/client/orm"
+  "github.com/beego/beego/v2/core/logs"
   "reflect"
   "strings"
   "errors"
@@ -57,6 +58,27 @@ func NewSessionWithTenantAndDbName(tenant interface{}, dbName string) *Session{
   return &Session{ State: SessionStateOk, Tenant: tenant, Debug: false, database: NewDataBase(dbName), IgnoreAuthorizedTenantCheck: true }
 }
 
+func RunTx(tenant interface{}, fn func(session *Session) error) error {
+  session := NewSession().
+      SetTenant(tenant)
+
+  session.OpenTx()
+  defer session.Close()   
+
+  return fn(session)
+}
+
+func RunNoTx(tenant interface{}, fn func(session *Session) error) error {
+  session := NewSession().
+      SetTenant(tenant)
+
+  session.OpenNoTx()
+  defer session.Close()   
+
+  return fn(session)
+}
+
+
 func (this *Session) SetDatabase(dt *DataBase) *Session{
   this.database = dt
   return this
@@ -111,11 +133,11 @@ func (this *Session) OnError() *Session {
 
 func (this *Session) SetError() *Session {
   this.State = SessionStateError
-  fmt.Println("DEBUG: Session.SetError")
+  logs.Debug("DEBUG: Session.SetError")
   if this.Debug {
-    fmt.Println("------------------------ DEBUG STACK TRACE BEGIN")
+    logs.Debug("------------------------ DEBUG STACK TRACE BEGIN")
     debug.PrintStack()
-    fmt.Println("------------------------ DEBUG STACK TRACE END")
+    logs.Debug("------------------------ DEBUG STACK TRACE END")
   }
   return this
 }
@@ -193,19 +215,19 @@ func (this *Session) beginTx() error {
 
     this.openDbError = true
 
-    fmt.Println("****************************************************************")
-    fmt.Println("****************************************************************")
-    fmt.Println("****************************************************************")
-    fmt.Println("************************ db begin error: %v", err.Error())
-    fmt.Println("****************************************************************")
-    fmt.Println("****************************************************************")
-    fmt.Println("****************************************************************")
+    logs.Debug("****************************************************************")
+    logs.Debug("****************************************************************")
+    logs.Debug("****************************************************************")
+    logs.Debug("************************ db begin error: %v", err.Error())
+    logs.Debug("****************************************************************")
+    logs.Debug("****************************************************************")
+    logs.Debug("****************************************************************")
 
     return err
     //panic(err)
   }
 
-  //fmt.Println("tx openned = %v", this.tx)
+  //logs.Debug("tx openned = %v", this.tx)
 
   return nil
 
@@ -214,18 +236,18 @@ func (this *Session) beginTx() error {
 func (this *Session) Commit() error{
 
   if this.Debug {
-    fmt.Println("## session commit ")
+    logs.Debug("## session commit ")
   }
 
   if this.database != nil {
     if err := this.database.Commit(); err != nil {
-      fmt.Println("****************************************************************")
-      fmt.Println("****************************************************************")
-      fmt.Println("****************************************************************")
-      fmt.Println("************************ db commit error: %v", err.Error())
-      fmt.Println("****************************************************************")
-      fmt.Println("****************************************************************")
-      fmt.Println("****************************************************************")
+      logs.Debug("****************************************************************")
+      logs.Debug("****************************************************************")
+      logs.Debug("****************************************************************")
+      logs.Debug("************************ db commit error: %v", err.Error())
+      logs.Debug("****************************************************************")
+      logs.Debug("****************************************************************")
+      logs.Debug("****************************************************************")
       this.Rollback()
       //panic(err)
       return err
@@ -239,22 +261,22 @@ func (this *Session) Commit() error{
 func (this *Session) Rollback() error{
 
   if this.Debug {
-    fmt.Println("## session rollback ")
+    logs.Debug("## session rollback ")
   }
 
-  //fmt.Println("## session rollback ")
+  //logs.Debug("## session rollback ")
 
-  fmt.Println("** Session Rollback ")
+  logs.Debug("** Session Rollback ")
   
   if this.database != nil {
     if err := this.database.Rollback(); err != nil {
-      fmt.Println("****************************************************************")
-      fmt.Println("****************************************************************")
-      fmt.Println("****************************************************************")
-      fmt.Println("************************ db roolback error: %v", err.Error())
-      fmt.Println("****************************************************************")
-      fmt.Println("****************************************************************")
-      fmt.Println("****************************************************************")
+      logs.Debug("****************************************************************")
+      logs.Debug("****************************************************************")
+      logs.Debug("****************************************************************")
+      logs.Debug("************************ db roolback error: %v", err.Error())
+      logs.Debug("****************************************************************")
+      logs.Debug("****************************************************************")
+      logs.Debug("****************************************************************")
       return err
     }
     this.database = nil
@@ -268,7 +290,7 @@ func (this *Session) Save(entity interface{}) error {
 
   if !this.isTenantNil() && this.isSetTenant(entity) {
     if this.Debug {
-      fmt.Println("## Save set tenant")
+      logs.Debug("## Save set tenant")
     }
     this.setTenant(entity)
   }
@@ -286,11 +308,11 @@ func (this *Session) Save(entity interface{}) error {
   _, err := this.GetDb().Insert(entity)
 
   if this.Debug {
-    fmt.Println("## save data: %+v", entity)
+    logs.Debug("## save data: %+v", entity)
   }
 
   if err != nil {
-    fmt.Println("## Session: error on save: %v", err.Error())
+    logs.Debug("## Session: error on save: %v", err.Error())
     this.SetError()
     return err
   }
@@ -309,7 +331,7 @@ func (this *Session) Update(entity interface{}) error {
 
   if !this.isTenantNil() && this.isSetTenant(entity) {
     if this.Debug {
-      fmt.Println("## Update set tenant")
+      logs.Debug("## Update set tenant")
     }
     this.setTenant(entity)
   }
@@ -327,11 +349,11 @@ func (this *Session) Update(entity interface{}) error {
   _, err := this.GetDb().Update(entity)
 
   if this.Debug {
-    fmt.Println("## update data: %+v", entity)
+    logs.Debug("## update data: %+v", entity)
   }
 
   if err != nil {
-    fmt.Println("## Session: error on update: %v", err.Error())
+    logs.Debug("## Session: error on update: %v", err.Error())
     this.SetError()
     return err
   }
@@ -362,7 +384,7 @@ func (this *Session) Remove(entity interface{}) error {
   _, err := this.GetDb().Delete(entity)
 
   if err != nil {
-    fmt.Println("## Session: error on remove: %v", err.Error())
+    logs.Debug("## Session: error on remove: %v", err.Error())
     this.SetError()
     return err
   }
@@ -387,7 +409,7 @@ func (this *Session) Get(entity interface{}) (bool, error) {
     err := this.GetDb().Read(entity)
     
     if err == orm.ErrNoRows {
-      //fmt.Println("## Session: error on load: %v", err.Error())
+      //logs.Debug("## Session: error on load: %v", err.Error())
       //this.SetError()
       return false, nil
     }
@@ -437,7 +459,7 @@ func (this *Session) Count(entity interface{}) (int64, error){
     num, err := query.Count()
 
     if err != nil {
-      fmt.Println("## Session: error on count table %v: %v", model.TableName(), err.Error())
+      logs.Debug("## Session: error on count table %v: %v", model.TableName(), err.Error())
       //this.SetError()
     }
     return num, err
@@ -479,7 +501,7 @@ func (this *Session) FindById(entity interface{}, id int64) (interface{}, error)
     }
 
     if err != nil{
-      fmt.Println("## Session: error on find by id table %v: %v", model.TableName(), err.Error())
+      logs.Debug("## Session: error on find by id table %v: %v", model.TableName(), err.Error())
       //this.SetError()
       return nil, err
     }
@@ -514,7 +536,7 @@ func (this *Session) SaveOrUpdate(entity interface{}) error{
 
   if !this.isTenantNil() && this.isSetTenant(entity) {
     if this.Debug {
-      fmt.Println("## SaveOrUpdate set tenant")
+      logs.Debug("## SaveOrUpdate set tenant")
     }
     this.setTenant(entity)
   } 
@@ -554,7 +576,7 @@ func (this *Session) List(entity interface{}, entities interface{}) error {
     }      
 
     if _, err := query.All(entities); err != nil {
-      fmt.Println("## Session: error on list: %v", err.Error())
+      logs.Debug("## Session: error on list: %v", err.Error())
       //this.SetError()
       return err
     }
@@ -620,7 +642,7 @@ func (this *Session) PageQuery(query orm.QuerySeter, entity interface{}, entitie
     }      
 
     if _, err := query.All(entities); err != nil {
-      fmt.Println("## Session: error on page: %v", err.Error())
+      logs.Debug("## Session: error on page: %v", err.Error())
       //this.SetError()
       return err
     }
@@ -653,7 +675,7 @@ func (this *Session) Query(entity interface{}) (orm.QuerySeter, error) {
 
 func (this *Session) ToList(querySeter orm.QuerySeter, entities interface{}) error {
   if _, err := querySeter.All(entities); err != nil {
-    fmt.Println("## Session: error on to list: %v", err.Error())
+    logs.Debug("## Session: error on to list: %v", err.Error())
     //this.SetError()
     return err
   }
@@ -662,9 +684,11 @@ func (this *Session) ToList(querySeter orm.QuerySeter, entities interface{}) err
 
 func (this *Session) ToOne(querySeter orm.QuerySeter, entity interface{}) error {
   if err := querySeter.One(entity); err != nil {
-    fmt.Println("## Session: error on to one: %v", err.Error())
+    if err != orm.ErrNoRows {
+      logs.Debug("## Session: error on to one: %v", err.Error())
+      return err
+    }
     //this.SetError()
-    return err
   }
   return nil
 }
@@ -673,7 +697,7 @@ func (this *Session) ToPage(querySeter orm.QuerySeter, entities interface{}, pag
   querySeter.Limit(page.Limit)
   querySeter.Offset(page.Offset)
   if _, err := querySeter.All(entities); err != nil {
-    fmt.Println("## Session: error on to page: %v", err.Error())
+    logs.Debug("## Session: error on to page: %v", err.Error())
     //this.SetError()
     return err
   }
@@ -686,7 +710,7 @@ func (this *Session) ToCount(querySeter orm.QuerySeter) (int64, error) {
   var err error
 
   if count, err = querySeter.Count(); err != nil {
-    fmt.Println("## Session: error on to count: %v", err.Error())
+    logs.Debug("## Session: error on to count: %v", err.Error())
     //this.SetError()
     return count, err
   }
@@ -699,7 +723,7 @@ func (this *Session) ExecuteDelete(querySeter orm.QuerySeter) (int64, error) {
   var err error
   
   if count, err = querySeter.Delete(); err != nil {
-    fmt.Println("## Session: error on to list: %v", err.Error())
+    logs.Debug("## Session: error on to list: %v", err.Error())
     //this.SetError()
     return count, err
   }
@@ -718,7 +742,7 @@ func (this *Session) ExecuteUpdate(querySeter orm.QuerySeter, args map[string]in
   }
   
   if _, err := querySeter.Update(params); err != nil {
-    fmt.Println("## Session: error on to list: %v", err.Error())
+    logs.Debug("## Session: error on to list: %v", err.Error())
     //this.SetError()
     return count, err
   }
@@ -740,7 +764,7 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
 
   if reply == nil {
     if this.Debug {
-      fmt.Println("## reply is nil")
+      logs.Debug("## reply is nil")
     }
     return nil
   }
@@ -779,13 +803,13 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
     if zero {
 
       if this.Debug {
-        fmt.Println("## no eager zero field: ", field.Name)
+        logs.Debug("## no eager zero field: ", field.Name)
       }
 
     } else if !ok {
 
       if this.Debug {
-        fmt.Println("## no eager. field does not implemente model: ", field.Name)
+        logs.Debug("## no eager. field does not implemente model: ", field.Name)
       }
 
     } else {
@@ -793,11 +817,11 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
       if model.IsPersisted() {
 
         if this.Debug {
-          fmt.Println("## eager field: ", field.Name, fieldValue)
+          logs.Debug("## eager field: ", field.Name, fieldValue)
         }
 
         if _, err := this.GetDb().LoadRelated(reply, field.Name); err != nil {
-          fmt.Println("********* eager field error ", fullType, field.Name, fieldValue, err.Error())
+          logs.Debug("********* eager field error ", fullType, field.Name, fieldValue, err.Error())
         } else {
           // reload loaded value of field reference
           refValue = reflect.ValueOf(reply)
@@ -820,13 +844,13 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
           }
 
           if this.Debug {
-            fmt.Println("## eager field success: ", field.Name, fieldValue)
+            logs.Debug("## eager field success: ", field.Name, fieldValue)
           }
 
         }
       } else {
         if this.Debug {
-          fmt.Println("## not eager field not persisted: ", field.Name)
+          logs.Debug("## not eager field not persisted: ", field.Name)
         }
       }
 
@@ -835,11 +859,11 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error{
       }
 
       if this.Debug {
-        fmt.Println("## eager next field: ", field.Name)
+        logs.Debug("## eager next field: ", field.Name)
       }
 
       if err := this.eagerDeep(fieldValue, ignoreTag); err != nil {
-        fmt.Println("## eager next field %v: %v", field.Name, err.Error())
+        logs.Debug("## eager next field %v: %v", field.Name, err.Error())
         return err
       }
     }
@@ -872,7 +896,7 @@ func (this *Session) saveOrUpdateCascadeDeep(reply interface{}, firstTime bool) 
   // nas filhas, ignora verificação
   if firstTime {
     defer func() { // em caso de erro, restaura confiuração
-      //fmt.Println("DEFER IgnoreAuthorizedTenantCheck value")
+      //logs.Debug("DEFER IgnoreAuthorizedTenantCheck value")
       this.IgnoreAuthorizedTenantCheck = ignoreAuthorizedTenantCheckBkp
     }()
     this.IgnoreAuthorizedTenantCheck = true
@@ -907,19 +931,19 @@ func (this *Session) saveOrUpdateCascadeDeep(reply interface{}, firstTime bool) 
     if zero {
 
       if this.Debug {
-        fmt.Println("## no cascade zero field: ", field.Name)
+        logs.Debug("## no cascade zero field: ", field.Name)
       }
 
     } else if !ok {
 
       if this.Debug {
-        fmt.Println("## no cascade. field does not implemente model: ", field.Name)
+        logs.Debug("## no cascade. field does not implemente model: ", field.Name)
       }
 
     } else {
 
       if this.Debug {
-        fmt.Println("## cascade field: ", field.Name)
+        logs.Debug("## cascade field: ", field.Name)
       }
 
       key := fmt.Sprintf("%v.%v", strings.Split(fullType.String(), ".")[1], field.Name)
@@ -942,7 +966,7 @@ func (this *Session) saveOrUpdateCascadeDeep(reply interface{}, firstTime bool) 
   }
 
   if this.Debug {
-    fmt.Println("## save or update: ", fullType)
+    logs.Debug("## save or update: ", fullType)
   }
 
   // Volta a configuração para verificação da entidade principal.
@@ -995,13 +1019,13 @@ func (this *Session) RemoveCascadeDeep(reply interface{}, firstTime bool) error{
     if zero {
 
       if this.Debug {
-        fmt.Println("## no cascade remove zero field: ", field.Name)
+        logs.Debug("## no cascade remove zero field: ", field.Name)
       }
 
     } else if !ok {
 
       if this.Debug {
-        fmt.Println("## no cascade remove. field does not implemente model: ", field.Name)
+        logs.Debug("## no cascade remove. field does not implemente model: ", field.Name)
       }
 
     } else {
@@ -1022,7 +1046,7 @@ func (this *Session) RemoveCascadeDeep(reply interface{}, firstTime bool) error{
       }
 
       if this.Debug {
-        fmt.Println("## cascade remove field: ", field.Name)
+        logs.Debug("## cascade remove field: ", field.Name)
       }
 
       itensToRemove = append(itensToRemove, fieldValue)
@@ -1031,7 +1055,7 @@ func (this *Session) RemoveCascadeDeep(reply interface{}, firstTime bool) error{
   }
 
   if this.Debug {
-    fmt.Println("## remove: ", fullType)
+    logs.Debug("## remove: ", fullType)
   }
 
   if err := this.Remove(reply); err != nil {
@@ -1091,7 +1115,7 @@ func (this *Session) setDefaultsDeep(reply interface{}) error{
     if ok {
 
       if this.Debug {
-        fmt.Println("set defaults to ", fullValue, field.Name)
+        logs.Debug("set defaults to ", fullValue, field.Name)
       }
 
       if zero {
@@ -1149,7 +1173,7 @@ func (this *Session) setTenant(reply interface{}){
   fullType := fullValue.Type()
 
   if this.Debug {
-    fmt.Println("## set Tenant to ", fullType)
+    logs.Debug("## set Tenant to ", fullType)
   }
 
 
@@ -1169,25 +1193,25 @@ func (this *Session) setTenant(reply interface{}){
       value := reflect.ValueOf(this.Tenant)
 
       if this.Debug {
-        fmt.Println("## field %v is tenant set tenant %v", field.Name, value)
+        logs.Debug("## field %v is tenant set tenant %v", field.Name, value)
       }
 
       // check is null
-      //fmt.Println("## set Tenant to ", fullType)
+      //logs.Debug("## set Tenant to ", fullType)
       elem := fieldStruct.Elem()
-      //fmt.Println("elem = %v", elem)
+      //logs.Debug("elem = %v", elem)
       //valueOf := reflect.ValueOf(elem)
-      //fmt.Println("valueOf = %v, IsValid = %v", valueOf, elem.IsValid())
+      //logs.Debug("valueOf = %v, IsValid = %v", valueOf, elem.IsValid())
       if !elem.IsValid() {
-        //fmt.Println("==== auto set tenant")
+        //logs.Debug("==== auto set tenant")
         fieldStruct.Set(value)        
       }else{
-        //fmt.Println("==== auto set tenant: tenant already")
+        //logs.Debug("==== auto set tenant: tenant already")
       }
 
     } else {
       if this.Debug {
-        fmt.Println("## field %v not is tenant ", field.Name)
+        logs.Debug("## field %v not is tenant ", field.Name)
       }
     }
 
@@ -1249,7 +1273,7 @@ func (this *Session) isSetTenant(reply interface{}) bool{
   fullType := fullValue.Type()
 
   if this.Debug {
-    fmt.Println("## set Tenant to ", fullType)
+    logs.Debug("## set Tenant to ", fullType)
   }
 
 
@@ -1261,13 +1285,13 @@ func (this *Session) isSetTenant(reply interface{}) bool{
 			tags := this.getTags(field)
 
 		  if tags == nil || len(tags) == 0 {
-        //fmt.Println("## set tenant")
+        //logs.Debug("## set tenant")
 		    return true
 		  }
 
 		  set := !this.hasTag(tags, "no_set_tenant")
 
-      //fmt.Println("## set tenant = %v", set)
+      //logs.Debug("## set tenant = %v", set)
 
       return set
 
@@ -1275,7 +1299,7 @@ func (this *Session) isSetTenant(reply interface{}) bool{
 
 	}
 
-  //fmt.Println("## not set tenant")
+  //logs.Debug("## not set tenant")
 	return false
 }
 
@@ -1302,7 +1326,7 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
   fullType := fullValue.Type()
 
   if this.Debug {
-    fmt.Println("## check is same tenant ", fullType)
+    logs.Debug("## check is same tenant ", fullType)
   }
 
   // return true if entity not has tenant, not is manager security
@@ -1327,7 +1351,7 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
           if this.AuthorizedTenants != nil && !nilEntityTenant {
             for _, authorizedTenant := range this.AuthorizedTenants {
               if entityTenant.GetId() == authorizedTenant.GetId() {
-                //fmt.Println("check entity tenant = ", entityTenant.GetId(), ", auth tenant = ", authorizedTenant.GetId())
+                //logs.Debug("check entity tenant = ", entityTenant.GetId(), ", auth tenant = ", authorizedTenant.GetId())
                 return true
               }
             }
@@ -1347,7 +1371,7 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
               }
 
               if !authorized {
-                fmt.Println("+++ WARN: unautorized tenant ", currentTenant.GetId(), "to entity tenant = ", entityTenant.GetId(), " for type ", fullType, " content = ", reply, ", action = ", action)
+                logs.Debug("+++ WARN: unautorized tenant ", currentTenant.GetId(), "to entity tenant = ", entityTenant.GetId(), " for type ", fullType, " content = ", reply, ", action = ", action)
               }
 
               return authorized
@@ -1355,22 +1379,22 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
             }
             
           } else {
-            fmt.Println("=======================================================")
-            fmt.Println("=== WARN!!! Current Tenant id empty for entity type = ", fullType, " content = ", reply, ", action = ", action)
-            fmt.Println("=======================================================")            
+            logs.Debug("=======================================================")
+            logs.Debug("=== WARN!!! Current Tenant id empty for entity type = ", fullType, " content = ", reply, ", action = ", action)
+            logs.Debug("=======================================================")            
           }
 
         }
       } else if !ignoreAuthorizedTenantCheckError {
-        fmt.Println("=======================================================")
-        fmt.Println("=== WARN!!! Tenant id empty for entity type = ", fullType, " content = ", reply, ", action = ", action)
-        fmt.Println("=======================================================")
+        logs.Debug("=======================================================")
+        logs.Debug("=== WARN!!! Tenant id empty for entity type = ", fullType, " content = ", reply, ", action = ", action)
+        logs.Debug("=======================================================")
       }
     }
   }
 
-  //fmt.Println("does not authorize data access")
-  //fmt.Println("## not set tenant")
+  //logs.Debug("does not authorize data access")
+  //logs.Debug("## not set tenant")
   return false || tenantFieldNotFound || ignoreAuthorizedTenantCheckError
 }
 
@@ -1393,7 +1417,7 @@ func (this *Session) HasFilterTenant(reply interface{}) bool{
 			tags := this.getTags(field)
 
 		  if !this.hasTag(tags, "tenant") {
-        //fmt.Println("## filter tenant")
+        //logs.Debug("## filter tenant")
 		    return false
 		  }
 
@@ -1403,7 +1427,7 @@ func (this *Session) HasFilterTenant(reply interface{}) bool{
 
 		  noFilter := this.hasTag(tags, "no_filter_tenant")
 
-      //fmt.Println("## filter tenant = %v", filter)
+      //logs.Debug("## filter tenant = %v", filter)
 
       if noFilter {
         return false
@@ -1414,6 +1438,6 @@ func (this *Session) HasFilterTenant(reply interface{}) bool{
 		}
 
 	}
-	//fmt.Println("## filter tenant")
+	//logs.Debug("## filter tenant")
 	return false
 }

@@ -1,19 +1,18 @@
-package rx
+package optional
 
-type Optional interface {
+type Optional struct {
 	
 } 
 
 type None struct {
-	Optional
+	
 }
 
 func NewNone() *None {
 	return &None{}
 }
 
-type Some struct {
-	Optional
+type Some struct {	
 	Item interface{}
 }
 
@@ -25,20 +24,11 @@ func NewSomeEmpty() *Some {
 	return &Some{}
 }
 
-
-//func (this *Some) GetOrDefault(val T) T {
-//	if  this.Item != *new(T) {
-//		return this.Item
-//	}
-//	return val
-//}
-
-type Try interface {
-	Optional
+type Try struct {
+	
 }
 
 type Fail struct {
-	Try
 	Error error
 }
 
@@ -52,7 +42,6 @@ func NewFail(err error) *Fail {
 }
 
 type Success struct {
-	Try
 	Item interface{}
 }
 
@@ -65,8 +54,12 @@ func NewSuccess() *Success {
 	return &Success{ }
 }
 
+type Either struct {
+	
+}
+
 type Left struct {
-	Success
+		Item interface{}
 }
 
 func (this *Left) WithItem(item interface{}) *Left{
@@ -74,13 +67,12 @@ func (this *Left) WithItem(item interface{}) *Left{
 	return this
 }
 
-
 func NewLeft() *Left{
 	return &Left{}
 }
 
 type Rigth struct {
-	Success
+	Item interface{}
 }
 
 func (this *Rigth) WithItem(item interface{}) *Rigth{
@@ -96,6 +88,13 @@ func Get[R any](val interface{}) R{
 	return val.(R)
 }
 
+func GetOrDefault[R any](val interface{}, r R) R{
+	if x, ok := val.(R); ok {
+		return x
+	}
+	return r
+}
+
 func GetItem[R any](val interface{}) R{
 	switch val.(type) {
 		case Some:
@@ -108,12 +107,14 @@ func GetItem[R any](val interface{}) R{
 			return GetRigth(val).Item.(R)
 		default: 
 			var x R
-			return x	}
+			return x	
+	}
 }
 
 func GetFail(val interface{}) *Fail{
 	return val.(*Fail)
 }
+
 
 func GetSuccess(val interface{}) *Success{
 	return val.(*Success)
@@ -129,4 +130,8 @@ func GetLeft(val interface{}) *Left{
 
 func GetRigth(val interface{}) *Rigth{
 	return val.(*Rigth)
+}
+
+func GetFailError(val interface{}) error{
+	return val.(*Fail).Error
 }

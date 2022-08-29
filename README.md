@@ -344,3 +344,80 @@ Eager(reply interface{}) error
 // ignore_eager_child: ignore relation chields (fields)
 EagerForce(reply interface{}) error
 ```
+
+### Criteria
+
+import "github.com/mobilemindtec/go-utils/v2/criteria" 
+
+```
+  criteria.New[ModelType](session).
+    OrderDesc("CreatedAt").
+    SameOrNone(func(results []*ModelType){
+      
+    }).
+    Fail(func(err error){
+      
+    }).
+    Done(func(){
+      
+    }).
+    Do()
+
+  criteria.New[ModelType](session).
+    Eq("Id", 1).
+    First(func(result *ModelType){
+
+    }).
+    None(func(){
+
+    }).
+    Fail(func(err error){
+
+    }).
+    Do()  
+``` 
+
+### Optional
+
+```
+
+import "github.com/mobilemindtec/go-utils/v2/optional" 
+
+func doAnything() interface{} {
+
+  p, err := // do stuff
+
+  if err != nil {
+    return optional.NewFail(fmt.Errorf("Erro ao verificar existencia do prestador: %v", err))
+  }
+
+  if p != nil && p.IsPersisted() {
+    return optional.NewSomeEmpty()
+  } 
+
+  return optional.NewNone()
+}
+
+opt := doAnything()
+
+switch opt.(type) {
+  case optional.Some:
+    //optiona.GetItem(opt)
+    // do stuff
+  case optional.Nome:
+    // do stuff
+  case optional.Success:
+    //optiona.GetItem(opt)
+    // do stuff
+  case optional.Fail:
+    //GetFail(opt).ErrorString()
+    // do stuff
+  case optional.Left:
+    //optiona.GetItem(opt)
+    // do stuff
+  case optional.Right:
+    //optiona.GetItem(opt)
+    // do stuff
+}
+
+```
