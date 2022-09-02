@@ -71,7 +71,7 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 		}		
 
 
-		models.NewUser(this.Session).UpdateLastLogin()
+		models.NewUser(this.Session).UpdateLastLogin(user.Id)
 
 
 		return user, nil

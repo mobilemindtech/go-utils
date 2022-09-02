@@ -135,23 +135,20 @@ func Sort(vs interface{}, f func(interface{}, interface{}) int) {
   }  
 }
 
-func ListParts(vs interface{}, size int) [][]interface{} {
+func ListParts[T any](vs []T, size int) [][]T {
 
-  all := [][]interface{}{}
-  list := []interface{}{}
+  all := [][]T{}
+  list := []T{}
 
-  ss := reflect.ValueOf(vs)    
-  s := reflect.Indirect(ss)
 
-  for i := 0; i < s.Len(); i++ {
+  for _, it := range vs {
 
-    it := s.Index(i)
-    list = append(list, it.Interface())
+    list = append(list, it)
 
 
     if len(list) >= size {
       all = append(all, list)
-      list = []interface{}{}
+      list = []T{}
     }
 
   }
