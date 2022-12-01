@@ -5,7 +5,7 @@ import (
   "github.com/mobilemindtec/go-utils/app/models"
   "github.com/mobilemindtec/go-utils/app/route"
   "strings"
-  "fmt"
+  _ "fmt"
 )
 
 type BaseAuthController struct{
@@ -34,8 +34,6 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
   this.IsLoggedIn = this.baseController.GetSession("userinfo") != nil
   this.IsTokenLoggedIn = this.baseController.GetSession("appuserinfo") != nil
 
-  fmt.Println("-- ", this.baseController.GetSession("appuserinfo"))
-
   var tenant *models.Tenant
   tenantUuid := this.baseController.GetHeaderByNames("tenant", "X-Auth-Tenant")
 
@@ -46,7 +44,7 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
     this.SetAuthTenant(tenant)
   }
 
-  fmt.Println("this.IsLoggedIn || this.IsTokenLoggedIn", this.IsLoggedIn , this.IsTokenLoggedIn)
+  //fmt.Println("this.IsLoggedIn || this.IsTokenLoggedIn", this.IsLoggedIn , this.IsTokenLoggedIn)
 
   if this.IsLoggedIn || this.IsTokenLoggedIn {
 

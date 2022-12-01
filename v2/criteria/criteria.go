@@ -192,6 +192,7 @@ func (this *Criteria[T]) FindById(id int64) (*T, error) {
 	return nil, nil
 }
 
+
 func (this *Criteria[T]) Get(id int64) (*T, bool, error) {
 	var entity T
 	r, err := this.Session.FindById(&entity, id)
