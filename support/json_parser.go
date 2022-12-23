@@ -55,10 +55,9 @@ type JsonParser struct {
 }
 
 func (this *JsonParser) JsonToMap(ctx *context.Context) (map[string]interface{}, error) {
-  data := make(map[string]interface{})
-  err := json.Unmarshal(ctx.Input.RequestBody, &data)
-  return data, err
+  return this.JsonBytesToMap(ctx.Input.RequestBody)
 }
+
 
 func (this *JsonParser) JsonBytesToMap(body []byte) (map[string]interface{}, error) {
   data := make(map[string]interface{})

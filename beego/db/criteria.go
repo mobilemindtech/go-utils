@@ -160,6 +160,7 @@ func (this *Criteria) SetEntity(entity interface{}) *Criteria {
 	return this
 }
 
+
 func (this *Criteria) RunWithTenant(tenant interface{}, runner func(c *Criteria)) {
 	this.Session.RunWithTenant(tenant, func(){
 		runner(this)
@@ -372,7 +373,7 @@ func (this *Criteria) Query() orm.QuerySeter {
 	  if model, ok := this.Result.(Model); ok {
 	    this.query = this.Session.GetDb().QueryTable(model.TableName())
 		} else {
-			this.setError(errors.New("entity does not implements of Model")	)
+			this.SetError(errors.New("entity does not implements of Model")	)
 		}
 	}
 
@@ -812,13 +813,13 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
 		  }  		
 
   		if this.Results == nil {
-  			this.setError(errors.New("Results can't be nil"))
+  			this.SetError(errors.New("Results can't be nil"))
   			return this
   		}
 
   		err := this.Session.ToList(query, this.Results)
 
-  		this.setError(err)
+  		this.SetError(err)
 
   		this.Any = reflect.ValueOf(this.Results).Elem().Len() > 0
   		this.Empty = !this.Any
@@ -856,9 +857,9 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   		err := this.Session.ToOne(query, this.Result)
 
   		if err != orm.ErrNoRows {
-	  		this.setError(err)
+	  		this.SetError(err)
     	} else {
-    		this.setError(nil)
+    		this.SetError(nil)
     	}
 
     	if !this.HasError {
@@ -866,7 +867,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
 		      if next, err := hook.AfterLoad(this.Result); !next || err != nil {
 
 		        if err != nil {
-		          this.setError(err)
+		          this.SetError(err)
 		          this.Result = nil
 		        }
 
@@ -894,7 +895,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   		this.Any = count > 0
   		this.Empty = !this.Any
 
-  		this.setError(err)
+  		this.SetError(err)
 
   	case CriteriaDelete:
 
@@ -905,7 +906,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
 
   		this.Any = count > 0
   		this.Empty = !this.Any
-  		this.setError(err)
+  		this.SetError(err)
 
   	case CriteriaUpdate:
 
@@ -917,14 +918,14 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
   		this.Any = count > 0
   		this.Empty = !this.Any
   		
-  		this.setError(err)
+  		this.SetError(err)
   }
 
   return this
 
 }
 
-func (this *Criteria) setError(err error) {
+func (this *Criteria) SetError(err error) {
 	if err != nil && this.Error == nil{
 		this.HasError = true
 		this.Error = errors.New(this.getErrorDescription(err))

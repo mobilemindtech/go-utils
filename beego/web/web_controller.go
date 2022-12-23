@@ -1253,3 +1253,7 @@ func (this *WebController) SetAuthUser(u *models.User)  {
 func (this *WebController) GetAuthUser() *models.User {
   return this.userinfo
 }
+
+func (this *WebController) RawBody() []byte {
+  return this.Ctx.Input.RequestBody
+}

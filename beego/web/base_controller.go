@@ -727,3 +727,19 @@ func (this *BaseController) ParseDateTime(date string) (time.Time, error){
 func (this *BaseController) ParseJsonDate(date string) (time.Time, error){
   return time.ParseInLocation(jsonDateLayout, date, this.DefaultLocation)
 }
+
+func (this *BaseController) RawBody() []byte {
+  return this.Ctx.Input.RequestBody
+}
+
+func (this *BaseController) NotFound(){
+  this.Ctx.Output.SetStatus(404)
+}
+
+func (this *BaseController) ServerError(){
+  this.Ctx.Output.SetStatus(500)
+}
+
+func (this *BaseController) BadRequest(data interface{}){
+  this.Ctx.Output.SetStatus(400)
+}

@@ -2,7 +2,7 @@ package criteria
 
 import (
 	"github.com/mobilemindtec/go-utils/beego/db"
-	_ "github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtec/go-utils/v2/optional"
 	"reflect"
 	_ "fmt"
 )
@@ -20,14 +20,21 @@ func NewDataCount[T any](totalCount int64, results []*T) *DataCount[T] {
 
 type Criteria[T any] struct {
 	db.Criteria
+	
+	someFn func([]*T)
+	someOrNoneFn func([]*T)
+	someOrNoneNextFn func([]*T) interface{}
 
-	sameFn func([]*T)
-	sameOrNoneFn func([]*T)
+	someNextFn func([]*T) interface{}
+
 	firstFn func(*T)
+	firstNextFn func(*T) interface{}
 	firstOrNoneFn func(*T)
+	firstOrNoneNextFn func(*T) interface{}
 	failFn func(error)
 	doneFn func()
 	noneFn func()
+	successFn func(interface{})
 }
 
 func New[T any](session *db.Session) *Criteria[T] {
@@ -41,14 +48,25 @@ func New[T any](session *db.Session) *Criteria[T] {
 	return criteria
 }
 
-func (this *Criteria[T]) Same(fn func([]*T)) *Criteria[T] {
-	this.sameFn = fn
+func (this *Criteria[T]) Some(fn func([]*T)) *Criteria[T] {
+	this.someFn = fn
 	return this
 }
 
-func (this *Criteria[T]) SameOrNone(fn func([]*T)) *Criteria[T] {
-	this.sameOrNoneFn = fn
+func (this *Criteria[T]) SomeNext(fn func([]*T) interface{}) interface{} {
+	this.someNextFn = fn
+	return this.DoNext()
+}
+
+
+func (this *Criteria[T]) SomeOrNone(fn func([]*T)) *Criteria[T] {
+	this.someOrNoneFn = fn
 	return this
+}
+
+func (this *Criteria[T]) SomeOrNoneNext(fn func([]*T) interface{}) interface{} {
+	this.someOrNoneNextFn = fn
+	return this.DoNext()
 }
 
 func (this *Criteria[T]) First(fn func(*T)) *Criteria[T] {
@@ -56,9 +74,19 @@ func (this *Criteria[T]) First(fn func(*T)) *Criteria[T] {
 	return this
 }
 
+func (this *Criteria[T]) FirstNext(fn func(*T) interface{}) interface{} {
+	this.firstNextFn = fn
+	return this.DoNext()
+}
+
 func (this *Criteria[T]) FirstOrNone(fn func(*T)) *Criteria[T] {
 	this.firstOrNoneFn = fn
 	return this
+}
+
+func (this *Criteria[T]) FirstOrNoneNext(fn func(*T) interface{}) interface{} {
+	this.firstOrNoneNextFn = fn
+	return this.DoNext()
 }
 
 func (this *Criteria[T]) Fail(fn func(error)) *Criteria[T] {
@@ -76,45 +104,146 @@ func (this *Criteria[T]) Done(fn func()) *Criteria[T] {
 	return this
 }
 
-func (this *Criteria[T]) Do() {
-	
-	if this.firstFn != nil {
+func (this *Criteria[T]) Success(fn func(interface{})) *Criteria[T] {
+	this.successFn = fn
+	return this
+}
+
+
+func (this *Criteria[T]) DoFailNext() interface{} {
+
+	if this.HasError {
+		return optional.NewFail(this.Error)
+	}
+
+	return nil
+}
+
+func (this *Criteria[T]) Do() *Criteria[T] {
+	this.DoNext()
+	return this
+}
+
+func (this *Criteria[T]) DoNext() interface{} {
+
+	var ret interface{}
+
+	if this.firstFn != nil || this.firstNextFn != nil {
 		
 		this.One()
 
 		if this.Any && !this.HasError {
 			r, _ := this.GetResult()
-			this.firstFn(r)
+
+			if this.firstFn != nil {
+				this.firstFn(r)
+			} else {
+				ret := this.firstNextFn(r)
+				if ret != nil {
+					switch ret.(type) {
+						case optional.None:
+							if this.noneFn != nil {
+								this.noneFn()
+							}
+							break
+						case optional.Fail:
+							this.SetError(ret.(optional.Fail).Error)
+							break
+						case error:
+							this.SetError(ret.(error))
+							break							
+					}
+				}
+			}
 		}
 
-	} else if this.firstOrNoneFn != nil {
+	} else if this.firstOrNoneFn != nil || this.firstOrNoneNextFn != nil {
 		
 		this.One()
 
 		if !this.HasError {
 			r, _ := this.GetResult()
-			this.firstOrNoneFn(r)
+			
+			if this.firstOrNoneFn != nil {
+				this.firstOrNoneFn(r)
+			} else {
+				ret := this.firstOrNoneNextFn(r)
+				if ret != nil {
+					switch ret.(type) {
+						case optional.None:
+							if this.noneFn != nil {
+								this.noneFn()
+							}
+							break
+						case optional.Fail:
+							this.SetError(ret.(optional.Fail).Error)
+							break
+						case error:
+							this.SetError(ret.(error))
+							break
+					}
+				}				
+			}
 		}
 
 	
-	} else if this.sameFn != nil {
+	} else if this.someFn != nil || this.someNextFn != nil {
 
 		this.List()
 
 		if !this.HasError {
 			if this.Any {
 				rs, _ := this.GetResults()
-				this.sameFn(rs)
+				if this.someFn != nil {
+					this.someFn(rs)
+				} else {
+					ret = this.someNextFn(rs)
+					if ret != nil {
+						switch ret.(type) {
+							case optional.None:
+								if this.noneFn != nil {
+									this.noneFn()
+								}
+								break
+							case optional.Fail:
+								this.SetError(ret.(optional.Fail).Error)
+								break
+						case error:
+							this.SetError(ret.(error))
+							break								
+						}
+					}					
+				}
 			}
 		}
 
-	} else if this.sameOrNoneFn != nil {
+	} else if this.someOrNoneFn != nil || this.someOrNoneNextFn != nil {
 
 		this.List()
 
 		if !this.HasError {
 			rs, _ := this.GetResults()
-			this.sameOrNoneFn(rs)
+
+			if this.someOrNoneFn != nil {
+				this.someOrNoneFn(rs)
+			} else {
+				ret = this.someOrNoneNextFn(rs)
+				if ret != nil {
+					switch ret.(type) {
+						case optional.None:
+							if this.noneFn != nil {
+								this.noneFn()
+							}
+							break
+						case optional.Fail:
+							this.SetError(ret.(optional.Fail).Error)
+							break
+					case error:
+						this.SetError(ret.(error))
+						break								
+					}
+				}				
+			}
 		}
 
 	}
@@ -122,18 +251,31 @@ func (this *Criteria[T]) Do() {
 	if this.HasError {
 		if this.failFn != nil {
 			this.failFn(this.Error)
+		} else if this.firstNextFn != nil || 
+								this.someNextFn != nil  ||
+								this.firstOrNoneNextFn != nil || 
+								this.someOrNoneNextFn != nil {
+			return optional.NewFail(this.Error)
 		}
+	} else {
+		if this.successFn != nil {
+			this.successFn(ret)
+		} 
 	}
 
-	if this.noneFn  != nil {
+	if this.noneFn != nil {
 		if this.Empty {
 			this.noneFn()
+		} else if this.firstNextFn != nil || this.someNextFn != nil {
+			return optional.NewNone()
 		}
 	}
 
 	if this.doneFn != nil {
 		this.doneFn()
 	}
+
+	return ret
 }
 
 func (this *Criteria[T]) List() ([]*T, error) {
