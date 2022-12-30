@@ -30,52 +30,32 @@ func Include(vs interface{}, t interface{}) bool {
 
 // Any returns `true` if one of the interface{}s in the slice
 // satisfies the predicate `f`.
-func Any(vs interface{}, f func(interface{}) bool) bool {
-	
-  ss := reflect.ValueOf(vs)    
-  s := reflect.Indirect(ss)
 
-  for i := 0; i < s.Len(); i++ {
-    it := s.Index(i)
-    if f(it.Interface()) {
+func Empty[T any](vs []T, f func(T) bool) bool {
+  return !Any[T](vs, f)
+}
+
+func Any[T any](vs []T, f func(T) bool) bool {
+  for _, it := range vs {
+    if f(it) {        
       return true
     }
   }
   return false
 }
 
-// All returns `true` if all of the interface{}s in the slice
-// satisfy the predicate `f`.
-func All(vs interface{}, f func(interface{}) bool) bool {
-
-  ss := reflect.ValueOf(vs)    
-  s := reflect.Indirect(ss)
-
-  for i := 0; i < s.Len(); i++ {
-    it := s.Index(i)
-    if !f(it.Interface()) {
-      return false
-    }
-  }
-  return true
-}
-
 // Filter returns a new slice containing all interface{}s in the
 // slice that satisfy the predicate `f`.
-func FindAll(vs interface{}, f func(interface{}) bool) []interface{} {
-  return Filter(vs, f)
+func FindAll[T any](vs []T, f func(T) bool) []T {
+  return Filter[T](vs, f)
 }
-func Filter(vs interface{}, f func(interface{}) bool) []interface{} {
-  
-  vsf := make([]interface{}, 0)
 
-  ss := reflect.ValueOf(vs)    
-  s := reflect.Indirect(ss)
 
-  for i := 0; i < s.Len(); i++ {
-    it := s.Index(i)
-    if f(it.Interface()) {        
-      vsf = append(vsf, it.Interface())
+func Filter[T any](vs []T, f func(T) bool) []T {
+  vsf := []T{}
+  for _, it := range vs {
+    if f(it) {        
+      vsf = append(vsf, it)
     }
   }
   return vsf
@@ -83,52 +63,41 @@ func Filter(vs interface{}, f func(interface{}) bool) []interface{} {
 
 // Filter returns a new slice containing all interface{}s in the
 // slice that satisfy the predicate `f`.
-func Find(vs interface{}, f func(interface{}) bool) interface{} {
-  
-  ss := reflect.ValueOf(vs)    
-  s := reflect.Indirect(ss)
-
-  for i := 0; i < s.Len(); i++ {
-    it := s.Index(i)
-    if f(it.Interface()) {        
-      return it.Interface()
+func Find[T any](vs []T, f func(T) bool) T {  
+  var x T
+  for _, it := range vs {
+    if f(it) {        
+      return it
     }
   }
-  return nil
+  return x
 }
 
 // Map returns a new slice containing the results of applying
 // the function `f` to each interface{} in the original slice.
-func Map(vs interface{}, f func(interface{}) interface{}) []interface{} {    
-
-  ss := reflect.ValueOf(vs)    
-  s := reflect.Indirect(ss)
-
-	vsm := make([]interface{}, s.Len())
-
-  for i := 0; i < s.Len(); i++ {
-    it := s.Index(i)
-    vsm[i] = f(it.Interface())
+func Map[T any, R any](vs []T, f func(T) R) []R {    
+  vsf := []R{}
+  for _, it := range vs {
+    vsf = append(vsf, f(it))    
   }
-  return vsm
+  return vsf
 }
 
-func Sort(vs interface{}, f func(interface{}, interface{}) int) {    
+func Sort[T any](vs []T, f func(T, T) int) {    
 
-  ss := reflect.ValueOf(vs)    
-  s := reflect.Indirect(ss)
+  l := len(vs)
   swap := reflect.Swapper(vs)
 
-  for i := s.Len(); i > 0; i-- {
+  for i := l; i > 0; i-- {
   //The inner loop will first iterate through the full length
   //the next iteration will be through n-1
   // the next will be through n-2 and so on
     for j := 1; j < i; j++ {
 
-      v1 := ss.Index(j-1)
-      v2 := ss.Index(j)
+      v1 := vs[j-1]
+      v2 := vs[j]
 
-      if f(v1.Interface(), v2.Interface()) > 0 {
+      if f(v1, v2) > 0 {
         swap(j-1, j)
       }          
     }
