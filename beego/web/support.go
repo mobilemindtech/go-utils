@@ -12,6 +12,7 @@ import(
   "strconv"
   "time"  
   "fmt"
+  "os"
 )
 
 var (
@@ -172,8 +173,12 @@ func LoadFuncs() {
     return support.NumberMaskReverse(fmt.Sprintf("%v", text), mask)
   }
 
+  uuidGen := func() string {
+    return uuid.NewV4().String()
+  }
+
   beego.AddFuncMap("is_zero_date", isZeroDate)
-  
+  beego.AddFuncMap("uuid", uuidGen)
   beego.AddFuncMap("inc", inc)
   beego.AddFuncMap("has_error", hasError)
   beego.AddFuncMap("error_msg", errorMsg)
