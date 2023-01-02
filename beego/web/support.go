@@ -7,6 +7,7 @@ import(
   "github.com/mobilemindtec/go-utils/support"
   "github.com/beego/beego/v2/core/logs"
   "github.com/leekchan/accounting"  	
+  "github.com/satori/go.uuid"
   "github.com/beego/i18n"  
   "strings"
   "strconv"
