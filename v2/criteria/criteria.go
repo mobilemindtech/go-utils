@@ -18,6 +18,49 @@ func NewDataCount[T any](totalCount int64, results []*T) *DataCount[T] {
 	return &DataCount[T] { TotalCount: totalCount, Count64: totalCount, Count32: int(totalCount), Results: results }
 }
 
+type Reactive struct {
+	criteria *db.Criteria
+
+}
+
+func NewReactive(c *db.Criteria) *Reactive {
+	return &Reactive{ criteria: c}
+}
+
+func (this *Reactive) Get() interface{} {
+	var r interface{}
+	if this.criteria.IsOne() && this.criteria.Any {
+		r = this.criteria.Result
+	} else if this.criteria.IsList() {
+		r = this.criteria.Results
+	} else if this.criteria.IsCount() {
+		r = this.criteria.Count64
+	} else if this.criteria.IsExists() {
+		r = this.criteria.Any
+	}
+	return optional.Make(r, this.criteria.Error)
+}
+
+func (this *Reactive) First() *Reactive {
+	this.criteria.One()
+	return this
+}
+
+func (this *Reactive) List() *Reactive {
+	this.criteria.List()
+	return this
+}
+
+func (this *Reactive) Any() *Reactive {
+	this.criteria.Exists()
+	return this
+}
+
+func (this *Reactive) Count() *Reactive {
+	this.criteria.Count()
+	return this
+}
+
 type Criteria[T any] struct {
 	db.Criteria
 	
@@ -46,6 +89,10 @@ func New[T any](session *db.Session) *Criteria[T] {
 	criteria.Result = &entity
 	criteria.Results = &entities
 	return criteria
+}
+
+func (this *Criteria[T]) Rx() *Reactive {
+	return NewReactive(&this.Criteria)
 }
 
 func (this *Criteria[T]) Some(fn func([]*T)) *Criteria[T] {
@@ -124,6 +171,28 @@ func (this *Criteria[T]) Do() *Criteria[T] {
 	return this
 }
 
+func (this *Criteria[T]) Optional() *optional.Optional[T] {
+	var r interface{}
+
+	if this.Criteria.HasError {
+		r = this.Criteria.Error
+	} else if this.Criteria.IsOne() && this.Criteria.Any {
+		r = this.Criteria.Result
+	} else if this.Criteria.IsList() {
+		r = this.Criteria.Results
+	} else if this.Criteria.IsCount() {
+		r = this.Criteria.Count64
+	} else if this.Criteria.IsExists() {
+		r = this.Criteria.Any
+	}	
+
+	if this.Criteria.IsList() {
+		return optional.New[T](optional.MakeSlice(r, this.Criteria.Error))		
+	}
+
+	return optional.New[T](optional.Make(r, this.Criteria.Error))
+}
+
 func (this *Criteria[T]) DoNext() interface{} {
 
 	var ret interface{}
@@ -141,13 +210,13 @@ func (this *Criteria[T]) DoNext() interface{} {
 				ret := this.firstNextFn(r)
 				if ret != nil {
 					switch ret.(type) {
-						case optional.None:
+						case *optional.None:
 							if this.noneFn != nil {
 								this.noneFn()
 							}
 							break
-						case optional.Fail:
-							this.SetError(ret.(optional.Fail).Error)
+						case *optional.Fail:
+							this.SetError(ret.(*optional.Fail).Error)
 							break
 						case error:
 							this.SetError(ret.(error))
@@ -170,13 +239,13 @@ func (this *Criteria[T]) DoNext() interface{} {
 				ret := this.firstOrNoneNextFn(r)
 				if ret != nil {
 					switch ret.(type) {
-						case optional.None:
+						case *optional.None:
 							if this.noneFn != nil {
 								this.noneFn()
 							}
 							break
-						case optional.Fail:
-							this.SetError(ret.(optional.Fail).Error)
+						case *optional.Fail:
+							this.SetError(ret.(*optional.Fail).Error)
 							break
 						case error:
 							this.SetError(ret.(error))
@@ -200,13 +269,13 @@ func (this *Criteria[T]) DoNext() interface{} {
 					ret = this.someNextFn(rs)
 					if ret != nil {
 						switch ret.(type) {
-							case optional.None:
+							case *optional.None:
 								if this.noneFn != nil {
 									this.noneFn()
 								}
 								break
-							case optional.Fail:
-								this.SetError(ret.(optional.Fail).Error)
+							case *optional.Fail:
+								this.SetError(ret.(*optional.Fail).Error)
 								break
 						case error:
 							this.SetError(ret.(error))
@@ -230,13 +299,13 @@ func (this *Criteria[T]) DoNext() interface{} {
 				ret = this.someOrNoneNextFn(rs)
 				if ret != nil {
 					switch ret.(type) {
-						case optional.None:
+						case *optional.None:
 							if this.noneFn != nil {
 								this.noneFn()
 							}
 							break
-						case optional.Fail:
-							this.SetError(ret.(optional.Fail).Error)
+						case *optional.Fail:
+							this.SetError(ret.(*optional.Fail).Error)
 							break
 					case error:
 						this.SetError(ret.(error))
@@ -281,6 +350,11 @@ func (this *Criteria[T]) DoNext() interface{} {
 func (this *Criteria[T]) List() ([]*T, error) {
 	this.Criteria.List()
 	return this.GetResults()
+}
+
+func (this *Criteria[T]) Exists() (bool, error) {
+	this.Criteria.One()
+	return this.Any, this.Error
 }
 
 func (this *Criteria[T]) ListAndCount() (int64, []*T, error) {

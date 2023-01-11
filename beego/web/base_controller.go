@@ -2,6 +2,7 @@ package web
 
 import (
   "github.com/mobilemindtec/go-utils/beego/validator"
+  "github.com/mobilemindtec/go-utils/v2/optional"
   "github.com/mobilemindtec/go-utils/beego/db"
   "github.com/mobilemindtec/go-utils/support"
   "github.com/beego/beego/v2/core/validation"  
@@ -211,6 +212,61 @@ func (this *BaseController) OnResultsWithTotalCount(viewName string, results int
   this.Data["totalCount"] = totalCount
   this.OnTemplate(viewName)
   this.OnFlash(false)
+}
+
+func (this *BaseController) RenderJsonResult(opt interface{}) {
+
+  switch opt.(type) {
+    case *optional.Some:
+      it := opt.(*optional.Some).Item
+      if optional.IsSlice(it) {
+        this.OnJsonResults(it)
+      } else {
+        this.OnJsonResult(it)
+      }
+      break
+    case *optional.None, *optional.Empty:
+      this.OnJson200()
+      break
+    case *optional.Fail:
+      this.OnJsonError(fmt.Sprintf("%v", opt.(*optional.Fail).Error))
+      break
+    default:
+      this.OnJsonError(fmt.Sprintf("unknow optional value: %v", opt))
+      break
+  }
+
+}
+
+func (this *BaseController) RenderJson(opt interface{}) {
+
+  switch opt.(type) {
+    case *optional.Some:
+      this.Data["json"] = map[string]interface{} {
+        "data": opt.(*optional.Some).Item,
+      }
+      break
+    case *optional.None, *optional.Empty:
+      this.Ctx.Output.SetStatus(404)
+      break
+    case *optional.Fail:
+      this.Data["json"] = map[string]interface{} {
+        "error": true,
+        "message": fmt.Sprintf("%v", opt.(*optional.Fail).Error),
+      }
+      this.Ctx.Output.SetStatus(500)
+      break
+    default:
+      this.Data["json"] = map[string]interface{} {
+        "error": true,
+        "message": fmt.Sprintf("unknow optional value: %v", opt),
+      }
+      this.Ctx.Output.SetStatus(500)
+      break
+  }
+
+  this.ServeJSON()
+
 }
 
 func (this *BaseController) OnJsonResult(result interface{}) {

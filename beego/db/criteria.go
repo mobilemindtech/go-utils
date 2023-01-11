@@ -52,6 +52,7 @@ const (
 	CriteriaCount
 	CriteriaUpdate
 	CriteriaDelete
+	CriteriaExists
 )
 
 type CriteriaOrder struct {
@@ -99,6 +100,8 @@ type Criteria struct {
 	Result interface{}
 	Results interface{}
 
+	criteriaType CriteriaResult
+
 	UpdateParams map[string] interface{}
 
 	Page *Page
@@ -137,6 +140,22 @@ func NewCriteria(session *Session, entity interface{}, entities interface{}) *Cr
 
 func NewCondition() *Criteria{
 	return &Criteria{ criaterias: []*Criteria{}  }
+}
+
+func (this *Criteria) IsOne() bool {
+	return this.criteriaType == CriteriaOne
+}
+
+func (this *Criteria) IsList() bool {
+	return this.criteriaType == CriteriaList
+}
+
+func (this *Criteria) IsCount() bool {
+	return this.criteriaType == CriteriaCount
+}
+
+func (this *Criteria) IsExists() bool {
+	return this.criteriaType == CriteriaExists
 }
 
 func (this *Criteria) Defaults() *Criteria {
@@ -342,7 +361,7 @@ func (this *Criteria) One() *Criteria {
 }
 
 func (this *Criteria) Exists() bool {
-	this.execute(CriteriaCount)
+	this.execute(CriteriaExists)
 	return this.Any
 }
 
@@ -754,6 +773,8 @@ func (this *Criteria) getPathName(criteria *Criteria) string {
 
 func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
 
+	this.criteriaType = resultType
+
 	defer func(){
 		if this.tenantCopy != nil {
 			this.Session.SetTenant(this.tenantCopy)
@@ -885,7 +906,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria{
 			this.Empty = !this.Any
 
 
-  	case CriteriaCount:
+  	case CriteriaCount, CriteriaExists:
 
   		count, err := this.Session.ToCount(query)
 
