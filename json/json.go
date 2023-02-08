@@ -575,11 +575,9 @@ func (this *JSON) DecodeFromMap(jsonData map[string]interface{}, obj interface{}
 					} else {
 						logs.Debug("Type not found to parse: field = ", field.Name, " type = ", fieldStruct.Type(), " value = ", val)
 					}
-
 				}
 				break
 			}
-
 		}
 	}
 	//logs.Debug("## filter tenant")
