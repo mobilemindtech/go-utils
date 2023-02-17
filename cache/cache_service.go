@@ -45,7 +45,7 @@ func (this *CacheService) init() {
 		Addr:     sessionproviderconfig,
 		Password: "",
 		DB:       0,
-		PoolSize: 1000,
+		PoolSize: 5,
 	})
 
 }
