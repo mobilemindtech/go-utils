@@ -23,8 +23,9 @@ const (
 )
 
 type CacheService struct {
-	rdb      *redis.Client
-	duration int // milisec
+	rdb            *redis.Client
+	duration       int // milisec
+	sessionKashKey string
 }
 
 func New() *CacheService {
@@ -36,6 +37,7 @@ func New() *CacheService {
 func (this *CacheService) init() {
 
 	sessionproviderconfig, _ := beego.AppConfig.String("sessionproviderconfig")
+	this.sessionKashKey, _ = beego.AppConfig.String("cachesessionhashkey")
 
 	//logs.Debug("CONNECT REDIS")
 
@@ -79,6 +81,10 @@ func (this *CacheService) NewExpiresMill(duration int) *CacheService {
 	return &CacheService{duration: duration, rdb: this.rdb}
 }
 
+func (this *CacheService) getSessionKey(key string) string {
+	return fmt.Sprintf("%v_%v", this.sessionKashKey, key)
+}
+
 func (this *CacheService) Put(key string, value interface{}) {
 
 	payload, err := json.Marshal(value)
@@ -88,7 +94,7 @@ func (this *CacheService) Put(key string, value interface{}) {
 		return
 	}
 
-	if err := this.rdb.Set(key, string(payload), time.Duration(this.duration)*time.Millisecond).Err(); err != nil {
+	if err := this.rdb.Set(this.getSessionKey(key), string(payload), time.Duration(this.duration)*time.Millisecond).Err(); err != nil {
 		logs.Error("error save cache on redis: %v", err)
 		return
 	}
@@ -97,7 +103,7 @@ func (this *CacheService) Put(key string, value interface{}) {
 }
 
 func (this *CacheService) Get(key string, value interface{}) interface{} {
-	r, err := this.rdb.Get(key).Result()
+	r, err := this.rdb.Get(this.getSessionKey(key)).Result()
 
 	//logs.Debug("REDIS RESULT: %v", r)
 	//logs.Debug("REDIS ERR: %v", err)
@@ -112,7 +118,7 @@ func (this *CacheService) Get(key string, value interface{}) interface{} {
 }
 
 func (this *CacheService) GetVal(key string) interface{} {
-	value, err := this.rdb.Get(key).Result()
+	value, err := this.rdb.Get(this.getSessionKey(key)).Result()
 
 	if err == redis.Nil {
 		return optional.NewNone()
@@ -167,8 +173,10 @@ func (this *CacheService) MemoizeOpt(key string, value interface{}, cacheable fu
 	}
 }
 
-func (this *CacheService) Delete(key ...string) *CacheService {
-	this.rdb.Del(key...)
+func (this *CacheService) Delete(keys ...string) *CacheService {
+	for _, key := range keys {
+		this.rdb.Del(this.getSessionKey(key))
+	}
 	return this
 }
 
