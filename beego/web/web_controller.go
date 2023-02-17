@@ -1,8 +1,10 @@
 package web
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
+	"net/http"
 	"os"
 	"runtime/debug"
 	"strconv"
@@ -18,8 +20,12 @@ import (
 	"github.com/mobilemindtec/go-utils/app/services"
 	"github.com/mobilemindtec/go-utils/beego/db"
 	"github.com/mobilemindtec/go-utils/beego/validator"
+	"github.com/mobilemindtec/go-utils/cache"
 	"github.com/mobilemindtec/go-utils/json"
 	"github.com/mobilemindtec/go-utils/support"
+	"github.com/mobilemindtec/go-utils/v2/criteria"
+	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/satori/go.uuid"
 )
 
 type WebController struct {
@@ -48,7 +54,8 @@ type WebController struct {
 	userinfo *models.User
 	tenant   *models.Tenant
 
-	IsLoggedIn      bool
+	IsLoggedIn bool
+
 	IsTokenLoggedIn bool
 
 	Auth *services.AuthService
@@ -58,6 +65,11 @@ type WebController struct {
 	InheritedController interface{}
 
 	DoNotLoadTenantsOnSession bool
+
+	CacheService            *cache.CacheService
+	Character               *support.Character
+	CacheKeysDeleteOnLogOut []string
+	UploadPathDestination   string
 }
 
 func init() {
@@ -93,6 +105,8 @@ func (this *WebController) loadLang() {
 // It's used for language option check and setting.
 func (this *WebController) Prepare() {
 
+	this.CacheService = cache.New()
+	this.Character = support.NewCharacter()
 	this.EntityValidator = validator.NewEntityValidator(this.Lang, this.ViewPath)
 	this.DefaultLocation, _ = time.LoadLocation("America/Sao_Paulo")
 	this.defaultPageLimit = 25
@@ -135,8 +149,8 @@ func (this *WebController) CreateSession() *db.Session {
 	err := session.OpenTx()
 
 	if err != nil {
-		this.Log("ERROR: db.NewSession: %v", err)
-		this.Abort("505")
+		logs.Error("ERROR: db.NewSession: %v", err)
+		this.Abort("500")
 	}
 
 	return session
@@ -154,8 +168,11 @@ func (this *WebController) AuthPrepare() {
 	tenantUuid := this.GetHeaderByNames("tenant", "X-Auth-Tenant")
 
 	if len(tenantUuid) > 0 {
-		ModelTenant := this.ModelTenant
-		tenant, _ = ModelTenant.GetByUuidAndEnabled(tenantUuid)
+		loader := func() (*models.Tenant, error) {
+			return this.ModelTenant.GetByUuidAndEnabled(tenantUuid)
+
+		}
+		tenant, _ = cache.Memoize(this.CacheService, tenantUuid, new(models.Tenant), loader)
 		this.SetAuthTenant(tenant)
 	}
 
@@ -168,14 +185,10 @@ func (this *WebController) AuthPrepare() {
 		}
 
 		if !this.IsTokenLoggedIn {
-
 			tenant = this.GetAuthTenantSession()
-
 			if tenant == nil {
-				ModelTenantUser := this.ModelTenantUser
-				tenant, _ = ModelTenantUser.GetFirstTenant(this.GetAuthUser())
+				tenant, _ = this.ModelTenantUser.GetFirstTenant(this.GetAuthUser())
 			}
-
 		}
 
 		if tenant == nil || !tenant.IsPersisted() {
@@ -185,9 +198,9 @@ func (this *WebController) AuthPrepare() {
 
 		if tenant == nil || !tenant.IsPersisted() {
 
-			this.Log("ERROR: user does not have active tenant")
+			logs.Error("ERROR: user does not have active tenant")
 
-			if this.IsTokenLoggedIn && !this.IsJson() {
+			if this.IsTokenLoggedIn || this.IsJson() {
 				this.OnJsonError("set header tenant")
 			} else {
 				this.OnErrorAny("/", "user does not has active tenant")
@@ -197,17 +210,17 @@ func (this *WebController) AuthPrepare() {
 
 		this.SetAuthTenant(tenant)
 
-		this.Log("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-		this.Log("* User Id = %v", this.GetAuthUser().Id)
-		this.Log("* User Name = %v", this.GetAuthUser().Name)
-		this.Log("* Tenant Id = %v", this.GetAuthTenant().Id)
-		this.Log("* Tenant Name = %v", this.GetAuthTenant().Name)
-		this.Log("* User Authority = %v", this.GetAuthUser().Role.Authority)
-		this.Log("* User Roles = %v", this.GetAuthUser().GetAuthorities())
-		this.Log("* User IsLoggedIn = %v", this.IsLoggedIn)
-		this.Log("* User IsTokenLoggedIn = %v", this.IsTokenLoggedIn)
-		this.Log("* User Auth Token = %v", this.GetToken())
-		this.Log("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+		logs.Trace(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
+		logs.Trace(":: Tenant Id = %v", this.GetAuthTenant().Id)
+		logs.Trace(":: Tenant Name = %v", this.GetAuthTenant().Name)
+		logs.Trace(":: User Id = %v", this.GetAuthUser().Id)
+		logs.Trace(":: User Name = %v", this.GetAuthUser().Name)
+		logs.Trace(":: User Authority = %v", this.GetAuthUser().Role.Authority)
+		logs.Trace(":: User Roles = %v", this.GetAuthUser().GetAuthorities())
+		logs.Trace(":: User IsLoggedIn = %v", this.IsLoggedIn)
+		logs.Trace(":: User IsTokenLoggedIn = %v", this.IsTokenLoggedIn)
+		logs.Trace(":: User Auth Token = %v", this.GetToken())
+		logs.Trace(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
 
 		this.Data["UserInfo"] = this.GetAuthUser()
 		this.Data["Tenant"] = this.GetAuthTenant()
@@ -260,7 +273,7 @@ func (this *WebController) FlashRead() {
 
 func (this *WebController) Finish() {
 
-	this.Log("* Controller.Finish, Commit")
+	logs.Trace("* Controller.Finish, Commit")
 
 	this.Session.Close()
 
@@ -271,7 +284,7 @@ func (this *WebController) Finish() {
 
 func (this *WebController) Finally() {
 
-	this.Log("* Controller.Finally, Rollback")
+	logs.Trace("* Controller.Finally, Rollback")
 
 	if this.Session != nil {
 		this.Session.OnError().Close()
@@ -369,6 +382,101 @@ func (this *WebController) OnResultsWithTotalCount(viewName string, results inte
 	this.OnFlash(false)
 }
 
+func (this *WebController) RenderJsonResult(opt interface{}) {
+
+	switch opt.(type) {
+	case *optional.Some:
+		it := opt.(*optional.Some).Item
+		if optional.IsSlice(it) {
+			this.OnJsonResults(it)
+		} else {
+			this.OnJsonResult(it)
+		}
+		break
+	case *optional.None, *optional.Empty:
+		this.OnJson200()
+		break
+	case *optional.Fail:
+		this.OnJsonError(fmt.Sprintf("%v", opt.(*optional.Fail).Error))
+		break
+	case *support.JsonResult:
+		this.OnJson(opt.(*support.JsonResult))
+		break
+	default:
+		this.OnJsonError(fmt.Sprintf("unknow optional value: %v", opt))
+		break
+	}
+
+}
+
+func (this *WebController) RenderJson(opt interface{}) {
+
+	var dataResult interface{}
+	var statusCodeResult = 200
+
+	switch opt.(type) {
+	case *optional.Some:
+
+		someVal := opt.(*optional.Some).Item
+
+		switch someVal.(type) {
+		case *criteria.Page:
+			dataResult = someVal
+			break
+		default:
+			dataResult = map[string]interface{}{
+				"data": someVal,
+			}
+		}
+
+		break
+	case *optional.None, *optional.Empty:
+		statusCodeResult = 404
+		break
+	case *optional.Fail:
+
+		f := opt.(*optional.Fail)
+		err := f.Error
+		statusCode := 500
+
+		data := map[string]interface{}{
+			"error":   true,
+			"message": fmt.Sprintf("%v", err),
+		}
+
+		if err.Error() == "validation error" {
+			data["validation"] = f.Item
+			statusCode = 400
+		}
+
+		dataResult = data
+		statusCodeResult = statusCode
+		break
+	default:
+		dataResult = map[string]interface{}{
+			"error":   true,
+			"message": fmt.Sprintf("unknow optional value: %v", opt),
+		}
+
+		statusCodeResult = 500
+		break
+	}
+
+	j, err := json.Encode(dataResult)
+
+	if err != nil {
+		logs.Error("ERROR JSON ENCODE: %v", err)
+		this.Ctx.Output.SetStatus(500)
+		this.Ctx.Output.Body([]byte(fmt.Sprint(`{ "error": true, "message": "%v" }`, err.Error())))
+	} else {
+		logs.Trace("REPONSE STATUS CODE = %v", statusCodeResult)
+		this.Ctx.Output.SetStatus(statusCodeResult)
+		this.Ctx.Output.Body(j)
+	}
+
+	this.ServeJSON()
+}
+
 func (this *WebController) OnJsonResult(result interface{}) {
 	this.Data["json"] = &support.JsonResult{Result: result, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()}
 	this.ServeJSON()
@@ -457,10 +565,6 @@ func (this *WebController) RenderTemplate(viewName string) {
 	this.OnTemplate(viewName)
 }
 
-func (this *WebController) RenderJson(json *support.JsonResult) {
-	this.OnJson(json)
-}
-
 func (this *WebController) RenderJsonMap(jsonMap map[string]interface{}) {
 	this.OnJsonMap(jsonMap)
 }
@@ -510,6 +614,10 @@ func (this *WebController) OkAsHtml(message string) {
 
 func (this *WebController) Ok() {
 	this.Ctx.Output.SetStatus(200)
+}
+
+func (this *WebController) OkAsText(message string) {
+	this.Ctx.Output.Body([]byte(message))
 }
 
 func (this *WebController) OnJsonValidationError() {
@@ -695,9 +803,9 @@ func (this *WebController) OnValidate(entity interface{}, custonValidation func(
 
 func (this *WebController) OnParseForm(entity interface{}) {
 	if err := this.ParseForm(entity); err != nil {
-		this.Log("*******************************************")
-		this.Log("***** ERROR on parse form ", err.Error())
-		this.Log("*******************************************")
+		logs.Error("*******************************************")
+		logs.Error("***** ERROR on parse FORM to JSON: %v", err.Error())
+		logs.Error("*******************************************")
 		this.Abort("500")
 	}
 }
@@ -708,9 +816,9 @@ func (this *WebController) OnJsonParseForm(entity interface{}) {
 
 func (this *WebController) OnJsonParseFormWithFieldsConfigs(entity interface{}, configs map[string]string) {
 	if err := this.FormToModelWithFieldsConfigs(this.Ctx, entity, configs); err != nil {
-		this.Log("*******************************************")
-		this.Log("***** ERROR on parse form ", err.Error())
-		this.Log("*******************************************")
+		logs.Error("*******************************************")
+		logs.Error("***** ERROR on parse FORM to JSON: %v ", err.Error())
+		logs.Error("*******************************************")
 		this.Abort("500")
 	}
 }
@@ -729,9 +837,9 @@ func (this *WebController) ParamParseFloat(s string) float64 {
 	if err == nil {
 		returnValue = precoFloat
 	} else {
-		this.Log("*******************************************")
-		this.Log("****** ERROR parse string to float64 for stringv", s)
-		this.Log("*******************************************")
+		logs.Error("*******************************************")
+		logs.Error("****** ERROR parse string to float64 for stringv", s)
+		logs.Error("*******************************************")
 		this.Abort("500")
 	}
 
@@ -740,11 +848,27 @@ func (this *WebController) ParamParseFloat(s string) float64 {
 
 func (this *WebController) OnParseJson(entity interface{}) {
 	if err := this.JsonToModel(this.Ctx, entity); err != nil {
-		this.Log("*******************************************")
-		this.Log("***** ERROR on parse json ", err.Error())
-		this.Log("*******************************************")
+		logs.Error("*******************************************")
+		logs.Error("***** ERROR on parse json ", err.Error())
+		logs.Error("*******************************************")
 		this.Abort("500")
 	}
+}
+
+func (this *WebController) RawBody() []byte {
+	return this.Ctx.Input.RequestBody
+}
+
+func (this *WebController) NotFound() {
+	this.Ctx.Output.SetStatus(404)
+}
+
+func (this *WebController) ServerError() {
+	this.Ctx.Output.SetStatus(500)
+}
+
+func (this *WebController) BadRequest(data interface{}) {
+	this.Ctx.Output.SetStatus(400)
 }
 
 func (this *WebController) HasPath(paths ...string) bool {
@@ -800,43 +924,50 @@ func (this *WebController) GetCurrentTime() time.Time {
 func (this *WebController) GetPage() *db.Page {
 	page := new(db.Page)
 
+	var defaultLimit int64 = 25
+
 	if this.IsJson() {
 
 		if this.Ctx.Input.IsPost() {
 			jsonMap, _ := this.JsonToMap(this.Ctx)
 
-			//this.Log(" page jsonMap = %v", jsonMap)
-
 			if _, ok := jsonMap["limit"]; ok {
-				page.Limit = this.GetJsonInt64(jsonMap, "limit")
+				page.Limit = optional.
+					New[int64](this.GetJsonInt64(jsonMap, "limit")).
+					OrElse(defaultLimit)
+
 				page.Offset = this.GetJsonInt64(jsonMap, "offset")
-				page.Sort = this.GetJsonString(jsonMap, "order_column")
+
+				page.Sort = optional.
+					New[string](this.GetJsonString(jsonMap, "order_column")).
+					OrElse(this.GetJsonString(jsonMap, "sort"))
+
+				page.Order = optional.
+					New[string](this.GetJsonString(jsonMap, "order_sort")).
+					OrElse(this.GetJsonString(jsonMap, "order"))
+
 				page.Order = this.GetJsonString(jsonMap, "order_sort")
 				page.Search = this.GetJsonString(jsonMap, "search")
+
+				return page
 			}
-		} else {
-
-			page.Limit = this.GetIntByKey("limit")
-			page.Offset = this.GetIntByKey("offset")
-			page.Sort = this.GetStringByKey("order_column")
-			page.Order = this.GetStringByKey("order_sort")
-			page.Search = this.GetStringByKey("search")
-
 		}
-
-	} else {
-
-		page.Limit = this.GetIntByKey("limit")
-		page.Offset = this.GetIntByKey("offset")
-		page.Search = this.GetStringByKey("search")
-		page.Order = this.GetStringByKey("order_sort")
-		page.Sort = this.GetStringByKey("order_column")
-
 	}
 
-	if page.Limit <= 0 {
-		page.Limit = this.defaultPageLimit
-	}
+	page.Limit = optional.
+		New[int64](this.GetIntByKey("limit")).
+		OrElse(defaultLimit)
+
+	page.Sort = optional.
+		New[string](this.GetStringByKey("order_column")).
+		OrElse(this.GetStringByKey("sort"))
+
+	page.Order = optional.
+		New[string](this.GetStringByKey("order_sort")).
+		OrElse(this.GetStringByKey("order"))
+
+	page.Offset = this.GetIntByKey("offset")
+	page.Search = this.GetStringByKey("search")
 
 	return page
 }
@@ -934,6 +1065,18 @@ func (this *WebController) ParseJsonDate(date string) (time.Time, error) {
 	return time.ParseInLocation(jsonDateLayout, date, this.DefaultLocation)
 }
 
+func (this *WebController) NormalizePageSortKey(key string) string {
+	if strings.Contains(key, ".") {
+		return strings.Replace(key, ".", "__", -1)
+	}
+	return key
+}
+
+func (this *WebController) CheckboxToBool(key string) bool {
+	arr := this.Ctx.Request.Form[key]
+	return len(arr) > 0
+}
+
 func (this *WebController) WebControllerLoadModels() {
 	if this.InheritedController != nil {
 		if app, ok := this.InheritedController.(NestWebController); ok {
@@ -956,34 +1099,45 @@ func (this *WebController) LoadModels() {
 }
 
 func (this *WebController) LoadTenants() {
-	tenants := []*models.Tenant{}
 
 	if this.IsLoggedIn && !this.DoNotLoadTenantsOnSession {
 
-		if this.Auth.IsRoot() {
-			its, _ := this.ModelTenant.List()
-			tenants = *its
-		} else {
-			list, _ := this.ModelTenantUser.ListByUserAdmin(this.GetAuthUser())
+		cacheKey := cache.CacheKey("tenants_user_", this.GetAuthUser().Id)
+		this.DeleteCacheOnLogout(cacheKey)
 
-			for _, it := range *list {
+		loader := func() ([]interface{}, error) {
 
-				if !it.Enabled {
-					continue
+			tenants := []*models.Tenant{}
+			if this.Auth.IsRoot() {
+				its, _ := this.ModelTenant.List()
+				tenants = *its
+			} else {
+				list, _ := this.ModelTenantUser.ListByUserAdmin(this.GetAuthUser())
+
+				for _, it := range *list {
+
+					if !it.Enabled {
+						continue
+					}
+
+					this.Session.Load(it.Tenant)
+					tenants = append(tenants, it.Tenant)
 				}
-
-				this.Session.Load(it.Tenant)
-				tenants = append(tenants, it.Tenant)
 			}
+			authorizeds := []interface{}{}
+			for _, it := range tenants {
+				authorizeds = append(authorizeds, it)
+			}
+			return authorizeds, nil
 		}
-		authorizeds := []interface{}{}
-		for _, it := range tenants {
-			authorizeds = append(authorizeds, it)
-		}
-		this.Session.SetAuthorizedTenants(authorizeds)
-	}
 
-	this.Data["AvailableTenants"] = tenants
+		authorizeds, _ := cache.Memoize(this.CacheService, cacheKey, new([]interface{}), loader)
+
+		this.Session.SetAuthorizedTenants(authorizeds)
+		this.Data["AvailableTenants"] = authorizeds
+	} else {
+		this.Data["AvailableTenants"] = []*models.Tenant{}
+	}
 }
 
 func (this *WebController) Audit(format string, v ...interface{}) {
@@ -1014,52 +1168,46 @@ func (this *WebController) AppAuth() {
 
 		auth := services.NewLoginService(this.Lang, this.Session)
 
-		this.Log("Authenticate by token %v", token)
+		logs.Debug("Authenticate by token %v", token)
 
-		user, err := auth.AuthenticateToken(token)
+		loader := func() (*models.User, error) {
+			return auth.AuthenticateToken(token)
+		}
+
+		user, err := cache.Memoize(this.CacheService, token, new(models.User), loader)
 
 		if err != nil {
-			this.Log("LOGIN ERROR: %v", err)
+			logs.Error("LOGIN ERROR: %v", err)
 			this.LogOut()
 			return
 		}
 
-		if user == nil {
-			this.Log("LOGIN ERROR: user not found!")
+		if user == nil || !user.IsPersisted() {
+			logs.Error("LOGIN ERROR: user not found!")
 			this.LogOut()
 			return
 		}
 
-		if user != nil && user.Id > 0 {
-			this.ModelUser.LoadRelated(user)
-			this.SetTokenLogin(user)
-		}
+		this.SetTokenLogin(user)
 	}
 }
 
 func (this *WebController) GetLogin() *models.User {
 	id, _ := this.GetSession("userinfo").(int64)
-	e, err := this.Session.FindById(new(models.User), id)
-	if err != nil {
-		return nil
-	}
-	user := e.(*models.User)
-	this.ModelUser.LoadRelated(user)
-	return user
+	return this.memoizeUser(id)
 }
 
 func (this *WebController) GetTokenLogin() *models.User {
 	id, _ := this.GetSession("appuserinfo").(int64)
-	e, err := this.Session.FindById(new(models.User), id)
-	if err != nil {
-		return nil
-	}
-	user := e.(*models.User)
-	this.ModelUser.LoadRelated(user)
-	return user
+	return this.memoizeUser(id)
+}
+
+func (this *WebController) SessionLogOut() {
+	this.LogOut()
 }
 
 func (this *WebController) LogOut() {
+	this.CacheService.Delete(this.CacheKeysDeleteOnLogOut...)
 	this.DelSession("userinfo")
 	this.DelSession("appuserinfo")
 	this.DelSession("authtenantid")
@@ -1158,7 +1306,7 @@ func (this *WebController) UpSecurityAuth() bool {
 
 	if !route.IsRouteAuthorized(this.Ctx, roles) {
 
-		this.Log("WARN: path %v not authorized ", this.Ctx.Input.URL())
+		logs.Warn("WARN: path %v not authorized ", this.Ctx.Input.URL())
 
 		if !this.IsLoggedIn && !this.IsTokenLoggedIn {
 			if this.IsJson() {
@@ -1187,9 +1335,17 @@ func (this *WebController) UpSecurityAuth() bool {
 func (this *WebController) HasTenantAuth(tenant *models.Tenant) bool {
 	if !this.Auth.IsRoot() {
 
-		item, _ := this.ModelTenantUser.FindByUserAndTenant(this.GetAuthUser(), tenant)
+		ModelTenantUser := this.ModelTenantUser
 
-		return item != nil && item.IsPersisted()
+		loader := func() bool {
+			item, _ := ModelTenantUser.FindByUserAndTenant(this.GetAuthUser(), tenant)
+			return item != nil && item.IsPersisted()
+		}
+		parser := func(v string) bool {
+			return v == "true"
+		}
+		cacheKey := cache.CacheKey("has_user", this.GetAuthUser().Id, "tenant", tenant.Id)
+		return cache.MemoizeVal(this.CacheService, cacheKey, parser, loader)
 
 	}
 	return true
@@ -1198,33 +1354,34 @@ func (this *WebController) HasTenantAuth(tenant *models.Tenant) bool {
 func (this *WebController) SetAuthTenantSession(tenant *models.Tenant) {
 
 	if this.HasTenantAuth(tenant) {
-		this.Log("Set tenant session. user %v now is using tenant %v", this.GetAuthUser().Id, tenant.Id)
+		logs.Error("Set tenant session. user %v now is using tenant %v", this.GetAuthUser().Id, tenant.Id)
 		this.SetSession("authtenantid", tenant.Id)
 	} else {
-		this.Log("Cannot set tenant session. user %v not enable to use tenant %v", this.GetAuthUser().Id, tenant.Id)
+		logs.Error("Cannot set tenant session. user %v not enable to use tenant %v", this.GetAuthUser().Id, tenant.Id)
 	}
 
 }
 
 func (this *WebController) GetAuthTenantSession() *models.Tenant {
-	if id, ok := this.GetSession("authtenantid").(int64); ok {
-		if id > 0 {
+	var tenant *models.Tenant
+
+	if id, ok := this.GetSession("authtenantid").(int64); ok && id > 0 {
+		loader := func() (*models.Tenant, error) {
 			tenant := models.Tenant{Id: int64(id)}
 			this.Session.Load(&tenant)
-			return &tenant
+			return &tenant, nil
 		}
+		tenant, _ = cache.Memoize(this.CacheService, cache.CacheKey("tenant_", id), new(models.Tenant), loader)
 	}
 
-	return nil
+	return tenant
 }
 
 func (this *WebController) GetAuthTenant() *models.Tenant {
-
 	tenant := this.GetAuthTenantSession()
 	if tenant != nil && tenant.IsPersisted() {
 		return tenant
 	}
-
 	return this.tenant
 }
 
@@ -1240,6 +1397,97 @@ func (this *WebController) GetAuthUser() *models.User {
 	return this.userinfo
 }
 
-func (this *WebController) RawBody() []byte {
-	return this.Ctx.Input.RequestBody
+func (this *WebController) DeleteCacheOnLogout(keys ...string) {
+	this.CacheKeysDeleteOnLogOut = append(this.CacheKeysDeleteOnLogOut, keys...)
+}
+
+func (this *WebController) memoizeUser(id int64) *models.User {
+	var user *models.User
+	loader := func() (*models.User, error) {
+		e, err := this.Session.FindById(new(models.User), id)
+		if err != nil {
+			return nil, err
+		}
+		user := e.(*models.User)
+		this.ModelUser.LoadRelated(user)
+		return user, nil
+	}
+	user, _ = cache.Memoize(this.CacheService, cache.CacheKey("user_", id), new(models.User), loader)
+	return user
+}
+
+func (this *WebController) PrepareUploadedFile(fileOriginalName string, fileName string) (string, string, error) {
+
+	path := this.UploadPathDestination + string(os.PathSeparator)
+
+	if err := os.MkdirAll(path, 0777); err != nil {
+		return "", "", err
+	}
+
+	splited := strings.Split(fileOriginalName, ".")
+
+	if len(splited) == 0 {
+		return "", "", errors.New("file extension not found")
+	}
+
+	ext := splited[len(splited)-1]
+
+	if !strings.Contains(fileName, ".") {
+		fileName += "." + ext
+	}
+
+	path += string(os.PathSeparator) + fileName
+
+	logs.Trace("## save file on ", path)
+
+	return path, fileName, nil
+}
+
+func (this *WebController) GetUploadedFileSavePath(fieldName string) string {
+
+	if err := os.MkdirAll(this.UploadPathDestination, 0777); err != nil {
+		logs.Error("Error on create uploaded file save path %v: %v", this.UploadPathDestination, err)
+	}
+
+	return fmt.Sprintf("%v/%v", this.UploadPathDestination, fieldName)
+}
+
+func (this *WebController) HasUploadedFile(fname string) (bool, error) {
+	_, _, err := this.GetFile(fname)
+	if err == http.ErrMissingFile {
+		return false, nil
+	} else if err != nil {
+		return false, errors.New(fmt.Sprintf("Erro ao buscar documento: %v", err))
+	}
+	return true, nil
+}
+
+func (this *WebController) GetUploadedFileExt(fieldName string, required bool) (bool, string, error) {
+
+	_, multipartFileHeader, err := this.GetFile(fieldName)
+
+	if err == http.ErrMissingFile {
+
+		if required {
+			return false, "", fmt.Errorf("Selecione uma imagem para enviar")
+		}
+
+		return false, "", nil
+
+	} else if err != nil {
+		return false, "", fmt.Errorf("Erro ao enviar arquivo: %v", err)
+	}
+
+	originalName := this.Character.Transform(multipartFileHeader.Filename)
+	splited := strings.Split(originalName, ".")
+
+	if len(splited) == 0 {
+		return false, "", fmt.Errorf("file extension not found")
+	}
+
+	ext := splited[len(splited)-1]
+	uuid := uuid.NewV4()
+	newFileName := fmt.Sprintf("%v.%v", uuid.String(), ext)
+
+	return true, newFileName, nil
 }

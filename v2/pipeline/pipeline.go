@@ -2,52 +2,36 @@ package pipeline
 
 import (
 	"errors"
-	"fmt"
+	_ "fmt"
+
 	"reflect"
 
 	"github.com/beego/beego/v2/core/logs"
+	"github.com/mobilemindtec/go-utils/v2/ctx"
+	"github.com/mobilemindtec/go-utils/v2/foreach"
 	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtec/go-utils/v2/util"
 )
 
-type Action func() interface{}
-type ActionR1 func(interface{}) interface{}
-type ActionR2 func(interface{}, interface{}) interface{}
-type ActionR3 func(interface{}, interface{}, interface{}) interface{}
-type ActionR4 func(interface{}, interface{}, interface{}, interface{}) interface{}
-type ActionR5 func(interface{}, interface{}, interface{}, interface{}, interface{}) interface{}
+type Action = func() interface{}
+type ActionR1 = func(interface{}) interface{}
+type ActionR2 = func(interface{}, interface{}) interface{}
+type ActionR3 = func(interface{}, interface{}, interface{}) interface{}
+type ActionR4 = func(interface{}, interface{}, interface{}, interface{}) interface{}
+type ActionR5 = func(interface{}, interface{}, interface{}, interface{}, interface{}) interface{}
 
-type PipeCtx struct {
-	data  map[string]interface{}
-	index int
-}
+type SuccessFn = func()
+type SuccessR1Fn = func(interface{})
 
-func NewCtx() *PipeCtx {
-	return &PipeCtx{data: map[string]interface{}{}}
-}
+type PipeState int
 
-func (this *PipeCtx) Put(key string, v interface{}) *PipeCtx {
-	this.data[key] = v
-	return this
-}
-
-func (this *PipeCtx) Add(v interface{}) *PipeCtx {
-	key := fmt.Sprintf("$%v", this.index)
-	this.index += 1
-	this.data[key] = v
-	return this
-}
-
-func (this *PipeCtx) Get(key string) interface{} {
-	if v, ok := this.data[key]; ok {
-		return v
-	}
-	return nil
-}
-
-func (this *PipeCtx) Has(key string) bool {
-	_, ok := this.data[key]
-	return ok
-}
+const (
+	StateCreated PipeState = 1 + iota
+	StateRunning
+	StateSuccess
+	StateExit
+	StateError
+)
 
 type PipeStep struct {
 	name    string
@@ -59,78 +43,81 @@ type PipeStep struct {
 }
 
 type Pipe struct {
-	onError   func(*optional.Fail)
-	onExit    func()
-	onSuccess func()
-	Results   []interface{}
-	Result    interface{}
-	steps     []*PipeStep
-	Ctx       *PipeCtx
+	errorHandler   interface{}
+	exitHandler    func()
+	successHandler interface{}
+	finallyHandler func()
+	startHandler   func()
+	results        []interface{}
+	steps          []*PipeStep
+	ctx            *ctx.Ctx
+	State          PipeState
 }
 
 func New() *Pipe {
-	return &Pipe{steps: []*PipeStep{}, Results: []interface{}{}, Ctx: NewCtx()}
+	return &Pipe{steps: []*PipeStep{}, results: []interface{}{}, ctx: ctx.New(), State: StateCreated}
+}
+
+func (this *Pipe) GetResults() []interface{} {
+	return this.results
 }
 
 func (this *Pipe) PutCtx(key string, v interface{}) *Pipe {
-	this.Ctx.Put(key, v)
+	this.ctx.Put(key, v)
 	return this
 }
 
 func (this *Pipe) AddCtx(v interface{}) *Pipe {
-	this.Ctx.Add(v)
+	this.ctx.AddOrdered(v)
 	return this
 }
 
 func (this *Pipe) GetCtx(key string) interface{} {
-	return this.Ctx.Get(key)
+	return this.ctx.Get(key)
+}
+
+func (this *Pipe) GetOrElseCtx(key string, def interface{}) interface{} {
+	if this.HasCtx(key) {
+		return this.ctx.Get(key)
+	}
+	return def
 }
 
 func (this *Pipe) HasCtx(key string) bool {
-	return this.Ctx.Has(key)
+	return this.ctx.Has(key)
 }
 
-func (this *Pipe) OnError(ac func(*optional.Fail)) *Pipe {
-	this.onError = ac
+func (this *Pipe) ErrorHandler(ac interface{}) *Pipe {
+	this.errorHandler = ac
 	return this
 }
 
-func (this *Pipe) OnExit(ac func()) *Pipe {
-	this.onExit = ac
+func (this *Pipe) ExitHandler(ac func()) *Pipe {
+	this.exitHandler = ac
 	return this
 }
 
-func (this *Pipe) OnSuccess(ac func()) *Pipe {
-	this.onSuccess = ac
+func (this *Pipe) NotFoundHandler(ac func()) *Pipe {
+	this.exitHandler = ac
 	return this
 }
 
-func (this *Pipe) Next(ac Action) *Pipe {
-	this.steps = append(this.steps, &PipeStep{action: ac})
+func (this *Pipe) SuccessHandler(ac interface{}) *Pipe {
+	this.successHandler = ac
 	return this
 }
 
-func (this *Pipe) NextR1(ac ActionR1) *Pipe {
-	this.steps = append(this.steps, &PipeStep{action: ac})
+func (this *Pipe) StartHandler(ac func()) *Pipe {
+	this.startHandler = ac
 	return this
 }
 
-func (this *Pipe) NextR2(ac ActionR2) *Pipe {
-	this.steps = append(this.steps, &PipeStep{action: ac})
+func (this *Pipe) FinallyHandler(ac func()) *Pipe {
+	this.finallyHandler = ac
 	return this
 }
 
-func (this *Pipe) NextR3(ac ActionR3) *Pipe {
-	this.steps = append(this.steps, &PipeStep{action: ac})
-	return this
-}
-
-func (this *Pipe) NextR4(ac ActionR4) *Pipe {
-	this.steps = append(this.steps, &PipeStep{action: ac})
-	return this
-}
-
-func (this *Pipe) NextR5(ac ActionR5) *Pipe {
+func (this *Pipe) Next(ac interface{}) *Pipe {
 	this.steps = append(this.steps, &PipeStep{action: ac})
 	return this
 }
@@ -145,14 +132,94 @@ func (this *Pipe) Debug() *Pipe {
 	return this
 }
 
-func (this *Pipe) Run() {
+func (this *Pipe) GetResult() interface{} {
+	l := len(this.results)
+	if l > 0 {
+		return optional.NewSome(this.results[l-1])
+	}
+	return optional.NewNone()
+}
+
+func (this *Pipe) configure() {
+
+	fnErrorHandler := this.errorHandler
+	fnExitHandler := this.exitHandler
+	fnSuccessHandler := this.successHandler
+
+	this.errorHandler = func(v *optional.Fail) {
+		this.State = StateError
+		if fnErrorHandler != nil {
+			switch fnErrorHandler.(type) {
+			case util.ErrorFn:
+				fnErrorHandler.(util.ErrorFn)(v)
+				break
+			case util.FailFn:
+				fnErrorHandler.(util.FailFn)(v)
+				break
+			default:
+				panic("wrong error handler func")
+			}
+		}
+	}
+
+	this.exitHandler = func() {
+		this.State = StateExit
+		if fnExitHandler != nil {
+			fnExitHandler()
+		}
+	}
+
+	if fnSuccessHandler == nil {
+		this.successHandler = func() {
+			this.State = StateSuccess
+		}
+	} else {
+		switch fnSuccessHandler.(type) {
+		case SuccessFn:
+			this.successHandler = func() {
+				this.State = StateSuccess
+				fnSuccessHandler.(SuccessFn)()
+			}
+			break
+		case SuccessR1Fn:
+			this.successHandler = func(v interface{}) {
+				this.State = StateSuccess
+				fnSuccessHandler.(SuccessR1Fn)(v)
+			}
+			break
+		default:
+			panic("wrong success handler func")
+		}
+	}
+
+}
+
+func (this *Pipe) addStepResult(result interface{}) {
+	this.results = append(this.results, result)
+	this.AddCtx(result)
+}
+
+func (this *Pipe) Run() *Pipe {
 
 	defer func() {
+
 		if r := recover(); r != nil {
-			fmt.Println("Recovered in f", r)
-			this.onError(optional.NewFailStr("%v", r))
+			logs.Info("Pipeline recover: ", r)
+
+			this.executeErrorHandler(optional.NewFailStr("%v", r))
 		}
+
+		if this.finallyHandler != nil {
+			this.finallyHandler()
+		}
+
 	}()
+
+	this.configure()
+
+	if this.startHandler != nil {
+		this.startHandler()
+	}
 
 	for i, step := range this.steps {
 
@@ -162,8 +229,8 @@ func (this *Pipe) Run() {
 		}
 
 		if step.debug {
-			logs.Info("Step: %v, Results: %v", i, len(this.Results))
-			for j, r := range this.Results {
+			logs.Info("Step: %v, results: %v", i, len(this.results))
+			for j, r := range this.results {
 				logs.Info("Result %v: %v", j, r)
 			}
 			continue
@@ -175,7 +242,7 @@ func (this *Pipe) Run() {
 
 		if step.action != nil {
 
-			l := len(this.Results)
+			l := len(this.results)
 
 			switch step.action.(type) {
 			case Action:
@@ -184,55 +251,55 @@ func (this *Pipe) Run() {
 			case ActionR1:
 
 				if l < 1 {
-					this.onError(optional.NewFailStr("action r%v, results len %v", 1, l))
-					return
+					this.executeErrorHandler(optional.NewFailStr("action r%v, results len %v", 1, l))
+					return this
 				}
 
-				r = step.action.(ActionR1)(this.Results[0])
+				r = step.action.(ActionR1)(this.results[0])
 				break
-			case ActionR2, func(interface{}, interface{}) interface{}:
+			case ActionR2:
 
 				if l < 2 {
-					this.onError(optional.NewFailStr("action r%v, results len %v", 2, l))
-					return
+					this.executeErrorHandler(optional.NewFailStr("action r%v, results len %v", 2, l))
+					return this
 				}
 
-				r = step.action.(ActionR2)(this.Results[0], this.Results[1])
+				r = step.action.(ActionR2)(this.results[0], this.results[1])
 				break
-			case ActionR3, func(interface{}, interface{}, interface{}) interface{}:
+			case ActionR3:
 
 				if l < 3 {
-					this.onError(optional.NewFailStr("action r%v, results len %v", 3, l))
-					return
+					this.executeErrorHandler(optional.NewFailStr("action r%v, results len %v", 3, l))
+					return this
 				}
 
-				r = step.action.(ActionR3)(this.Results[0], this.Results[1], this.Results[2])
+				r = step.action.(ActionR3)(this.results[0], this.results[1], this.results[2])
 				break
-			case ActionR4, func(interface{}, interface{}, interface{}, interface{}) interface{}:
+			case ActionR4:
 
 				if l < 4 {
-					this.onError(optional.NewFailStr("action r%v, results len %v", 4, l))
-					return
+					this.executeErrorHandler(optional.NewFailStr("action r%v, results len %v", 4, l))
+					return this
 				}
 
-				r = step.action.(ActionR4)(this.Results[0], this.Results[1], this.Results[2], this.Results[3])
+				r = step.action.(ActionR4)(this.results[0], this.results[1], this.results[2], this.results[3])
 				break
-			case ActionR5, func(interface{}, interface{}, interface{}, interface{}, interface{}) interface{}:
+			case ActionR5:
 
 				if l < 5 {
-					this.onError(optional.NewFailStr("action r%v, results len %v", 5, l))
-					return
+					this.executeErrorHandler(optional.NewFailStr("action r%v, results len %v", 5, l))
+					return this
 				}
 
-				r = step.action.(ActionR5)(this.Results[0], this.Results[1], this.Results[2], this.Results[3], this.Results[4])
+				r = step.action.(ActionR5)(this.results[0], this.results[1], this.results[2], this.results[3], this.results[4])
 				break
 			default:
-				this.onError(optional.NewFailStr("no action set"))
+				this.executeErrorHandler(optional.NewFailStr("no action set"))
 			}
 
 		} else {
-			this.onError(optional.NewFailStr("nil action"))
-			return
+			this.executeErrorHandler(optional.NewFailStr("nil action"))
+			return this
 		}
 
 		if r == nil {
@@ -240,49 +307,112 @@ func (this *Pipe) Run() {
 		}
 
 		switch r.(type) {
+		case *Pipe:
+			pipe := r.(*Pipe)
+			pipe.
+				ErrorHandler(this.errorHandler).
+				ExitHandler(this.exitHandler).
+				Run()
+
+			if pipe.State != StateSuccess {
+				return this
+			}
+
+			r = pipe.GetResult()
+			if some, ok := r.(*optional.Some); ok {
+				this.addStepResult(some.Item)
+			}
+			break
+
+		case []*Pipe:
+			pipes := r.([]*Pipe)
+
+			for _, pipe := range pipes {
+				pipe.
+					ErrorHandler(this.errorHandler).
+					ExitHandler(this.exitHandler).
+					Run()
+
+				if pipe.State != StateSuccess {
+					return this
+				}
+
+				r = pipe.GetResult()
+				if some, ok := r.(*optional.Some); ok {
+					this.addStepResult(some.Item)
+				}
+			}
+			break
+
 		case *optional.Some:
-			this.Result = r.(*optional.Some).Item
-			this.Results = append(this.Results, this.Result)
-			this.AddCtx(this.Result)
+			result := r.(*optional.Some).Item
+			this.addStepResult(result)
 			break
 		case *optional.Fail:
-			this.onError(r.(*optional.Fail))
-			return
+			this.executeErrorHandler(r.(*optional.Fail))
+			return this
 
 		case *optional.None:
-			this.onExit()
-			return
+			this.exitHandler()
+			return this
 		case *optional.Empty:
 			continue
 		default:
-			this.onError(optional.NewFailStr("action return has be Some | Fail | None. type %v is not allowed", reflect.TypeOf(r)))
-			return
+
+			if iterable, ok := r.(foreach.Iterable); ok {
+				iterable.ErrorHandler(this.errorHandler)
+				iterable.Execute()
+			} else {
+				this.executeErrorHandler(optional.NewFailStr("action return has be Some | Fail | None. type %v is not allowed", reflect.TypeOf(r)))
+				return this
+			}
+
 		}
 	}
 
-	if this.onSuccess != nil {
-		this.onSuccess()
+	this.executeSuccessHandler()
+
+	return this
+}
+
+func (this *Pipe) executeErrorHandler(v *optional.Fail) {
+	this.errorHandler.(util.FailFn)(v)
+}
+
+func (this *Pipe) executeSuccessHandler() {
+	if this.successHandler != nil {
+		switch this.successHandler.(type) {
+		case SuccessFn:
+			this.successHandler.(SuccessFn)()
+			break
+		case SuccessR1Fn:
+			this.successHandler.(SuccessR1Fn)(this.GetResult())
+		}
 	}
 }
 
-func GetCtx[T any](ctx interface{}, key string) T {
-	switch ctx.(type) {
+func GetCtx[T any](c interface{}, key string) T {
+	switch c.(type) {
 	case *Pipe:
-		return ctx.(*Pipe).GetCtx(key).(T)
-	case *PipeCtx:
-		return ctx.(*PipeCtx).Get(key).(T)
+		return c.(*Pipe).GetCtx(key).(T)
+	case *ctx.Ctx:
+		return c.(*ctx.Ctx).Get(key).(T)
 	default:
-		panic(errors.New("should be Pipe or PipeCtx"))
+		panic(errors.New("should be Pipe or Ctx"))
 	}
 }
 
-func GetCtxPtr[T any](ctx interface{}, key string) *T {
+func GetCtxPtr2[T1 any, T2 any](c interface{}, key1 string, key2 string) (*T1, *T2) {
+	return GetCtxPtr[T1](c, key1), GetCtxPtr[T2](c, key2)
+}
 
-	switch ctx.(type) {
+func GetCtxPtr[T any](c interface{}, key string) *T {
+
+	switch c.(type) {
 	case *Pipe:
-		return ctx.(*Pipe).GetCtx(key).(*T)
-	case *PipeCtx:
-		return ctx.(*PipeCtx).Get(key).(*T)
+		return c.(*Pipe).GetCtx(key).(*T)
+	case *ctx.Ctx:
+		return c.(*ctx.Ctx).Get(key).(*T)
 	default:
 		panic(errors.New("should be Pipe or PipeCtx"))
 	}

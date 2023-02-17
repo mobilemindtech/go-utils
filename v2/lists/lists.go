@@ -1,157 +1,177 @@
 package lists
 
 import (
-  "reflect"
-  _ "fmt"
+	_ "fmt"
+	"reflect"
 )
-
 
 // Index returns the first index of the target interface{} `t`, or
 // -1 if no match is found.
 func Index(vs interface{}, t interface{}) int {
 
-  ss := reflect.ValueOf(vs)    
-  s := reflect.Indirect(ss)
+	ss := reflect.ValueOf(vs)
+	s := reflect.Indirect(ss)
 
-  for i := 0; i < s.Len(); i++ {
-    it := s.Index(i)
-    if it.Interface() == t {
-      return i
-    }
-  }
-  return -1
+	for i := 0; i < s.Len(); i++ {
+		it := s.Index(i)
+		if it.Interface() == t {
+			return i
+		}
+	}
+	return -1
 }
 
 // Include returns `true` if the target interface{} t is in the
 // slice.
 func Include(vs interface{}, t interface{}) bool {
-  return Index(vs, t) >= 0
+	return Index(vs, t) >= 0
 }
 
 // Any returns `true` if one of the interface{}s in the slice
 // satisfies the predicate `f`.
 
 func Empty[T any](vs []T, f func(T) bool) bool {
-  return !Any[T](vs, f)
+	return !Any[T](vs, f)
 }
 
 func Any[T any](vs []T, f func(T) bool) bool {
-  for _, it := range vs {
-    if f(it) {        
-      return true
-    }
-  }
-  return false
+	for _, it := range vs {
+		if f(it) {
+			return true
+		}
+	}
+	return false
 }
 
 // Filter returns a new slice containing all interface{}s in the
 // slice that satisfy the predicate `f`.
 func FindAll[T any](vs []T, f func(T) bool) []T {
-  return Filter[T](vs, f)
+	return Filter[T](vs, f)
 }
 
-
 func Filter[T any](vs []T, f func(T) bool) []T {
-  vsf := []T{}
-  for _, it := range vs {
-    if f(it) {        
-      vsf = append(vsf, it)
-    }
-  }
-  return vsf
+	vsf := []T{}
+	for _, it := range vs {
+		if f(it) {
+			vsf = append(vsf, it)
+		}
+	}
+	return vsf
 }
 
 // Filter returns a new slice containing all interface{}s in the
 // slice that satisfy the predicate `f`.
-func Find[T any](vs []T, f func(T) bool) T {  
-  var x T
-  for _, it := range vs {
-    if f(it) {        
-      return it
-    }
-  }
-  return x
+func Find[T any](vs []T, f func(T) bool) T {
+	var x T
+	for _, it := range vs {
+		if f(it) {
+			return it
+		}
+	}
+	return x
 }
 
 // Map returns a new slice containing the results of applying
 // the function `f` to each interface{} in the original slice.
-func Map[T any, R any](vs []T, f func(T) R) []R {    
-  vsf := []R{}
-  for _, it := range vs {
-    vsf = append(vsf, f(it))    
-  }
-  return vsf
+func Map[T any, R any](vs []T, f func(T) R) []R {
+	vsf := []R{}
+	for _, it := range vs {
+		vsf = append(vsf, f(it))
+	}
+	return vsf
 }
 
-func Sort[T any](vs []T, f func(T, T) int) {    
+func Sort[T any](vs []T, f func(T, T) int) {
 
-  l := len(vs)
-  swap := reflect.Swapper(vs)
+	l := len(vs)
+	swap := reflect.Swapper(vs)
 
-  for i := l; i > 0; i-- {
-  //The inner loop will first iterate through the full length
-  //the next iteration will be through n-1
-  // the next will be through n-2 and so on
-    for j := 1; j < i; j++ {
+	for i := l; i > 0; i-- {
+		//The inner loop will first iterate through the full length
+		//the next iteration will be through n-1
+		// the next will be through n-2 and so on
+		for j := 1; j < i; j++ {
 
-      v1 := vs[j-1]
-      v2 := vs[j]
+			v1 := vs[j-1]
+			v2 := vs[j]
 
-      if f(v1, v2) > 0 {
-        swap(j-1, j)
-      }          
-    }
-  }  
+			if f(v1, v2) > 0 {
+				swap(j-1, j)
+			}
+		}
+	}
 }
 
 func ListParts[T any](vs []T, size int) [][]T {
 
-  all := [][]T{}
-  list := []T{}
+	all := [][]T{}
+	list := []T{}
 
+	for _, it := range vs {
 
-  for _, it := range vs {
+		list = append(list, it)
 
-    list = append(list, it)
+		if len(list) >= size {
+			all = append(all, list)
+			list = []T{}
+		}
 
+	}
 
-    if len(list) >= size {
-      all = append(all, list)
-      list = []T{}
-    }
+	if len(list) > 0 {
+		all = append(all, list)
+	}
 
-  }
-
-  if len(list) > 0 {
-    all = append(all, list)
-  }
-
-  return all
+	return all
 
 }
 
 func UniqueValues(vs interface{}, uniqueValueResolver func(data interface{}) interface{}) []interface{} {
-  return RemoveDuplicates(vs, uniqueValueResolver)
+	return RemoveDuplicates(vs, uniqueValueResolver)
 }
 
 func RemoveDuplicates(vs interface{}, uniqueValueResolver func(data interface{}) interface{}) []interface{} {
 
-  result := []interface{}{}
-  ss := reflect.ValueOf(vs)    
-  s := reflect.Indirect(ss)
+	result := []interface{}{}
+	ss := reflect.ValueOf(vs)
+	s := reflect.Indirect(ss)
 
-  for i := 0; i < s.Len(); i++ {
+	for i := 0; i < s.Len(); i++ {
 
-    it := s.Index(i)
+		it := s.Index(i)
 
-    any := Any(result, func (item interface{}) bool { 
-      return uniqueValueResolver(item) == uniqueValueResolver(it.Interface()) 
-    })
+		any := Any(result, func(item interface{}) bool {
+			return uniqueValueResolver(item) == uniqueValueResolver(it.Interface())
+		})
 
-    if !any {
-      result = append(result, it.Interface())
-    }
-  }
+		if !any {
+			result = append(result, it.Interface())
+		}
+	}
 
-  return result
+	return result
+}
+
+func Split[T any](vs []T, size int) [][]T {
+
+	all := [][]T{}
+	list := []T{}
+
+	for _, it := range vs {
+
+		list = append(list, it)
+
+		if len(list) >= size {
+			all = append(all, list)
+			list = []T{}
+		}
+
+	}
+
+	if len(list) > 0 {
+		all = append(all, list)
+	}
+
+	return all
+
 }

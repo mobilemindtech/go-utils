@@ -109,12 +109,12 @@ func (this *RxSession[T]) Update(entity T) *optional.Optional[T] {
 	return optional.WithSome[T](entity)
 }
 
-func (this *RxSession[T]) Remove(entity T) *optional.Optional[T] {
+func (this *RxSession[T]) Remove(entity T) *optional.Optional[bool] {
 
 	if err := this.session.Remove(entity); err != nil {
-		return optional.WithFail[T](err)
+		return optional.WithFail[bool](err)
 	}
-	return optional.WithSome[T](entity)
+	return optional.WithSome[bool](true)
 }
 
 func (this *RxSession[T]) Persist(entity T) *optional.Optional[T] {

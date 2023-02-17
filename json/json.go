@@ -78,8 +78,8 @@ func (this *JSON) ParseObj(obj interface{}) (interface{}, error) {
 	//fullValue := refValue
 	//fullType := fullValue.Type()
 
-	//logs.Debug("1 fullType ", fullType, " fullValue ", fullValue)
 	kind := reflect.TypeOf(obj).Kind()
+	//logs.Debug("Kind = %v, OBJ = %v", kind, obj)
 
 	switch kind {
 
@@ -106,7 +106,7 @@ func (this *JSON) ParseObj(obj interface{}) (interface{}, error) {
 		jsonResult := []interface{}{}
 		lst := reflect.Indirect(refValue)
 		for i := 0; i < lst.Len(); i++ {
-			r, err := this.ParseObj(lst.Index(i))
+			r, err := this.ParseObj(lst.Index(i).Interface())
 			if err != nil {
 				return nil, err
 			}

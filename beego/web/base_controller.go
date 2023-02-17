@@ -15,6 +15,7 @@ import (
 	"github.com/beego/i18n"
 	"github.com/mobilemindtec/go-utils/beego/db"
 	"github.com/mobilemindtec/go-utils/beego/validator"
+	"github.com/mobilemindtec/go-utils/cache"
 	"github.com/mobilemindtec/go-utils/json"
 	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-utils/v2/criteria"
@@ -31,6 +32,9 @@ type BaseController struct {
 	i18n.Locale
 
 	defaultPageLimit int64
+
+	CacheService            *cache.CacheService
+	CacheKeysDeleteOnLogOut []string
 }
 
 func init() {
@@ -75,6 +79,8 @@ func (this *BaseController) NestPrepareBase() {
 	this.Session = db.NewSession()
 	var err error
 	err = this.Session.OpenTx()
+
+	this.CacheService = cache.New()
 
 	if err != nil {
 		this.Log("***************************************************")
@@ -150,6 +156,7 @@ func (this *BaseController) Finally() {
 	if this.Session != nil {
 		this.Session.OnError().Close()
 	}
+	this.CacheService.Close()
 }
 
 func (this *BaseController) Recover(info interface{}) {
@@ -696,8 +703,6 @@ func (this *BaseController) GetPageWithDefaultLimit(defaultLimit int64) *db.Page
 		if this.Ctx.Input.IsPost() {
 			jsonMap, _ := this.JsonToMap(this.Ctx)
 
-			//this.Log(" page jsonMap = %v", jsonMap)
-
 			if _, ok := jsonMap["limit"]; ok {
 				page.Limit = optional.
 					New[int64](this.GetJsonInt64(jsonMap, "limit")).
@@ -846,4 +851,12 @@ func (this *BaseController) ServerError() {
 
 func (this *BaseController) BadRequest(data interface{}) {
 	this.Ctx.Output.SetStatus(400)
+}
+
+func (this *BaseController) DeleteCacheOnLogout(keys ...string) {
+	this.CacheKeysDeleteOnLogOut = append(this.CacheKeysDeleteOnLogOut, keys...)
+}
+
+func (this *BaseController) LogoutHanlder() {
+	this.CacheService.Delete(this.CacheKeysDeleteOnLogOut...)
 }

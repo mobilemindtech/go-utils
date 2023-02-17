@@ -77,8 +77,8 @@ func (this *EntityValidator) Validate(entities ...interface{}) interface{} {
 	}
 
 	if result.HasError {
-		err := this.GetValidationErrors(result)
-		return optional.NewFailWithItem(errors.New("validation error"), err)
+		results := this.GetValidationResults(result)
+		return optional.NewFailWithItem(errors.New("validation error"), results)
 	}
 
 	return optional.NewEmpty()
@@ -210,6 +210,20 @@ func (this *EntityValidator) GetValidationErrors(result *EntityValidatorResult) 
 	data := make(map[interface{}]interface{})
 	this.CopyErrorsToView(result, data)
 	return data["errors"].(map[string]string)
+}
+
+func (this *EntityValidator) GetValidationResults(result *EntityValidatorResult) []map[string]string {
+	data := make(map[interface{}]interface{})
+	this.CopyErrorsToView(result, data)
+	validations := data["errors"].(map[string]string)
+	results := []map[string]string{}
+	for k, v := range validations {
+		results = append(results, map[string]string{
+			"field":   k,
+			"message": v,
+		})
+	}
+	return results
 }
 
 func (this *EntityValidator) CopyErrorsToView(result *EntityValidatorResult, data map[interface{}]interface{}) {
