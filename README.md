@@ -207,53 +207,12 @@ type BaseController struct {
   Db orm.Ormer
   i18n.Locale     
 }
-
-```
-* Controller manager database transaction in actions (open, commit, rollback, close)
-
-### functions
-```
-OnEntity(viewName string, entity interface{})
-OnEntityError(viewName string, entity interface{}, message string)
-OnEntities(viewName string, entities interface{})
-OnResult(viewName string, result interface{})
-OnResults(viewName string, results interface{})
-OnJsonResult(result interface{})
-OnJsonResultWithMessage(result interface{}, message string)
-OnJsonResults(results interface{})
-OnJson(json support.JsonResult)
-OnJsonMap(jsonMap map[string]interface{})
-OnJsonParseForm(entity interface{})
-OnJsonError(message string)
-OnJsonOk(message string)
-OnJsonValidationError()
-OnTemplate(viewName string)
-OnRedirect(action string)
- OnRedirectError(action string, message string)
- OnRedirectSuccess(action string, message string)
- OnFlash(store bool)
- GetMessage(key string, args ...interface{}) string
- OnValidate(entity interface{}, plus func(validator *validation.Validation)) bool 
- OnParseForm(entity interface{})
- OnParseJson(entity interface{})
- IsJson() bool
- GetId() int64
- GetIntParam(key string) int64
- GetIntByKey(key string) int64
- GetStringByKey(key string) string
- GetDateByKey(key string) (time.Time, error)
- ParseDate(date string) (time.Time, error)
- ParseDateTime(date string) (time.Time, error)
- ParseJsonDate(date string) (time.Time, error)
- GetToken() string
- IsZeroDate(date time.Time) bool
- Log(format string, v ...interface{}) 
- GetLastUpdate() time.Time
 ```
   
 ## Session
 
 Model
+-----
 
 ```
 type Model interface {
@@ -261,10 +220,11 @@ type Model interface {
   TableName() string  
 }
 
-
 ```
 
 Page
+-----
+
 ```
 type Page struct {
   Offset int64
@@ -347,80 +307,190 @@ EagerForce(reply interface{}) error
 
 ### Criteria
 
-import "github.com/mobilemindtec/go-utils/v2/criteria" 
 
-```
-  criteria.New[ModelType](session).
-    OrderDesc("CreatedAt").
-    SameOrNone(func(results []*ModelType){
-      
-    }).
-    Fail(func(err error){
-      
-    }).
-    Done(func(){
-      
-    }).
-    Do()
-
-  criteria.New[ModelType](session).
-    Eq("Id", 1).
-    First(func(result *ModelType){
-
-    }).
-    None(func(){
-
-    }).
-    Fail(func(err error){
-
-    }).
-    Do()  
-``` 
 
 ### Optional
 
-```
 
-import "github.com/mobilemindtec/go-utils/v2/optional" 
-
-func doAnything() interface{} {
-
-  p, err := // do stuff
-
-  if err != nil {
-    return optional.NewFail(fmt.Errorf("Erro ao verificar existencia do prestador: %v", err))
-  }
-
-  if p != nil && p.IsPersisted() {
-    return optional.NewSomeEmpty()
-  } 
-
-  return optional.NewNone()
-}
-
-opt := doAnything()
-
-switch opt.(type) {
-  case optional.Some:
-    //optiona.GetItem(opt)
-    // do stuff
-  case optional.Nome:
-    // do stuff
-  case optional.Success:
-    //optiona.GetItem(opt)
-    // do stuff
-  case optional.Fail:
-    //GetFail(opt).ErrorString()
-    // do stuff
-  case optional.Left:
-    //optiona.GetItem(opt)
-    // do stuff
-  case optional.Right:
-    //optiona.GetItem(opt)
-    // do stuff
-}
-
-```
+		func doAnything() interface{} {
+		
+		  p, err := // do stuff
+		
+		  if err != nil {
+		    return optional.NewFail(fmt.Errorf("error"))
+		  }
+		
+		  return optional.NewNone()
+		}
+		
+		opt := doAnything()
+		
+		switch opt.(type) {
+		  case optional.Some:
+		    //optiona.GetItem(opt)
+		    // do stuff
+		  case optional.Nome:
+		    // do stuff
+		  case optional.Fail:
+		    //GetFail(opt).ErrorString()
+		    // do stuff
+		}
 
 
-## Optional
+## Pipeline
+
+		render := func (v interface{}) {
+			logs.Info("%v", v)
+		}
+		
+		pipe := pipeline.New()
+	
+		pipe.
+			ErrorHandler(func(f *optional.Fail){
+				// do anything on error
+			}).
+			ExitHandler(func() {
+				// do anything on exit none
+			}).
+			SuccessHandler(func(){
+				// do anything on success
+			}).
+			Next(func() interface{} {
+				return json.New(this.RawBody()) // next need return optional Some or Fail
+			}).
+			Next(func() interface{} {
+				
+				// get last result from pipe line ctx, or with next param
+				// each result is saved on ctx with step index. eg.: $0, $1, $2, $3
+				// Optionaly you can return optional.NewEmpty() to ignore step result
+				j := pipeline.GetCtxPtr[json.Json](pipe, "$0") 
+				return criteria.
+					New[Customer](this.Session).
+					Eq("Id", j.GetInt64("id")).
+					Rx().
+					First().
+					Get() // next need return optional Some or Fail
+			}).
+			Next(func() interface{} {
+				cupom := pipeline.GetCtxPtr[Cupom](pipe, "$1")
+				return session.New[CupomPtr](this.Session).Remove(cupom).Val()
+			}).
+			Run()
+		
+With validation
+---------------
+
+		type Cupom = models.Cupom
+		type CupomPtr = *Cupom
+		type Cupons = []CupomPtr
+		
+		func (this *BeegoController) Save() {
+		
+			render := this.RenderJson
+			pipe := pipeline.New()
+			ev := validator.New()
+		
+			ev.AddCustom(func(v *validation.Validation) {
+				m := pipeline.GetCtxPtr[Cupom](pipe, "$1")
+		
+				if m.PercentDiscount <= 0 && m.CashDiscount <= 0 {
+					v.SetError("Desconto", "Entre com um desconto válido")
+				}
+			})
+		
+			pipe.
+				ErrorHandler(render).
+				ExitHandler(func() {
+					render(optional.NewNone())
+				}).
+				SuccessHandler(func() {
+					cupom := pipeline.GetCtxPtr[Cupom](pipe, "$1")
+					render(optional.NewSome(cupom))
+				}).
+				Next(func() interface{} {
+					return json.New(this.RawBody())
+				}).
+				Next(func(j interface{}) interface{} {
+					opt := criteria.
+						New[Cupom](this.Session).
+						Eq("Id", j.(*json.Json).GetInt64("id")).
+						Rx().
+						First().
+						Get()
+					return optional.OrElseSome(opt, new(Cupom))
+				}).
+				Next(func(j interface{}, m interface{}) interface{} {
+					p := json.NewParser[Cupom]().
+						AddConverter(func(j *json.Json) {
+							// any json converter rule
+						})
+					return p.ParseJsonInto(j.(*json.Json), m.(CupomPtr)).Val()
+				}).
+				Next(func() interface{} {
+					cupom := pipeline.GetCtxPtr[Cupom](pipe, "$1")
+					return ev.Validate(cupom)
+				}).
+				Next(func() interface{} {
+					cupom := pipeline.GetCtxPtr[Cupom](pipe, "$1")				
+					return session.New[CupomPtr](this.Session).Persist(cupom).Val()
+				}).
+				Run()
+		}
+		
+
+## Foreatch	
+
+		foreach.
+			New[CupomPtr]().
+			By(100).
+			For(func(offset int) *optional.Optional[Cupons] {
+				return criteria.
+					New[Cupom](localSession).
+					Eq("Enabled", true).
+					Lt("LimitDate", util.DateNow().Format("2006-01-2")).
+					SetOffset(int64(offset)).
+					SetLimit(100).
+					OptAll()
+		
+			}).
+			EachOne(func(c CupomPtr) bool {
+		
+				c.Enabled = false
+		
+				session.
+					New[CupomPtr](localSession).
+					Update(c).
+					Val()
+		
+				return true // next?
+			}).
+			Do() // or return to pipeline Next. Pipile line call Foreach Do
+		
+
+## Task		
+
+		type Provider struct {
+			// stuff
+		}
+		
+		type Result struct {
+			Message String
+		}
+		
+		providers := []*Provider{ new(Provider), new(Provider), }
+		
+	
+		worker := func worker(provider *Provider, tg *task.TaskGroup[*Provider, *Result]) {
+			tg.AddResult(&Result{ Message: "result to collect each datasource item" })	
+		}
+		
+		tg := task.
+			New[*ProviderItem, *Result]().
+			SetDataSource(providers).
+			SetTask(worker).
+			SetOnReceive(func(r *Result){
+				// receive processed item
+			}).
+			Start() // wait task be completed
+	
+
