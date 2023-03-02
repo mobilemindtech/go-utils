@@ -99,7 +99,7 @@ func (this *CacheService) Put(key string, value interface{}) {
 		return
 	}
 
-	logs.Debug("%v cached saved on redis", key)
+	//logs.Debug("%v cached saved on redis", key)
 }
 
 func (this *CacheService) Get(key string, value interface{}) interface{} {
@@ -147,12 +147,12 @@ func (this *CacheService) MemoizeOpt(key string, value interface{}, cacheable fu
 
 	switch v.(type) {
 	case *optional.Some, *optional.Fail:
-		logs.Debug("CACHE: get key %v from cache", key)
+		//logs.Debug("CACHE: get key %v from cache", key)
 		return v
 	default:
 		data := cacheable()
 
-		logs.Debug("CACHE: try get key %v from cacheble func: %v", key, data)
+		//logs.Debug("CACHE: try get key %v from cacheble func: %v", key, data)
 
 		if data == nil {
 			return optional.NewNone()
@@ -247,7 +247,7 @@ func MemoizeVal[T any](srv *CacheService, key string, parser func(string) T, cac
 	switch v.(type) {
 	case *optional.Some:
 
-		logs.Debug("CACHE: get key %v from cache", key)
+		//logs.Debug("CACHE: get key %v from cache", key)
 
 		raw := v.(*optional.Some).Item.(string)
 		return parser(raw)
@@ -266,7 +266,7 @@ func TryGet[T any](srv *CacheService, key string, value interface{}) (T, bool) {
 	switch v.(type) {
 	case *optional.Some:
 
-		logs.Debug("CACHE: get key %v from cache", key)
+		//logs.Debug("CACHE: get key %v from cache", key)
 
 		r := v.(*optional.Some).Item
 

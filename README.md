@@ -438,7 +438,7 @@ With validation
 		}
 		
 
-## Foreatch	
+## Foreach	
 
 		foreach.
 			New[CupomPtr]().

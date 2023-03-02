@@ -1436,7 +1436,7 @@ func (this *WebController) PrepareUploadedFile(fileOriginalName string, fileName
 		fileName += "." + ext
 	}
 
-	path += string(os.PathSeparator) + fileName
+	path += fileName
 
 	logs.Trace("## save file on ", path)
 
