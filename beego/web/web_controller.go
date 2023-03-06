@@ -273,9 +273,12 @@ func (this *WebController) FlashRead() {
 
 func (this *WebController) Finish() {
 
-	logs.Trace("* Controller.Finish, Commit")
+	logs.Trace("Finish, Commit")
 
 	this.Session.Close()
+	this.Session = nil
+	this.CacheService.Close()
+	this.CacheService = nil
 
 	if app, ok := this.AppController.(NestFinisher); ok {
 		app.NestFinish()
@@ -284,10 +287,14 @@ func (this *WebController) Finish() {
 
 func (this *WebController) Finally() {
 
-	logs.Trace("* Controller.Finally, Rollback")
+	logs.Trace("Finally, Rollback")
 
 	if this.Session != nil {
 		this.Session.OnError().Close()
+	}
+
+	if this.CacheService != nil {
+		this.CacheService.Close()
 	}
 }
 

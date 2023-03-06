@@ -169,6 +169,11 @@ func (this *Criteria[T]) OptPage() *optional.Optional[*Page0[*T]] {
 		Data:       all})
 }
 
+func (this *Criteria[T]) SetRelatedSel(related ...string) *Criteria[T] {
+	this.Criteria.SetRelatedsSel(related...)
+	return this
+}
+
 func (this *Criteria[T]) All() ([]*T, error) {
 	return this.List()
 

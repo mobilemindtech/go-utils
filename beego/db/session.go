@@ -9,6 +9,7 @@ import (
 
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/core/logs"
+	"github.com/mobilemindtec/go-utils/v2/optional"
 )
 
 type SessionState int
@@ -120,6 +121,11 @@ func (this *Session) SetIgnoreTenantFilter() *Session {
 	return this
 }
 
+func (this *Session) SetUseTenantFilter(s bool) *Session {
+	this.IgnoreTenantFilter = !s
+	return this
+}
+
 func (this *Session) OnError() *Session {
 	this.SetError()
 	return this
@@ -169,6 +175,22 @@ func (this *Session) Open(withTx bool) error {
 		return this.OpenWithTx()
 	}
 	return this.OpenWithoutTx()
+}
+
+func (this *Session) WithTx() (*Session, error) {
+	return this, this.OpenTx()
+}
+
+func (this *Session) WithoutTx() (*Session, error) {
+	return this, this.OpenNoTx()
+}
+
+func (this *Session) OpenTxOpt() interface{} {
+	return optional.Make(this, this.OpenTx())
+}
+
+func (this *Session) OpenOpt() interface{} {
+	return optional.Make(this, this.OpenNoTx())
 }
 
 func (this *Session) OpenTx() error {

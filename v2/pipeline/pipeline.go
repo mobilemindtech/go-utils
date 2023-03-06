@@ -360,7 +360,7 @@ func (this *Pipe) Run() *Pipe {
 		default:
 
 			if iterable, ok := r.(foreach.Iterable); ok {
-				iterable.ErrorHandler(this.errorHandler)
+				iterable.SetErrorHandler(this.errorHandler)
 				iterable.Execute()
 			} else {
 				this.executeErrorHandler(optional.NewFailStr("action return has be Some | Fail | None. type %v is not allowed", reflect.TypeOf(r)))
@@ -416,4 +416,26 @@ func GetCtxPtr[T any](c interface{}, key string) *T {
 	default:
 		panic(errors.New("should be Pipe or PipeCtx"))
 	}
+}
+
+func IfCtx[T any](p *Pipe, key string, fn func(T)) {
+	if p.HasCtx(key) {
+		fn(GetCtx[T](p, key))
+	}
+}
+
+func IfCtxPtr[T any](p *Pipe, key string, fn func(*T)) {
+	if p.HasCtx(key) {
+		fn(GetCtxPtr[T](p, key))
+	}
+}
+
+func GetCtxOrNil[T any](p *Pipe, key string) *T {
+	var v *T
+
+	if p.HasCtx(key) {
+		return GetCtxPtr[T](p, key)
+	}
+
+	return v
 }

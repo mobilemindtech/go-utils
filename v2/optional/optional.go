@@ -188,6 +188,10 @@ func NewEmpty() *Empty {
 	return &Empty{}
 }
 
+func DoNext() *Empty {
+	return NewEmpty()
+}
+
 type None struct {
 }
 
@@ -229,6 +233,26 @@ func NewFailWithItem(err error, item interface{}) *Fail {
 
 func NewFailStr(format string, v ...interface{}) *Fail {
 	return &Fail{Error: errors.New(fmt.Sprintf(format, v...))}
+}
+
+func NextOrFail(val interface{}) interface{} {
+	return NewFailOrEmpty(val)
+}
+
+func NewFailOrEmpty(val interface{}) interface{} {
+
+	if val == nil || IsNilFixed(val) {
+		return NewEmpty()
+	}
+
+	switch val.(type) {
+	case error:
+		return NewFail(val.(error))
+	case *Fail:
+		return val.(*Fail)
+	}
+
+	return NewEmpty()
 }
 
 type Success struct {
@@ -408,6 +432,10 @@ func MakeSlice(val interface{}, err error) interface{} {
 	return NewNone()
 }
 
+func Make0(val interface{}) interface{} {
+	return Make(val, nil)
+}
+
 func Make(val interface{}, err error) interface{} {
 
 	if err != nil {
@@ -419,6 +447,8 @@ func Make(val interface{}, err error) interface{} {
 	}
 
 	switch val.(type) {
+	case error:
+		return NewFail(val.(error))
 	case bool:
 		if val.(bool) {
 			return NewSome(val)
