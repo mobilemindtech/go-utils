@@ -52,6 +52,7 @@ type Pipe struct {
 	steps          []*PipeStep
 	ctx            *ctx.Ctx
 	State          PipeState
+	fail           *optional.Fail
 }
 
 func New() *Pipe {
@@ -148,6 +149,9 @@ func (this *Pipe) configure() {
 
 	this.errorHandler = func(v *optional.Fail) {
 		this.State = StateError
+
+		this.fail = v
+
 		if fnErrorHandler != nil {
 			switch fnErrorHandler.(type) {
 			case util.ErrorFn:
@@ -377,6 +381,10 @@ func (this *Pipe) Run() *Pipe {
 
 func (this *Pipe) executeErrorHandler(v *optional.Fail) {
 	this.errorHandler.(util.FailFn)(v)
+}
+
+func (this *Pipe) GetFailOrNil() *optional.Fail {
+	return this.fail
 }
 
 func (this *Pipe) executeSuccessHandler() {
