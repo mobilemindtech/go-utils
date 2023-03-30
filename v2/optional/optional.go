@@ -4,12 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"time"
 )
 
 type Optional[T any] struct {
-	some *Some
-	none *None
-	fail *Fail
+	some  *Some
+	none  *None
+	fail  *Fail
+	empty *Empty
 }
 
 func WithSome[T any](v interface{}) *Optional[T] {
@@ -37,8 +39,13 @@ func WithFail[T any](v interface{}) *Optional[T] {
 		break
 	case error:
 		s = NewFail(v.(error))
+		break
 	case string:
 		s = NewFail(errors.New(v.(string)))
+		break
+	default:
+		s = NewFail(errors.New("error"))
+		break
 	}
 
 	return &Optional[T]{fail: s}
@@ -46,6 +53,10 @@ func WithFail[T any](v interface{}) *Optional[T] {
 
 func WithNone[T any]() *Optional[T] {
 	return &Optional[T]{none: NewNone()}
+}
+
+func WithEmpty[T any]() *Optional[T] {
+	return &Optional[T]{empty: NewEmpty()}
 }
 
 func TryMake[T any](val interface{}, err error) *Optional[T] {
@@ -74,6 +85,9 @@ func New[T any](val interface{}) *Optional[T] {
 	case *Fail:
 		opt.fail = val.(*Fail)
 		break
+	case *Empty:
+		opt.empty = val.(*Empty)
+		break
 	case error:
 		opt.fail = NewFail(val.(error))
 		break
@@ -85,6 +99,9 @@ func New[T any](val interface{}) *Optional[T] {
 			break
 		case *None:
 			opt.none = mkd.(*None)
+			break
+		case *Empty:
+			opt.empty = mkd.(*Empty)
 			break
 		case *Fail:
 			opt.fail = mkd.(*Fail)
@@ -126,6 +143,8 @@ func (this *Optional[T]) Val() interface{} {
 		return this.some
 	} else if this.none != nil {
 		return this.none
+	} else if this.empty != nil {
+		return this.empty
 	} else if this.fail != nil {
 		return this.fail
 	} else {
@@ -155,12 +174,16 @@ func (this *Optional[T]) IfNone(cb func()) *Optional[T] {
 }
 
 func (this *Optional[T]) IfEmpty(cb func()) *Optional[T] {
-	this.IfNone(cb)
+	if this.empty != nil || this.none == nil {
+		cb()
+	}
 	return this
 }
 
 func (this *Optional[T]) IfNonEmpty(cb func(T)) *Optional[T] {
-	this.IfSome(cb)
+	if this.some != nil {
+		cb(GetItem[T](this.some))
+	}
 	return this
 }
 
@@ -404,6 +427,12 @@ func IfEmpty[T any](e interface{}, cb func()) bool {
 	}
 }
 
+func IfEmptyOrElse[T any](e interface{}, emptyCb func(), elseCb func(T)) {
+	if !IfEmpty[T](e, emptyCb) {
+		elseCb(GetItem[T](e))
+	}
+}
+
 func IfFail[T any](e interface{}, cb func(error)) bool {
 	switch e.(type) {
 	case error:
@@ -479,6 +508,11 @@ func Make(val interface{}, err error) interface{} {
 			return NewSome(val)
 		}
 		return NewNone()
+	case time.Time:
+		if val.(time.Time).IsZero() {
+			return NewNone()
+		}
+		return NewSome(val)
 	default:
 		return NewSome(val)
 	}

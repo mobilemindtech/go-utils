@@ -59,6 +59,14 @@ func New() *Pipe {
 	return &Pipe{steps: []*PipeStep{}, results: []interface{}{}, ctx: ctx.New(), State: StateCreated}
 }
 
+func (this *Pipe) IsSuccess() bool {
+	return this.State == StateSuccess
+}
+
+func (this *Pipe) IsExit() bool {
+	return this.State == StateExit
+}
+
 func (this *Pipe) GetResults() []interface{} {
 	return this.results
 }
@@ -128,7 +136,7 @@ func (this *Pipe) Log(msg string, args ...interface{}) *Pipe {
 	return this
 }
 
-func (this *Pipe) Debug() *Pipe {
+func (this *Pipe) DebugOn() *Pipe {
 	this.steps = append(this.steps, &PipeStep{debug: true})
 	return this
 }

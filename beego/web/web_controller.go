@@ -208,6 +208,17 @@ func (this *WebController) AuthPrepare() {
 			return
 		}
 
+		if !tenant.Enabled {
+			logs.Error("ERROR: tenant ", tenant.Id, " - ", tenant.Name, " is disabled")
+
+			if this.IsTokenLoggedIn || this.IsJson() {
+				this.OnJsonError("operation not permitted to tenant")
+			} else {
+				this.OnErrorAny("/", "operation not permitted to tenant")
+			}
+			return
+		}
+
 		this.SetAuthTenant(tenant)
 
 		logs.Trace(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
@@ -400,7 +411,10 @@ func (this *WebController) RenderJsonResult(opt interface{}) {
 			this.OnJsonResult(it)
 		}
 		break
-	case *optional.None, *optional.Empty:
+	case *optional.Empty:
+		this.OnJsonResults([]interface{}{})
+		break
+	case *optional.None:
 		this.OnJson200()
 		break
 	case *optional.Fail:
@@ -874,8 +888,16 @@ func (this *WebController) ServerError() {
 	this.Ctx.Output.SetStatus(500)
 }
 
-func (this *WebController) BadRequest(data interface{}) {
+func (this *WebController) BadRequest() {
 	this.Ctx.Output.SetStatus(400)
+}
+
+func (this *WebController) Unauthorized() {
+	this.Ctx.Output.SetStatus(401)
+}
+
+func (this *WebController) Forbidden() {
+	this.Ctx.Output.SetStatus(403)
 }
 
 func (this *WebController) HasPath(paths ...string) bool {
@@ -1004,7 +1026,7 @@ func (this *WebController) GetId() int64 {
 func (this *WebController) GetParam(key string) string {
 
 	if !strings.HasPrefix(key, ":") {
-		key = fmt.Sprintf(":", key)
+		key = fmt.Sprintf(":%v", key)
 	}
 
 	return this.Ctx.Input.Param(key)

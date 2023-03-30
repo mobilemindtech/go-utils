@@ -122,6 +122,10 @@ func (this *Criteria[T]) OptAll() *optional.Optional[[]*T] {
 
 	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]*T)
 
+	if !this.Any {
+		return optional.WithEmpty[[]*T]()
+	}
+
 	return optional.WithSome[[]*T](all)
 }
 
@@ -135,6 +139,11 @@ func (this *Criteria[T]) OptFirst() *optional.Optional[*T] {
 	if this.Criteria.HasError {
 		return optional.WithFail[*T](this.Error)
 	}
+
+	if !this.Any {
+		return optional.WithNone[*T]()
+	}
+
 	return optional.WithSome[*T](this.Result.(*T))
 }
 
