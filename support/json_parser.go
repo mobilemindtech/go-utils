@@ -3,6 +3,7 @@ package support
 import (
   "github.com/mobilemindtec/go-utils/app/util"
   "github.com/beego/beego/v2/server/web/context"
+  "github.com/beego/beego/v2/core/logs"
   "encoding/json"
   "strconv"
   "strings"
@@ -17,7 +18,7 @@ import (
 type FormatType int64
 
 const (
-  FormatTypeFloat = iota + 1
+  FormatTypeFloat FormatType = iota + 1
   FormatTypeInt
   FormatTypeDate
   FormatTypeBool
@@ -133,7 +134,7 @@ func (this *JsonParser) formToJsonWithFieldsConfigs(ctx *context.Context, config
   }
 
   processValue := func(currentConfig *FormJsonConfig, value string) interface{} {
-    if currentConfig != nil && len(value) > 0 {
+    if currentConfig != nil {
 
       if currentConfig.Parser != nil {
         return currentConfig.Parser(value)
@@ -142,22 +143,39 @@ func (this *JsonParser) formToJsonWithFieldsConfigs(ctx *context.Context, config
             case FormatTypeFloat:
 
               if strings.Contains(value, ",") && strings.Contains(value, ".")  {
-                return strings.Replace(value, ",", ".", -1)
+
+                if strings.Index(value, ",") < strings.Index(value, ".") {
+                  return strings.Replace(value, ",", "", -1)
+                }
+                return strings.Replace(strings.Replace(value, ".", "", -1), ",", ".", -1)
+
               } else if strings.Contains(value, ",") {
-                return strings.Replace(value, ",", "", -1)
+                
+                return strings.Replace(value, ",", ".", -1)
+
+              } else if strings.TrimSpace(value) == "" {
+                return "0.0"
               }
 
               return value
               
             case FormatTypeInt:
+
+              if value == "" {
+                return "0"
+              }
+
               return value
 
             case FormatTypeDate:
-              auxDate, _ := util.DateParse(currentConfig.Layout, value)
-              jsonDateLayout := "2006-01-02T15:04:05-07:00"
 
-              if !auxDate.IsZero() {
-                return auxDate.Format(jsonDateLayout)
+              if len(value) > 0 {
+                auxDate, _ := util.DateParse(currentConfig.Layout, value)
+                jsonDateLayout := "2006-01-02T15:04:05-07:00"
+
+                if !auxDate.IsZero() {
+                  return auxDate.Format(jsonDateLayout)
+                }
               }
               return ""
 
@@ -175,12 +193,32 @@ func (this *JsonParser) formToJsonWithFieldsConfigs(ctx *context.Context, config
   }
 
   for key, val := range configsMap {
-    configs = append(configs, NewFormJsonConfig(key, FormatTypeDate).SetLayout(val))
+
+    switch val {
+    case "float": 
+      configs = append(configs, NewFormJsonConfig(key, FormatTypeFloat))
+      break
+    case "int": 
+      configs = append(configs, NewFormJsonConfig(key, FormatTypeInt))
+      break
+    case "bool": 
+      configs = append(configs, NewFormJsonConfig(key, FormatTypeBool))
+      break
+    default: 
+
+      if strings.Contains(val, "date:") {
+        configs = append(configs, NewFormJsonConfig(key, FormatTypeDate).SetLayout(strings.Split(val, ":")[1]))
+      } else {
+        logs.Error("Invalid format: %v. use [float | int | bool | date:DD/MM/YYYY]", val)
+      }
+
+      break      
+
+    }
+
   }
 
-  for k, v := range  data{
-
-    //this.Log("key %v, value = %v", k, v)
+  for k, v := range  data {
 
     if len(v) == 0 {
       continue
@@ -213,12 +251,10 @@ func (this *JsonParser) formToJsonWithFieldsConfigs(ctx *context.Context, config
 
             value := parent[key].(string)
 
-            if len(value) > 0 {
-              if currentConfig != nil {
-                parent[key] = processValue(currentConfig, value)
-              } else {
-                parent[key] = value
-              }
+            if currentConfig != nil {
+              parent[key] = processValue(currentConfig, value)
+            } else {
+              parent[key] = value
             }
           }
         }
@@ -230,7 +266,7 @@ func (this *JsonParser) formToJsonWithFieldsConfigs(ctx *context.Context, config
 
       value := v[0]
 
-      if currentConfig != nil && len(value) > 0 {
+      if currentConfig != nil {
         jsonMap[k] = processValue(currentConfig, value)
       } else {
         jsonMap[k] = value

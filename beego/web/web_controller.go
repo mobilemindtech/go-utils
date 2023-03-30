@@ -825,20 +825,38 @@ func (this *WebController) OnValidate(entity interface{}, custonValidation func(
 func (this *WebController) OnParseForm(entity interface{}) {
 	if err := this.ParseForm(entity); err != nil {
 		logs.Error("*******************************************")
-		logs.Error("***** ERROR on parse FORM to JSON: %v", err.Error())
+		logs.Error("***** ERROR parse FORM to JSON: %v", err.Error())
 		logs.Error("*******************************************")
 		this.Abort("500")
 	}
 }
 
 func (this *WebController) OnJsonParseForm(entity interface{}) {
-	this.OnJsonParseFormWithFieldsConfigs(entity, nil)
+	this.Form2Json(entity)
 }
 
+/**
+ * 
+ * use this.Form2JsonWithCnf(entity, map[string]string{ 
+ 	* 	"FloatFieldName": "float",
+ 	* 	"IntFieldName": "int",
+ 	* 	"BoolFieldName": "bool",
+ 	*   "DateFieldName": "date:layout", 
+ 	* })
+ * 
+ */
 func (this *WebController) OnJsonParseFormWithFieldsConfigs(entity interface{}, configs map[string]string) {
+	this.Form2JsonWithCnf(entity, configs)
+}
+
+func (this *WebController) Form2Json(entity interface{}) {
+	this.Form2JsonWithCnf(entity, nil)
+}
+
+func (this *WebController) Form2JsonWithCnf(entity interface{}, configs map[string]string) {
 	if err := this.FormToModelWithFieldsConfigs(this.Ctx, entity, configs); err != nil {
 		logs.Error("*******************************************")
-		logs.Error("***** ERROR on parse FORM to JSON: %v ", err.Error())
+		logs.Error("***** ERROR parse FORM to JSON: %v ", err.Error())
 		logs.Error("*******************************************")
 		this.Abort("500")
 	}
