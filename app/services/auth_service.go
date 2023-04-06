@@ -38,6 +38,18 @@ func (this *AuthService) IsRoot() bool{
 	return false
 }
 
+func IsRootUser(user *models.User) bool{
+	if user != nil && user.Roles != nil {
+		for _, it := range *user.Roles {
+			if it.Authority == "ROLE_ROOT" {
+				return true
+			}
+		}
+	}
+	
+	return false
+}
+
 func (this *AuthService) ValidPassword(password1 string, password2 string) error {
 
 	if len(strings.TrimSpace(password1)) == 0 {

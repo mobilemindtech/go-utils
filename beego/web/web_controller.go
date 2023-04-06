@@ -208,12 +208,13 @@ func (this *WebController) AuthPrepare() {
 			return
 		}
 
-		if !tenant.Enabled {
+		if !tenant.Enabled && !services.IsRootUser(this.GetAuthUser()) {
 			logs.Error("ERROR: tenant ", tenant.Id, " - ", tenant.Name, " is disabled")
 
 			if this.IsTokenLoggedIn || this.IsJson() {
 				this.OnJsonError("operation not permitted to tenant")
 			} else {
+				this.LogOut()				
 				this.OnErrorAny("/", "operation not permitted to tenant")
 			}
 			return
