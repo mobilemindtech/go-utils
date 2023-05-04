@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"reflect"
@@ -181,12 +182,20 @@ func (this *Session) WithTx() (*Session, error) {
 	return this, this.OpenTx()
 }
 
+func (this *Session) WithTxOpts(opts *sql.TxOptions) (*Session, error) {
+	return this, this.OpenTxWithOpts(opts)
+}
+
 func (this *Session) WithoutTx() (*Session, error) {
 	return this, this.OpenNoTx()
 }
 
 func (this *Session) OpenTxOpt() interface{} {
 	return optional.Make(this, this.OpenTx())
+}
+
+func (this *Session) OpenTxWithOptsOpt(opts *sql.TxOptions) interface{} {
+	return optional.Make(this, this.OpenTxWithOpts(opts))
 }
 
 func (this *Session) OpenOpt() interface{} {
@@ -197,9 +206,18 @@ func (this *Session) OpenTx() error {
 	return this.OpenWithTx()
 }
 
+func (this *Session) OpenTxWithOpts(opts *sql.TxOptions) error {
+	return this.OpenWithTxOpts(opts)
+}
+
 func (this *Session) OpenWithTx() error {
 	this.tx = true
 	return this.beginTx()
+}
+
+func (this *Session) OpenWithTxOpts(opts *sql.TxOptions) error {
+	this.tx = true
+	return this.beginTxWithOpts(opts)
 }
 
 func (this *Session) OpenNoTx() error {
@@ -226,79 +244,59 @@ func (this *Session) Close() {
 }
 
 func (this *Session) beginTx() error {
-
-	if err := this.database.Begin(); err != nil {
-
-		this.openDbError = true
-
-		logs.Debug("****************************************************************")
-		logs.Debug("****************************************************************")
-		logs.Debug("****************************************************************")
-		logs.Debug("************************ db begin error: %v", err.Error())
-		logs.Debug("****************************************************************")
-		logs.Debug("****************************************************************")
-		logs.Debug("****************************************************************")
-
-		return err
-		//panic(err)
-	}
-
-	//logs.Debug("tx openned = %v", this.tx)
-
-	return nil
-
+	return this.beginTxWithOpts(nil)
 }
 
-func (this *Session) Commit() error {
+func (this *Session) beginTxWithOpts(opts *sql.TxOptions) (err error) {
+
+	if err = this.database.Begin(); err != nil {
+		this.openDbError = true
+		logs.Error("****************************************************************")
+		logs.Error("************************ db begin error: %v", err.Error())
+		logs.Error("****************************************************************")
+	}
+
+	return err
+}
+
+func (this *Session) Commit() (err error) {
 
 	if this.Debug {
 		logs.Debug("## session commit ")
 	}
 
 	if this.database != nil {
-		if err := this.database.Commit(); err != nil {
-			logs.Debug("****************************************************************")
-			logs.Debug("****************************************************************")
-			logs.Debug("****************************************************************")
-			logs.Debug("************************ db commit error: %v", err.Error())
-			logs.Debug("****************************************************************")
-			logs.Debug("****************************************************************")
-			logs.Debug("****************************************************************")
+		if err = this.database.Commit(); err != nil {
+			logs.Error("****************************************************************")
+			logs.Error("************************ db commit error: %v", err.Error())
+			logs.Error("****************************************************************")
 			this.Rollback()
-			//panic(err)
-			return err
 		}
 		this.database = nil
 	}
 
-	return nil
+	return err
 }
 
-func (this *Session) Rollback() error {
+func (this *Session) Rollback() (err error) {
 
 	if this.Debug {
 		logs.Debug("## session rollback ")
 	}
 
-	//logs.Debug("## session rollback ")
-
-	logs.Debug("** Session Rollback ")
+	logs.Debug("** session rollback")
 
 	if this.database != nil {
-		if err := this.database.Rollback(); err != nil {
-			logs.Debug("****************************************************************")
-			logs.Debug("****************************************************************")
-			logs.Debug("****************************************************************")
-			logs.Debug("************************ db roolback error: %v", err.Error())
-			logs.Debug("****************************************************************")
-			logs.Debug("****************************************************************")
-			logs.Debug("****************************************************************")
-			return err
+		if err = this.database.Rollback(); err != nil {
+			logs.Error("****************************************************************")
+			logs.Error("************************ db roolback error: %v", err.Error())
+			logs.Error("****************************************************************")
 		}
 		this.database = nil
 	}
 
-	return nil
+	return err
+
 }
 
 func (this *Session) Save(entity interface{}) error {
@@ -1387,7 +1385,7 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
 
 	//logs.Debug("does not authorize data access")
 	//logs.Debug("## not set tenant")
-	return false || tenantFieldNotFound || ignoreAuthorizedTenantCheckError
+	return tenantFieldNotFound || ignoreAuthorizedTenantCheckError
 }
 
 func (this *Session) HasFilterTenant(reply interface{}) bool {

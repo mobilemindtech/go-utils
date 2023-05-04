@@ -6,6 +6,8 @@ import (
 
 	"reflect"
 
+	"runtime/debug"
+
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/mobilemindtec/go-utils/v2/ctx"
 	"github.com/mobilemindtec/go-utils/v2/foreach"
@@ -216,7 +218,7 @@ func (this *Pipe) Run() *Pipe {
 	defer func() {
 
 		if r := recover(); r != nil {
-			logs.Info("Pipeline recover: ", r)
+			logs.Info("Pipeline recover: %v, StackTrae: %v", r, string(debug.Stack()))
 
 			this.executeErrorHandler(optional.NewFailStr("%v", r))
 		}
@@ -241,10 +243,7 @@ func (this *Pipe) Run() *Pipe {
 		}
 
 		if step.debug {
-			logs.Info("Step: %v, results: %v", i, len(this.results))
-			for j, r := range this.results {
-				logs.Info("Result %v: %v", j, r)
-			}
+			logs.Info("Step: %v, results size: %v, results: %v", i, len(this.results), this.results)
 			continue
 		}
 

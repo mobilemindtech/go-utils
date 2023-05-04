@@ -185,8 +185,23 @@ func (this *Criteria[T]) SetRelatedSel(related ...string) *Criteria[T] {
 
 func (this *Criteria[T]) All() ([]*T, error) {
 	return this.List()
-
 }
+
+func (this *Criteria[T]) Each(each func(*T)) error {
+
+	all, err := this.All()
+
+	if err != nil {
+		return err
+	}
+
+	for _, it := range all {
+		each(it)
+	}
+
+	return nil
+}
+
 func (this *Criteria[T]) List() ([]*T, error) {
 	this.Criteria.List()
 	return this.GetResults()

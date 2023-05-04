@@ -214,7 +214,7 @@ func (this *WebController) AuthPrepare() {
 			if this.IsTokenLoggedIn || this.IsJson() {
 				this.OnJsonError("operation not permitted to tenant")
 			} else {
-				this.LogOut()				
+				this.LogOut()
 				this.OnErrorAny("/", "operation not permitted to tenant")
 			}
 			return
@@ -502,6 +502,15 @@ func (this *WebController) RenderJson(opt interface{}) {
 func (this *WebController) OnJsonResult(result interface{}) {
 	this.Data["json"] = &support.JsonResult{Result: result, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()}
 	this.ServeJSON()
+}
+
+func (this *WebController) GetJsonResult() (*support.JsonResult, bool) {
+	if this.Data["json"] != nil {
+		if j, ok := this.Data["json"].(*support.JsonResult); ok {
+			return j, ok
+		}
+	}
+	return nil, false
 }
 
 func (this *WebController) OnJsonMessage(format string, v ...interface{}) {
@@ -837,15 +846,15 @@ func (this *WebController) OnJsonParseForm(entity interface{}) {
 }
 
 /**
- * 
- * use this.Form2JsonWithCnf(entity, map[string]string{ 
- 	* 	"FloatFieldName": "float",
- 	* 	"IntFieldName": "int",
- 	* 	"BoolFieldName": "bool",
- 	*   "DateFieldName": "date:layout", 
- 	* })
- * 
- */
+*
+* use this.Form2JsonWithCnf(entity, map[string]string{
+	* 	"FloatFieldName": "float",
+	* 	"IntFieldName": "int",
+	* 	"BoolFieldName": "bool",
+	*   "DateFieldName": "date:layout",
+	* })
+*
+*/
 func (this *WebController) OnJsonParseFormWithFieldsConfigs(entity interface{}, configs map[string]string) {
 	this.Form2JsonWithCnf(entity, configs)
 }
