@@ -30,11 +30,11 @@ type CacheService struct {
 
 func New() *CacheService {
 	v := &CacheService{duration: DefaultDuration}
-	v.init()
+	v.Init()
 	return v
 }
 
-func (this *CacheService) init() {
+func (this *CacheService) Init() {
 
 	sessionproviderconfig, _ := beego.AppConfig.String("sessionproviderconfig")
 	this.sessionKashKey, _ = beego.AppConfig.String("cachesessionhashkey")
@@ -251,6 +251,24 @@ func MemoizeVal[T any](srv *CacheService, key string, parser func(string) T, cac
 
 		raw := v.(*optional.Some).Item.(string)
 		return parser(raw)
+
+	default:
+		value := cacheable()
+		srv.Put(key, value)
+		return value
+	}
+}
+
+func MemoizeStr(srv *CacheService, key string, cacheable func() string) string {
+	v := srv.GetVal(key)
+
+	switch v.(type) {
+	case *optional.Some:
+
+		//logs.Debug("CACHE: get key %v from cache", key)
+
+		raw := v.(*optional.Some).Item.(string)
+		return raw
 
 	default:
 		value := cacheable()

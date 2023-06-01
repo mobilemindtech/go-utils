@@ -59,8 +59,12 @@ func WithEmpty[T any]() *Optional[T] {
 	return &Optional[T]{empty: NewEmpty()}
 }
 
-func TryMake[T any](val interface{}, err error) *Optional[T] {
-	if err != nil {
+func NewE[T any](val interface{}, err interface{}) *Optional[T] {
+	return TryMake[T](val, err)
+}
+
+func TryMake[T any](val interface{}, err interface{}) *Optional[T] {
+	if !IsNilFixed(err) {
 		return New[T](err)
 	}
 	return New[T](val)
@@ -112,6 +116,14 @@ func New[T any](val interface{}) *Optional[T] {
 		break
 	}
 	return &opt
+}
+
+func (this *Optional[T]) GetFail() *Fail {
+	return this.fail
+}
+
+func (this *Optional[T]) GetSome() *Some {
+	return this.some
 }
 
 func (this *Optional[T]) OrElse(v T) T {
@@ -187,21 +199,29 @@ func (this *Optional[T]) IfNonEmpty(cb func(T)) *Optional[T] {
 	return this
 }
 
+func (this *Optional[T]) IfOrElse(cbSome func(T), cbNone func()) *Optional[T] {
+
+	this.IfNonEmpty(cbSome)
+	this.IfEmpty(cbNone)
+
+	return this
+}
+
 /*
 func (this *Optional[T]) Else(cb func()) *Optional[T] {
 	cb()
 	return this
 }*/
 
-func Map[F any, T any](opt *Optional[F], fn func(*Optional[F]) T, orElse ...func() T) T {
+func Map[F any, T any](opt *Optional[F], fn func(F) *Optional[T], orElse ...func() *Optional[T]) *Optional[T] {
 	var x T
 	if opt.Any() {
-		return fn(opt)
+		return fn(opt.Get())
 	}
 	if len(orElse) > 0 {
 		return orElse[0]()
 	}
-	return x
+	return New[T](x)
 }
 
 type Empty struct {
@@ -405,6 +425,10 @@ func OrElseSome(e interface{}, v interface{}) *Some {
 		return e.(*Some)
 	}
 	return NewSome(v)
+}
+
+func Just[T any](e interface{}) *Optional[T] {
+	return New[T](e)
 }
 
 func IfNonEmpty[T any](e interface{}, cb func(T)) bool {

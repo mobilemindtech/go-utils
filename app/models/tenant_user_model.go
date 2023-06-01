@@ -1,340 +1,329 @@
 package models
 
 import (
-  "github.com/mobilemindtec/go-utils/beego/db"
-  "github.com/beego/beego/v2/client/orm"
-  "time"
+	"time"
+
+	"github.com/beego/beego/v2/client/orm"
+	"github.com/mobilemindtec/go-utils/beego/db"
 )
 
-type TenantUser struct{
-    
-  Id int64 `form:"-" json:",string,omitempty"`
-  CreatedAt time.Time `orm:"auto_now_add;type(datetime)" json:"-"`
-  UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"-"`      
+type TenantUser struct {
+	Id        int64     `form:"-" json:",string,omitempty"`
+	CreatedAt time.Time `orm:"auto_now_add;type(datetime)" json:"-"`
+	UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"-"`
 
-  Enabled bool `orm:"" valid:"Required;" form:"" json:",string,omitempty"`
-  Tenant *Tenant `orm:"rel(fk);on_delete(do_nothing)" valid:"Required" form:"" goutils:"no_set_tenant;no_filter_tenant"`
-  User *User `orm:"rel(fk);on_delete(do_nothing)" valid:"Required" form:",select"`
+	Enabled bool    `orm:"" valid:"Required;" form:"" json:",string,omitempty"`
+	Tenant  *Tenant `orm:"rel(fk);on_delete(do_nothing)" valid:"Required" form:"" goutils:"no_set_tenant;no_filter_tenant"`
+	User    *User   `orm:"rel(fk);on_delete(do_nothing)" valid:"Required" form:",select"`
 
-  Admin bool `orm:"" valid:"Required;" form:"" json:",string,omitempty"`
+	Admin bool `orm:"" valid:"Required;" form:"" json:",string,omitempty"`
 
-  Session *db.Session `orm:"-"`
+	Session *db.Session `orm:"-" inject:""`
 }
 
-
-func (this *TenantUser) TableName() string{
-  return "tenant_users"
+func (this *TenantUser) TableName() string {
+	return "tenant_users"
 }
 
-func NewTenantUser(session *db.Session) *TenantUser{
-  return &TenantUser{ Session: session }
+func NewTenantUser(session *db.Session) *TenantUser {
+	return &TenantUser{Session: session}
 }
 
-func (this *TenantUser) IsPersisted() bool{
-  return this.Id > 0
+func (this *TenantUser) IsPersisted() bool {
+	return this.Id > 0
 }
 
 func (this *TenantUser) LoadRelated(entity *TenantUser) {
-  this.Session.GetDb().LoadRelated(entity, "Tenant")
-  this.Session.GetDb().LoadRelated(entity, "User")
+	this.Session.GetDb().LoadRelated(entity, "Tenant")
+	this.Session.GetDb().LoadRelated(entity, "User")
 }
 
-func (this *TenantUser) ListByTenant(tenant *Tenant) (*[]*TenantUser , error) { 
-  var results []*TenantUser
+func (this *TenantUser) ListByTenant(tenant *Tenant) (*[]*TenantUser, error) {
+	var results []*TenantUser
 
-  query, err := this.Session.Query(this)
+	query, err := this.Session.Query(this)
 
+	if err != nil {
+		return nil, err
+	}
 
-  if err != nil {
-    return nil, err
-  }
+	query = query.Filter("Tenant", tenant).RelatedSel("User")
 
-  query = query.Filter("Tenant", tenant).RelatedSel("User")
+	if err := this.Session.ToList(query, &results); err != nil {
+		return nil, err
+	}
 
-  if err := this.Session.ToList(query, &results); err != nil {
-    return nil, err
-  }
-
-  return &results, err
+	return &results, err
 }
 
-func (this *TenantUser) ListActivesByTenant(tenant *Tenant) (*[]*TenantUser , error) { 
-  var results []*TenantUser
+func (this *TenantUser) ListActivesByTenant(tenant *Tenant) (*[]*TenantUser, error) {
+	var results []*TenantUser
 
-  query, err := this.Session.Query(this)
+	query, err := this.Session.Query(this)
 
+	if err != nil {
+		return nil, err
+	}
 
-  if err != nil {
-    return nil, err
-  }
+	query = query.Filter("Tenant", tenant).Filter("Enabled", true).RelatedSel("Tenant")
 
-  query = query.Filter("Tenant", tenant).Filter("Enabled", true).RelatedSel("Tenant")
+	if err := this.Session.ToList(query, &results); err != nil {
+		return nil, err
+	}
 
-  if err := this.Session.ToList(query, &results); err != nil {
-    return nil, err
-  }
-
-  return &results, err
+	return &results, err
 }
 
+func (this *TenantUser) ListByUser(user *User) (*[]*TenantUser, error) {
+	var results []*TenantUser
 
-func (this *TenantUser) ListByUser(user *User) (*[]*TenantUser , error) { 
-  var results []*TenantUser
+	query, err := this.Session.Query(this)
 
-  query, err := this.Session.Query(this)
+	if err != nil {
+		return nil, err
+	}
 
+	query = query.Filter("User", user).RelatedSel("Tenant")
 
-  if err != nil {
-    return nil, err
-  }
+	if err := this.Session.ToList(query, &results); err != nil {
+		return nil, err
+	}
 
-  query = query.Filter("User", user).RelatedSel("Tenant")
-
-  if err := this.Session.ToList(query, &results); err != nil {
-    return nil, err
-  }
-
-  return &results, err
+	return &results, err
 }
 
-func (this *TenantUser) ListByUserAdmin(user *User) (*[]*TenantUser , error) { 
-  var results []*TenantUser
+func (this *TenantUser) ListByUserAdmin(user *User) (*[]*TenantUser, error) {
+	var results []*TenantUser
 
-  query, err := this.Session.Query(this)
+	query, err := this.Session.Query(this)
 
+	if err != nil {
+		return nil, err
+	}
 
-  if err != nil {
-    return nil, err
-  }
+	query = query.Filter("User", user).Filter("Admin", true).RelatedSel("Tenant")
 
-  query = query.Filter("User", user).Filter("Admin", true).RelatedSel("Tenant")
+	if err := this.Session.ToList(query, &results); err != nil {
+		return nil, err
+	}
 
-  if err := this.Session.ToList(query, &results); err != nil {
-    return nil, err
-  }
-
-  return &results, err
+	return &results, err
 }
 
-func (this *TenantUser) ListActivesByUser(user *User) (*[]*TenantUser , error) { 
-  var results []*TenantUser
+func (this *TenantUser) ListActivesByUser(user *User) (*[]*TenantUser, error) {
+	var results []*TenantUser
 
-  query, err := this.Session.Query(this)
+	query, err := this.Session.Query(this)
 
+	if err != nil {
+		return nil, err
+	}
 
-  if err != nil {
-    return nil, err
-  }
+	query = query.Filter("User", user).Filter("Enabled", true).RelatedSel("Tenant")
 
-  query = query.Filter("User", user).Filter("Enabled", true).RelatedSel("Tenant")
+	if err := this.Session.ToList(query, &results); err != nil {
+		return nil, err
+	}
 
-  if err := this.Session.ToList(query, &results); err != nil {
-    return nil, err
-  }
-
-  return &results, err
+	return &results, err
 }
 
-func (this *TenantUser) List() (*[]*TenantUser , error) { 
-  var results []*TenantUser
-  err := this.Session.List(this, &results)
-  return &results, err
+func (this *TenantUser) List() (*[]*TenantUser, error) {
+	var results []*TenantUser
+	err := this.Session.List(this, &results)
+	return &results, err
 }
 
 func (this *TenantUser) FindByUserAndTenant(user *User, tenant *Tenant) (*TenantUser, error) {
-  result := new(TenantUser)
+	result := new(TenantUser)
 
-  query, err := this.Session.Query(this)
+	query, err := this.Session.Query(this)
 
-  if err != nil {
-    return nil, err
-  }
+	if err != nil {
+		return nil, err
+	}
 
-  err = query.Filter("User", user).Filter("Tenant", tenant).One(result)
+	err = query.Filter("User", user).Filter("Tenant", tenant).One(result)
 
-  if err == orm.ErrNoRows {
-    return nil, nil
-  } else if err == orm.ErrMultiRows {
-    return nil, err
-  }
+	if err == orm.ErrNoRows {
+		return nil, nil
+	} else if err == orm.ErrMultiRows {
+		return nil, err
+	}
 
-  return result, err
+	return result, err
 }
 
 func (this *TenantUser) FindByAdminUserAndTenant(user *User, tenant *Tenant) (*TenantUser, error) {
-  result := new(TenantUser)
+	result := new(TenantUser)
 
-  query, err := this.Session.Query(this)
+	query, err := this.Session.Query(this)
 
-  if err != nil {
-    return nil, err
-  }
+	if err != nil {
+		return nil, err
+	}
 
-  err = query.Filter("User", user).Filter("Tenant", tenant).Filter("Admin", true).One(result)
+	err = query.Filter("User", user).Filter("Tenant", tenant).Filter("Admin", true).One(result)
 
-  if err == orm.ErrNoRows {
-    return nil, nil
-  } else if err == orm.ErrMultiRows {
-    return nil, err
-  }
+	if err == orm.ErrNoRows {
+		return nil, nil
+	} else if err == orm.ErrMultiRows {
+		return nil, err
+	}
 
-  return result, err
+	return result, err
 }
 
-func (this *TenantUser) GetFirstTenant(user *User) (*Tenant , error) { 
-  var results []*TenantUser
+func (this *TenantUser) GetFirstTenant(user *User) (*Tenant, error) {
+	var results []*TenantUser
 
-  query, err := this.Session.Query(this)
+	query, err := this.Session.Query(this)
 
+	if err != nil {
+		return nil, err
+	}
 
-  if err != nil {
-    return nil, err
-  }
+	query = query.Filter("User", user).Filter("Enabled", true).RelatedSel("Tenant")
+	if err := this.Session.ToList(query, &results); err != nil {
+		return nil, err
+	}
 
-  query = query.Filter("User", user).Filter("Enabled", true).RelatedSel("Tenant")
-  if err := this.Session.ToList(query, &results); err != nil {
-    return nil, err
-  }
+	if len(results) > 0 {
+		return results[0].Tenant, nil
+	}
 
-  if len(results) > 0 {
-    return results[0].Tenant, nil
-  }
-
-  return nil, nil
+	return nil, nil
 }
 
-func (this *TenantUser) HasActiveTenant(user *User) (bool , error) { 
+func (this *TenantUser) HasActiveTenant(user *User) (bool, error) {
 
-  tenant, err := this.GetFirstTenant(user)
+	tenant, err := this.GetFirstTenant(user)
 
-  return tenant != nil && tenant.IsPersisted(), err
+	return tenant != nil && tenant.IsPersisted(), err
 }
 
-func (this *TenantUser) Create(user *User, tenant *Tenant) error { 
+func (this *TenantUser) Create(user *User, tenant *Tenant) error {
 
-  entity, err := this.FindByUserAndTenant(user, tenant)
+	entity, err := this.FindByUserAndTenant(user, tenant)
 
-  if err != nil && err != orm.ErrNoRows {
-    return err
-  }
+	if err != nil && err != orm.ErrNoRows {
+		return err
+	}
 
-  if entity != nil && entity.IsPersisted() {
-    return nil
-  }
+	if entity != nil && entity.IsPersisted() {
+		return nil
+	}
 
-  entity = &TenantUser{ User: user, Tenant: tenant, Enabled: true }
+	entity = &TenantUser{User: user, Tenant: tenant, Enabled: true}
 
-  return this.Session.Save(entity)
+	return this.Session.Save(entity)
 }
 
-func (this *TenantUser) Remove(user *User, tenant *Tenant) error { 
+func (this *TenantUser) Remove(user *User, tenant *Tenant) error {
 
-  entity, err := this.FindByUserAndTenant(user, tenant)
+	entity, err := this.FindByUserAndTenant(user, tenant)
 
-  if err != nil && err != orm.ErrNoRows {
-    return err
-  }
+	if err != nil && err != orm.ErrNoRows {
+		return err
+	}
 
-  if entity != nil && entity.IsPersisted() {
-    return this.Session.Remove(entity)
-  }
+	if entity != nil && entity.IsPersisted() {
+		return this.Session.Remove(entity)
+	}
 
-  return nil
+	return nil
 }
 
-func (this *TenantUser) RemoveAllByUser(user *User) error { 
+func (this *TenantUser) RemoveAllByUser(user *User) error {
 
-  results, err := this.ListByUser(user)
+	results, err := this.ListByUser(user)
 
-  if err != nil && err != orm.ErrNoRows {
-    return err
-  }
+	if err != nil && err != orm.ErrNoRows {
+		return err
+	}
 
-  for _, it := range *results {
-    if err := this.Session.Remove(it); err != nil {
-      return err
-    }
-  }
+	for _, it := range *results {
+		if err := this.Session.Remove(it); err != nil {
+			return err
+		}
+	}
 
-  return nil
+	return nil
 }
 
-func (this *TenantUser) RemoveAllByTenant(tenant *Tenant) error { 
+func (this *TenantUser) RemoveAllByTenant(tenant *Tenant) error {
 
-  results, err := this.ListByTenant(tenant)
+	results, err := this.ListByTenant(tenant)
 
-  if err != nil && err != orm.ErrNoRows {
-    return err
-  }
+	if err != nil && err != orm.ErrNoRows {
+		return err
+	}
 
-  for _, it := range *results {
-    if err := this.Session.Remove(it); err != nil {
-      return err
-    }
-  }
+	for _, it := range *results {
+		if err := this.Session.Remove(it); err != nil {
+			return err
+		}
+	}
 
-  return nil
+	return nil
 }
-
 
 func (this *TenantUser) ToUsers(results []*TenantUser) []*User {
-  users := []*User{}
+	users := []*User{}
 
-  for _, it := range results{
-    users = append(users, it.User)
-  }
+	for _, it := range results {
+		users = append(users, it.User)
+	}
 
-  return users
+	return users
 }
-
 
 func (this *TenantUser) ToTenants(results []*TenantUser) []*Tenant {
-  tenants := []*Tenant{}
+	tenants := []*Tenant{}
 
-  for _, it := range results{
-    tenants = append(tenants, it.Tenant)
-  }
+	for _, it := range results {
+		tenants = append(tenants, it.Tenant)
+	}
 
-  return tenants
+	return tenants
 }
 
+func (this *TenantUser) ListUsersByTenant(tenant *Tenant) ([]*User, error) {
+	results, err := this.ListByTenant(tenant)
 
-func (this *TenantUser) ListUsersByTenant(tenant *Tenant) ([]*User , error) { 
-  results, err := this.ListByTenant(tenant)
+	if err != nil {
+		return nil, err
+	}
 
-  if err != nil {
-    return nil, err
-  }
-
-  return this.ToUsers(*results), nil
+	return this.ToUsers(*results), nil
 }
 
-func (this *TenantUser) ListUsersActivesByTenant(tenant *Tenant) ([]*User , error) { 
-  results, err := this.ListActivesByTenant(tenant)
+func (this *TenantUser) ListUsersActivesByTenant(tenant *Tenant) ([]*User, error) {
+	results, err := this.ListActivesByTenant(tenant)
 
-  if err != nil {
-    return nil, err
-  }
+	if err != nil {
+		return nil, err
+	}
 
-  return this.ToUsers(*results), nil
+	return this.ToUsers(*results), nil
 }
 
-func (this *TenantUser) ListTenantsByUser(user *User) ([]*Tenant , error) { 
-  results, err := this.ListByUser(user)
+func (this *TenantUser) ListTenantsByUser(user *User) ([]*Tenant, error) {
+	results, err := this.ListByUser(user)
 
-  if err != nil {
-    return nil, err
-  }
+	if err != nil {
+		return nil, err
+	}
 
-  return this.ToTenants(*results), nil
+	return this.ToTenants(*results), nil
 }
 
-func (this *TenantUser) ListTenantsActivesByUser(user *User) ([]*Tenant , error) { 
-  results, err := this.ListActivesByUser(user)
+func (this *TenantUser) ListTenantsActivesByUser(user *User) ([]*Tenant, error) {
+	results, err := this.ListActivesByUser(user)
 
-  if err != nil {
-    return nil, err
-  }
+	if err != nil {
+		return nil, err
+	}
 
-  return this.ToTenants(*results), nil
+	return this.ToTenants(*results), nil
 }

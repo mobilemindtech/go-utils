@@ -410,7 +410,21 @@ func (this *Session) Remove(entity interface{}) error {
 }
 
 func (this *Session) Load(entity interface{}) (bool, error) {
+	if this.IsNil(entity) {
+		return false, nil
+	}
 	return this.Get(entity)
+}
+
+func (this *Session) LoadBatch(entities ...interface{}) error {
+
+	for _, it := range entities {
+		if _, err := this.Load(it); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (this *Session) Get(entity interface{}) (bool, error) {
@@ -1246,14 +1260,22 @@ func (this *Session) HasTenant() bool {
 
 func (this *Session) isTenantNil() bool {
 
-	isNil := true
+	/*isNil := true
 
 	if this.Tenant != nil {
 		value := reflect.ValueOf(this.Tenant)
 		isNil = value.IsNil()
-	}
+	}*/
 
-	return isNil
+	return this.IsNil(this.Tenant)
+}
+
+func (this *Session) IsNil(e interface{}) bool {
+	if e == nil {
+		return true
+	}
+	value := reflect.ValueOf(e)
+	return value.IsNil()
 }
 
 func (this *Session) isSetTenant(reply interface{}) bool {

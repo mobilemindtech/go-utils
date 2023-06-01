@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"reflect"
+
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/core/validation"
 	beego "github.com/beego/beego/v2/server/web"
@@ -24,8 +26,9 @@ import (
 	"github.com/mobilemindtec/go-utils/json"
 	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-utils/v2/criteria"
+	"github.com/mobilemindtec/go-utils/v2/ioc"
 	"github.com/mobilemindtec/go-utils/v2/optional"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 type WebController struct {
@@ -33,20 +36,20 @@ type WebController struct {
 	support.JsonParser
 	i18n.Locale
 
-	EntityValidator *validator.EntityValidator
+	EntityValidator *validator.EntityValidator `inject:""`
 	Flash           *beego.FlashData
-	Session         *db.Session
+	Session         *db.Session `inject:""`
 	ViewPath        string
 
 	// models
-	ModelAuditor    *models.Auditor
-	ModelCidade     *models.Cidade
-	ModelEstado     *models.Estado
-	ModelRole       *models.Role
-	ModelTenant     *models.Tenant
-	ModelUser       *models.User
-	ModelTenantUser *models.TenantUser
-	ModelUserRole   *models.UserRole
+	ModelAuditor    *models.Auditor    `inject:""`
+	ModelCidade     *models.Cidade     `inject:""`
+	ModelEstado     *models.Estado     `inject:""`
+	ModelRole       *models.Role       `inject:""`
+	ModelTenant     *models.Tenant     `inject:""`
+	ModelUser       *models.User       `inject:""`
+	ModelTenantUser *models.TenantUser `inject:""`
+	ModelUserRole   *models.UserRole   `inject:""`
 
 	defaultPageLimit int64
 
@@ -66,10 +69,12 @@ type WebController struct {
 
 	DoNotLoadTenantsOnSession bool
 
-	CacheService            *cache.CacheService
-	Character               *support.Character
+	CacheService            *cache.CacheService `inject:""`
+	Character               *support.Character  `inject:""`
 	CacheKeysDeleteOnLogOut []string
 	UploadPathDestination   string
+
+	Container *ioc.Container
 }
 
 func init() {
@@ -104,6 +109,22 @@ func (this *WebController) loadLang() {
 // Prepare implemented Prepare() method for WebController.
 // It's used for language option check and setting.
 func (this *WebController) Prepare() {
+
+	this.Container = ioc.New()
+
+	this.Container.AddFactory(reflect.TypeOf(db.Session{}), func(env string) interface{} {
+		return this.WebControllerCreateSession()
+	})
+
+	this.Container.AddFactory(reflect.TypeOf(validator.EntityValidator{}), func(env string) interface{} {
+		return validator.NewEntityValidator(this.Lang, this.ViewPath)
+	})
+
+	this.Container.AddFactory(reflect.TypeOf(services.AuthService{}), func(env string) interface{} {
+		return services.NewAuthService(this.GetAuthUser())
+	})
+
+	//this.Container.Inject(this)
 
 	this.CacheService = cache.New()
 	this.Character = support.NewCharacter()
@@ -237,6 +258,7 @@ func (this *WebController) AuthPrepare() {
 		this.Data["UserInfo"] = this.GetAuthUser()
 		this.Data["Tenant"] = this.GetAuthTenant()
 
+		//ioc.Get[services.AuthService](this.Container)
 		this.Auth = services.NewAuthService(this.GetAuthUser())
 	}
 
@@ -438,7 +460,6 @@ func (this *WebController) RenderJson(opt interface{}) {
 
 	switch opt.(type) {
 	case *optional.Some:
-
 		someVal := opt.(*optional.Some).Item
 
 		switch someVal.(type) {
@@ -454,6 +475,10 @@ func (this *WebController) RenderJson(opt interface{}) {
 		break
 	case *optional.None, *optional.Empty:
 		statusCodeResult = 404
+		dataResult = map[string]interface{}{
+			"error":   true,
+			"message": "not found",
+		}
 		break
 	case *optional.Fail:
 
