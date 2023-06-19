@@ -599,7 +599,7 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 					cond = cond.Or(pathName, criteria.Value)
 				}
 			}
-
+      
 			if this.Debug {
 				logs.Debug("*********************************************************")
 				logs.Debug("** set condition and or %v ", pathName)

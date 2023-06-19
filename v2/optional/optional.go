@@ -186,7 +186,7 @@ func (this *Optional[T]) IfNone(cb func()) *Optional[T] {
 }
 
 func (this *Optional[T]) IfEmpty(cb func()) *Optional[T] {
-	if this.empty != nil || this.none == nil {
+	if this.empty != nil || this.none != nil {
 		cb()
 	}
 	return this
@@ -213,7 +213,7 @@ func (this *Optional[T]) Else(cb func()) *Optional[T] {
 	return this
 }*/
 
-func Map[F any, T any](opt *Optional[F], fn func(F) *Optional[T], orElse ...func() *Optional[T]) *Optional[T] {
+func OptionalMap[F any, T any](opt *Optional[F], fn func(F) *Optional[T], orElse ...func() *Optional[T]) *Optional[T] {
 	var x T
 	if opt.Any() {
 		return fn(opt.Get())
@@ -222,6 +222,17 @@ func Map[F any, T any](opt *Optional[F], fn func(F) *Optional[T], orElse ...func
 		return orElse[0]()
 	}
 	return New[T](x)
+}
+
+func Map[F any, T any](opt *Optional[[]F], fn func(F) T) *Optional[[]T] {
+	items := []T{}
+	if opt.Any() {
+
+		for _, it := range opt.Get() {
+			items = append(items, fn(it))
+		}
+	}
+	return New[[]T](items)
 }
 
 type Empty struct {

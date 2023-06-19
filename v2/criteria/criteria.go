@@ -313,6 +313,16 @@ func (this *Criteria[T]) NotLike(path string, value interface{}) *Criteria[T] {
 	return this
 }
 
+func (this *Criteria[T]) LikeMatch(path string, value interface{}, likeMatch db.CriteriaLikeMatch) *Criteria[T] {
+	this.Criteria.LikeMatch(path, value, likeMatch)
+	return this
+}
+
+func (this *Criteria[T]) NotLikeMatch(path string, value interface{}, likeMatch db.CriteriaLikeMatch) *Criteria[T] {
+	this.Criteria.NotLikeMatch(path, value, likeMatch)
+	return this
+}
+
 func (this *Criteria[T]) Between(path string, value interface{}, value2 interface{}) *Criteria[T] {
 	this.Criteria.Between(path, value, value2)
 	return this
