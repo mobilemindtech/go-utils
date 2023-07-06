@@ -57,6 +57,7 @@ func (this *Reactive) Get() interface{} {
 	return optional.Make(r, this.criteria.Error)
 }
 
+
 func (this *Reactive) One() *Reactive {
 	return this.First()
 }

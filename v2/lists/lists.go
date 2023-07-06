@@ -102,6 +102,14 @@ func Sort[T any](vs []T, f func(T, T) int) {
 	}
 }
 
+func FoldLeft[T any, Acc any](vs []T, initial Acc, fold func(Acc, T) Acc) Acc {
+	nextAcc := initial
+	for _, it := range vs {
+		nextAcc = fold(nextAcc, it)
+	}
+	return nextAcc
+}
+
 func ListParts[T any](vs []T, size int) [][]T {
 
 	all := [][]T{}
@@ -174,4 +182,42 @@ func Split[T any](vs []T, size int) [][]T {
 
 	return all
 
+}
+
+func Foreach[T any](vs []T, each func(T)) {
+	for _, it := range vs {
+		each(it)
+	}
+}
+
+type CrudList[T any] struct {
+	SaveList   []T
+	RemoveList []T
+	UpdateList []T
+}
+
+func EmptyCrudList[T any]() *CrudList[T] {
+	return &CrudList[T]{SaveList: []T{}, RemoveList: []T{}, UpdateList: []T{}}
+}
+
+func NewCrudList[T any](currentList []T, newList []T, comparator func(T, T) bool) *CrudList[T] {
+	crud := EmptyCrudList[T]()
+
+	findInCurrentList := func(newVal T) bool {
+		return Any[T](currentList, func(x T) bool { return comparator(x, newVal) })
+	}
+
+	notInCurrentList := func(newVal T) bool {
+		return !Any[T](currentList, func(x T) bool { return comparator(x, newVal) })
+	}
+
+	notInNewList := func(newVal T) bool {
+		return !Any[T](newList, func(x T) bool { return comparator(x, newVal) })
+	}
+
+	crud.SaveList = FindAll(newList, notInCurrentList)
+	crud.UpdateList = FindAll(newList, findInCurrentList)
+	crud.RemoveList = FindAll(currentList, notInNewList)
+
+	return crud
 }

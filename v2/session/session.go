@@ -1,7 +1,10 @@
 package session
 
 import (
-	"errors"
+	_ "errors"
+
+	"fmt"
+	"reflect"
 
 	"github.com/mobilemindtec/go-utils/beego/db"
 	"github.com/mobilemindtec/go-utils/v2/optional"
@@ -82,7 +85,7 @@ func (this *RxSession[T]) Run() *optional.Optional[T] {
 			err = this.session.Remove(ac.(*ActionRemove).Get())
 			break
 		default:
-			err = errors.New("invalid action")
+			err = fmt.Errorf("invalid action: %v", reflect.TypeOf(ac))
 		}
 
 		if err != nil {
@@ -90,7 +93,7 @@ func (this *RxSession[T]) Run() *optional.Optional[T] {
 		}
 	}
 
-	return optional.WithNone[T]()
+	return optional.WithEmpty[T]()
 }
 
 func (this *RxSession[T]) Save(entity T) *optional.Optional[T] {

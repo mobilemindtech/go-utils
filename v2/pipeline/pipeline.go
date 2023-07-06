@@ -17,13 +17,13 @@ import (
 
 type Action = func() interface{}
 type ActionR1 = func(interface{}) interface{}
+
+type SuccessFn = func()
+type SuccessR1Fn = func(interface{})
 type ActionR2 = func(interface{}, interface{}) interface{}
 type ActionR3 = func(interface{}, interface{}, interface{}) interface{}
 type ActionR4 = func(interface{}, interface{}, interface{}, interface{}) interface{}
 type ActionR5 = func(interface{}, interface{}, interface{}, interface{}, interface{}) interface{}
-
-type SuccessFn = func()
-type SuccessR1Fn = func(interface{})
 
 type PipeState int
 
@@ -36,12 +36,14 @@ const (
 )
 
 type PipeStep struct {
-	name    string
-	action  interface{}
-	debug   bool
-	log     bool
-	logMsg  string
-	logArgs []interface{}
+	ctxName    string
+	returnLast bool
+	name       string
+	action     interface{}
+	debug      bool
+	log        bool
+	logMsg     string
+	logArgs    []interface{}
 }
 
 type Pipe struct {
@@ -133,6 +135,24 @@ func (this *Pipe) Next(ac interface{}) *Pipe {
 	return this
 }
 
+// execute ac and save return with on ctx with ctxName
+func (this *Pipe) NextN(ctxName string, ac interface{}) *Pipe {
+	this.steps = append(this.steps, &PipeStep{action: ac, ctxName: ctxName})
+	return this
+}
+
+// execute ac with param with last return
+func (this *Pipe) NextM(ac interface{}) *Pipe {
+	this.steps = append(this.steps, &PipeStep{action: ac, returnLast: true})
+	return this
+}
+
+// merge NextN and NextM
+func (this *Pipe) NextMN(ctxName string, ac interface{}) *Pipe {
+	this.steps = append(this.steps, &PipeStep{action: ac, returnLast: true, ctxName: ctxName})
+	return this
+}
+
 func (this *Pipe) Log(msg string, args ...interface{}) *Pipe {
 	this.steps = append(this.steps, &PipeStep{log: true, logMsg: msg, logArgs: args})
 	return this
@@ -208,9 +228,13 @@ func (this *Pipe) configure() {
 
 }
 
-func (this *Pipe) addStepResult(result interface{}) {
+func (this *Pipe) addStepResult(step *PipeStep, result interface{}) {
 	this.results = append(this.results, result)
 	this.AddCtx(result)
+
+	if len(step.ctxName) > 0 {
+		this.PutCtx(step.ctxName, result)
+	}
 }
 
 func (this *Pipe) Run() *Pipe {
@@ -262,12 +286,23 @@ func (this *Pipe) Run() *Pipe {
 			case ActionR1:
 
 				if l < 1 {
-					this.executeErrorHandler(optional.NewFailStr("action r%v, results len %v", 1, l))
+					this.executeErrorHandler(optional.NewFailStr("action %v, results len %v", 1, l))
 					return this
 				}
 
-				r = step.action.(ActionR1)(this.results[0])
+				var v interface{}
+
+				if step.returnLast {
+					lastIdx := len(this.results) - 1
+					if lastIdx > -1 {
+						v = this.results[lastIdx]
+					}
+				} else {
+					v = this.results[0]
+				}
+				r = step.action.(ActionR1)(v)
 				break
+
 			case ActionR2:
 
 				if l < 2 {
@@ -304,6 +339,7 @@ func (this *Pipe) Run() *Pipe {
 
 				r = step.action.(ActionR5)(this.results[0], this.results[1], this.results[2], this.results[3], this.results[4])
 				break
+
 			default:
 				this.executeErrorHandler(optional.NewFailStr("no action set"))
 			}
@@ -331,7 +367,7 @@ func (this *Pipe) Run() *Pipe {
 
 			r = pipe.GetResult()
 			if some, ok := r.(*optional.Some); ok {
-				this.addStepResult(some.Item)
+				this.addStepResult(step, some.Item)
 			}
 			break
 
@@ -350,14 +386,14 @@ func (this *Pipe) Run() *Pipe {
 
 				r = pipe.GetResult()
 				if some, ok := r.(*optional.Some); ok {
-					this.addStepResult(some.Item)
+					this.addStepResult(step, some.Item)
 				}
 			}
 			break
 
 		case *optional.Some:
 			result := r.(*optional.Some).Item
-			this.addStepResult(result)
+			this.addStepResult(step, result)
 			break
 		case *optional.Fail:
 			this.executeErrorHandler(r.(*optional.Fail))

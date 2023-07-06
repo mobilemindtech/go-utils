@@ -199,6 +199,51 @@ func (this *Optional[T]) IfNonEmpty(cb func(T)) *Optional[T] {
 	return this
 }
 
+func (this *Optional[T]) Filter(filter func(T) bool) *Optional[T] {
+	if this.some != nil {
+		v := GetItem[T](this.some)
+		if filter(v) {
+			return WithSome[T](v)
+		}
+	}
+	return WithNone[T]()
+}
+
+func (this *Optional[T]) Foreach(each func(T)) *Optional[T] {
+	if this.some != nil {
+		v := GetItem[T](this.some)
+		each(v)
+	}
+	return this
+}
+
+func (this *Optional[T]) Map(fn func(T) interface{}) interface{} {
+	if this.some != nil {
+		v := GetItem[T](this.some)
+		r := fn(v)
+
+		switch r.(type) {
+		case *Some, *None, *Empty, *Fail:
+			return r
+		default:
+			return Make0(r)
+		}
+	}
+	return NewNone()
+}
+
+func (this *Optional[T]) MapToNone() interface{} {
+	return NewNone()
+}
+
+func (this *Optional[T]) MapToEmpty() interface{} {
+	return NewEmpty()
+}
+
+func (this *Optional[T]) MapToSome(v interface{}) interface{} {
+	return NewSome(v)
+}
+
 func (this *Optional[T]) IfOrElse(cbSome func(T), cbNone func()) *Optional[T] {
 
 	this.IfNonEmpty(cbSome)
@@ -439,6 +484,10 @@ func OrElseSome(e interface{}, v interface{}) *Some {
 }
 
 func Just[T any](e interface{}) *Optional[T] {
+	return New[T](e)
+}
+
+func Maybe[T any](e interface{}) *Optional[T] {
 	return New[T](e)
 }
 
