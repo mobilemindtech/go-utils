@@ -118,13 +118,8 @@ func (this *CacheService) Get(key string, value interface{}) interface{} {
 }
 
 func (this *CacheService) GetVal(key string) interface{} {
-	value, err := this.rdb.Get(this.getSessionKey(key)).Result()
-
-	if err == redis.Nil {
-		return optional.NewNone()
-	}
-
-	return optional.Make(value, err)
+	var value interface{}
+	return this.Get(key, value)
 }
 
 func (this *CacheService) Memoize(key string, value interface{}, cacheable func() interface{}) (interface{}, error) {
@@ -265,9 +260,9 @@ func MemoizeStr(srv *CacheService, key string, cacheable func() string) string {
 	switch v.(type) {
 	case *optional.Some:
 
-		//logs.Debug("CACHE: get key %v from cache", key)
-
 		raw := v.(*optional.Some).Item.(string)
+		//logs.Debug("CACHE: get key %v from cache: %v", key, raw)
+
 		return raw
 
 	default:
