@@ -563,10 +563,10 @@ func Make(val interface{}, err error) interface{} {
 	case error:
 		return NewFail(val.(error))
 	case bool:
-		if val.(bool) {
+		//if val.(bool) {
 			return NewSome(val)
-		}
-		return NewNone()
+		//}
+		//return NewNone()
 	case string:
 		if val.(string) != "" {
 			return NewSome(val)
