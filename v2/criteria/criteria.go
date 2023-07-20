@@ -163,7 +163,7 @@ func (this *Criteria[T]) OptAny() *optional.Optional[bool] {
 	if this.Criteria.HasError {
 		return optional.WithFail[bool](this.Error)
 	}
-	return optional.WithSome[bool](true)
+	return optional.WithSome[bool](this.Any)
 }
 
 func (this *Criteria[T]) OptPage() *optional.Optional[*Page0[*T]] {
