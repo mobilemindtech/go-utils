@@ -71,6 +71,17 @@ func (this *Pipe) IsExit() bool {
 	return this.State == StateExit
 }
 
+func (this *Pipe) IsFail() bool {
+	return this.State == StateError
+}
+
+func (this *Pipe) GetError() error {
+	if this.IsFail() {
+		return this.fail.Error
+	}
+	return nil
+}
+
 func (this *Pipe) GetResults() []interface{} {
 	return this.results
 }
