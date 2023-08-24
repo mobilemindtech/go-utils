@@ -57,6 +57,24 @@ func (this *Reactive) Get() interface{} {
 	return optional.Make(r, this.criteria.Error)
 }
 
+func (this *Reactive) GetAsPage() *optional.Optional[*Page] {
+
+	if this.criteria.HasError {
+		return optional.OfFail[*Page](this.criteria.Error)
+	}
+
+	val := this.Get()
+
+	switch val.(type) {
+	case *optional.Some:
+		return optional.Of[*Page](val.(*optional.Some).Item.(*Page))
+	case *optional.Fail:
+		return optional.OfFail[*Page](val)
+	default:
+		return optional.OfFail[*Page]("wrong type. expected *Page")
+	}
+
+}
 
 func (this *Reactive) One() *Reactive {
 	return this.First()
@@ -108,6 +126,15 @@ func New[T any](session *db.Session) *Criteria[T] {
 	criteria.Result = &entity
 	criteria.Results = &entities
 	return criteria
+}
+
+func (this *Criteria[T]) Id(id int64) *Criteria[T] {
+	this.Criteria.Eq("Id", id)
+	return this
+}
+
+func (this *Criteria[T]) Pk(id int) *Criteria[T] {
+	return this.Id(int64(id))
 }
 
 func (this *Criteria[T]) Rx() *Reactive {
@@ -276,6 +303,20 @@ func (this *Criteria[T]) OrderDesc(path string) *Criteria[T] {
 
 func (this *Criteria[T]) Eq(path string, value interface{}) *Criteria[T] {
 	this.Criteria.Eq(path, value)
+	return this
+}
+
+func (this *Criteria[T]) If(test bool, c func(*Criteria[T])) *Criteria[T] {
+	if test {
+		c(this)
+	}
+	return this
+}
+
+func (this *Criteria[T]) IfTest(test func() bool, c func(*Criteria[T])) *Criteria[T] {
+	if test() {
+		c(this)
+	}
 	return this
 }
 

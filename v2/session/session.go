@@ -66,6 +66,34 @@ func (this *RxSession[T]) AddAction(ac ...interface{}) *RxSession[T] {
 	return this
 }
 
+func (this *RxSession[T]) AddPersist(items ...interface{}) *RxSession[T] {
+	for _, o := range items {
+		this.AddAction(NewActionPersist(o))
+	}
+	return this
+}
+
+func (this *RxSession[T]) AddSave(items ...interface{}) *RxSession[T] {
+	for _, o := range items {
+		this.AddAction(NewActionSave(o))
+	}
+	return this
+}
+
+func (this *RxSession[T]) AddUpdate(items ...interface{}) *RxSession[T] {
+	for _, o := range items {
+		this.AddAction(NewActionUpdate(o))
+	}
+	return this
+}
+
+func (this *RxSession[T]) AddRemove(items ...interface{}) *RxSession[T] {
+	for _, o := range items {
+		this.AddAction(NewActionRemove(o))
+	}
+	return this
+}
+
 func (this *RxSession[T]) Run() *optional.Optional[T] {
 	for _, ac := range this.actions {
 

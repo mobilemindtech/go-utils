@@ -29,6 +29,10 @@ func WithSome[T any](v interface{}) *Optional[T] {
 	return &Optional[T]{some: s}
 }
 
+func OfFail[T any](v interface{}) *Optional[T] {
+	return WithFail[T](v)
+}
+
 func WithFail[T any](v interface{}) *Optional[T] {
 
 	var s *Fail
@@ -51,8 +55,16 @@ func WithFail[T any](v interface{}) *Optional[T] {
 	return &Optional[T]{fail: s}
 }
 
+func OfNone[T any]() *Optional[T] {
+	return WithNone[T]()
+}
+
 func WithNone[T any]() *Optional[T] {
 	return &Optional[T]{none: NewNone()}
+}
+
+func OfEmpty[T any]() *Optional[T] {
+	return WithEmpty[T]()
 }
 
 func WithEmpty[T any]() *Optional[T] {
@@ -67,6 +79,10 @@ func TryMake[T any](val interface{}, err interface{}) *Optional[T] {
 	if !IsNilFixed(err) {
 		return New[T](err)
 	}
+	return New[T](val)
+}
+
+func Of[T any](val interface{}) *Optional[T] {
 	return New[T](val)
 }
 
@@ -242,6 +258,31 @@ func (this *Optional[T]) MapToEmpty() interface{} {
 
 func (this *Optional[T]) MapToSome(v interface{}) interface{} {
 	return NewSome(v)
+}
+
+func (this *Optional[T]) MapOpt(fn func(T) interface{}) *Optional[T] {
+
+	if this.fail != nil {
+		return this
+	}
+
+	if this.some != nil {
+		r := fn(this.some.Item.(T))
+		return Of[T](r)
+	}
+	return OfNone[T]()
+}
+
+func (this *Optional[T]) OrElseOpt(v interface{}) *Optional[T] {
+
+	if this.fail != nil {
+		return this
+	}
+
+	if this.some == nil {
+		return Of[T](v)
+	}
+	return this
 }
 
 func (this *Optional[T]) IfOrElse(cbSome func(T), cbNone func()) *Optional[T] {
@@ -487,10 +528,6 @@ func Just[T any](e interface{}) *Optional[T] {
 	return New[T](e)
 }
 
-func Maybe[T any](e interface{}) *Optional[T] {
-	return New[T](e)
-}
-
 func IfNonEmpty[T any](e interface{}, cb func(T)) bool {
 	switch e.(type) {
 	case Some:
@@ -545,6 +582,10 @@ func MakeSlice(val interface{}, err error) interface{} {
 	return NewNone()
 }
 
+func Maybe(val interface{}) interface{} {
+	return Make0(val)
+}
+
 func Make0(val interface{}) interface{} {
 	return Make(val, nil)
 }
@@ -564,7 +605,7 @@ func Make(val interface{}, err error) interface{} {
 		return NewFail(val.(error))
 	case bool:
 		//if val.(bool) {
-			return NewSome(val)
+		return NewSome(val)
 		//}
 		//return NewNone()
 	case string:

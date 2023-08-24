@@ -98,15 +98,15 @@ func (this *EntityValidator) ValidMult(entities []interface{}, action func(valid
 		}
 
 		if !customApplyDone {
-			if funcApply != nil {
-				ev, err := this.IsValid(it, funcApply)
-				if err != nil {
-					return nil, err
-				}
-				result.Merge(ev)
+
+			ev, err := this.IsValid(it, funcApply)
+			if err != nil {
+				return nil, err
 			}
+			result.Merge(ev)
 
 			for _, ac := range this.valActions {
+
 				ev, err := this.IsValid(it, ac)
 				if err != nil {
 					return nil, err
@@ -145,7 +145,6 @@ func (this *EntityValidator) Valid(entity interface{}, action CustomAction) (*En
 		ok, err := localValid.Valid(entity)
 
 		if err != nil {
-			logs.Debug("## error on run validation = ", err.Error())
 			return nil, err
 		}
 
@@ -246,9 +245,7 @@ func (this *EntityValidator) CopyErrorsToView(result *EntityValidatorResult, dat
 			for k, v := range result.Errors {
 				mapItem[k] = v
 			}
-
 		}
-
 	}
 }
 

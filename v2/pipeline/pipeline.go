@@ -204,6 +204,8 @@ func (this *Pipe) configure() {
 			default:
 				panic("wrong error handler func")
 			}
+		} else {
+			panic("error handler not found")
 		}
 	}
 
@@ -211,6 +213,8 @@ func (this *Pipe) configure() {
 		this.State = StateExit
 		if fnExitHandler != nil {
 			fnExitHandler()
+		} else {
+			panic("exit handler not found")
 		}
 	}
 
@@ -253,7 +257,7 @@ func (this *Pipe) Run() *Pipe {
 	defer func() {
 
 		if r := recover(); r != nil {
-			logs.Info("Pipeline recover: %v, StackTrae: %v", r, string(debug.Stack()))
+			logs.Info("Pipeline recover. Message %v. StackTrae: %v", r, string(debug.Stack()))
 
 			this.executeErrorHandler(optional.NewFailStr("%v", r))
 		}

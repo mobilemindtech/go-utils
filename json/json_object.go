@@ -2,6 +2,7 @@ package json
 
 import (
 	"encoding/json"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -28,6 +29,10 @@ type Parser[T any] struct {
 
 func NewParser[T any]() *Parser[T] {
 	return &Parser[T]{}
+}
+
+func (this *Parser[T]) UseDefaultEncoder() *Parser[T] {
+	return this.SetUseDefaultEncoder(true)
 }
 
 func (this *Parser[T]) SetUseDefaultEncoder(b bool) *Parser[T] {
@@ -101,6 +106,11 @@ func NewFromMap(d map[string]interface{}) *Json {
 	j := new(Json)
 	j.data = d
 	return j
+}
+
+func NewFromUrlValues(form url.Values) *Json {
+	data := support.NewJsonParser().UrlValuesToMap(form)
+	return NewFromMap(data)
 }
 
 func NewFromBytes(raw []byte) (*Json, error) {

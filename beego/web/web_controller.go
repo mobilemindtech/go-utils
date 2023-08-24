@@ -358,6 +358,32 @@ func (this *WebController) OnEntity(viewName string, entity interface{}) {
 	this.OnFlash(false)
 }
 
+func (this *WebController) OnEntityFail(viewName string, entity interface{}, fail *optional.Fail) {
+	this.Data["entity"] = entity
+
+	if fail.Item != nil {
+		switch fail.Item.(type) {
+		case []map[string]string:
+			errors := map[string]string{}
+			for _, it := range fail.Item.([]map[string]string) {
+				if _, ok := it["field"]; ok {
+					errors[it["field"]] = it["message"]
+				}
+			}
+			this.Data["errors"] = errors
+		}
+	}
+
+	if strings.Contains(fail.ErrorString(), "validation") {
+		this.Flash.Error(this.GetMessage("cadastros.validacao"))
+	} else {
+		this.Flash.Error(fail.ErrorString())
+	}
+
+	this.OnTemplate(viewName)
+	this.OnFlash(false)
+}
+
 func (this *WebController) OnEntityError(viewName string, entity interface{}, format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
 	this.Rollback()
@@ -572,6 +598,11 @@ func (this *WebController) OnJsonResultsWithTotalCount(results interface{}, tota
 	this.ServeJSON()
 }
 
+func (this *WebController) OnJsonPage(page *criteria.Page) {
+	this.Data["json"] = &support.JsonResult{Results: page.Data, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix(), TotalCount: int64(page.TotalCount)}
+	this.ServeJSON()
+}
+
 func (this *WebController) OnJsonResultAndResultsWithTotalCount(result interface{}, results interface{}, totalCount int64) {
 	this.Data["json"] = &support.JsonResult{Result: result, Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix(), TotalCount: totalCount}
 	this.ServeJSON()
@@ -704,6 +735,16 @@ func (this *WebController) OnJsonValidationWithResultsAndMessageAndErrors(result
 
 func (this *WebController) OnTemplate(viewName string) {
 	this.TplName = fmt.Sprintf("%s/%s.tpl", this.ViewPath, viewName)
+	this.OnFlash(false)
+}
+
+func (this *WebController) OnTemplateWithData(viewName string, data map[string]interface{}) {
+	this.TplName = fmt.Sprintf("%s/%s.tpl", this.ViewPath, viewName)
+
+	for k, v := range data {
+		this.Data[k] = v
+	}
+
 	this.OnFlash(false)
 }
 
