@@ -4,6 +4,7 @@ import (
 	_ "fmt"
 	"reflect"
 
+	"github.com/beego/beego/v2/core/logs"
 	"github.com/mobilemindtec/go-utils/beego/db"
 	"github.com/mobilemindtec/go-utils/v2/optional"
 )
@@ -148,11 +149,14 @@ func (this *Criteria[T]) OptAll() *optional.Optional[[]*T] {
 		return optional.WithFail[[]*T](this.Error)
 	}
 
-	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]*T)
-
 	if !this.Any {
+		logs.Debug("no data")
 		return optional.WithEmpty[[]*T]()
 	}
+
+	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]*T)
+
+	logs.Debug("all  = %v", all)
 
 	return optional.WithSome[[]*T](all)
 }

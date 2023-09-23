@@ -32,7 +32,9 @@ func (this *EntityValidatorResult) Merge(result *EntityValidatorResult) {
 	}
 }
 
-type CustomAction func(validator *validation.Validation)
+type Validation = validation.Validation
+type CustomAction func(validator *Validation)
+type CustomValidation func(entity interface{}, validator *Validation)
 
 func NewEntityValidatorResult() *EntityValidatorResult {
 	return &EntityValidatorResult{Errors: make(map[string]string), ErrorsFields: make(map[string]string)}
@@ -41,7 +43,7 @@ func NewEntityValidatorResult() *EntityValidatorResult {
 type EntityValidator struct {
 	Lang       string
 	ViewPath   string
-	valActions []CustomAction
+	valActions []CustomValidation
 	values     []interface{}
 }
 
@@ -49,10 +51,10 @@ func NewEntityValidator(lang string, viewPath string) *EntityValidator {
 	return &EntityValidator{Lang: lang, ViewPath: viewPath}
 }
 func New() *EntityValidator {
-	return &EntityValidator{values: []interface{}{}, valActions: []CustomAction{}}
+	return &EntityValidator{values: []interface{}{}, valActions: []CustomValidation{}}
 }
 
-func (this *EntityValidator) AddCustom(acs ...CustomAction) *EntityValidator {
+func (this *EntityValidator) AddValidation(acs ...CustomValidation) *EntityValidator {
 	for _, ac := range acs {
 		this.valActions = append(this.valActions, ac)
 	}
@@ -84,11 +86,10 @@ func (this *EntityValidator) Validate(entities ...interface{}) interface{} {
 	return optional.NewEmpty()
 }
 
-func (this *EntityValidator) ValidMult(entities []interface{}, action func(validator *validation.Validation)) (*EntityValidatorResult, error) {
+func (this *EntityValidator) ValidMult(entities []interface{}, action func(validator *Validation)) (*EntityValidatorResult, error) {
 
 	result := NewEntityValidatorResult()
 
-	funcApply := action
 	customApplyDone := false
 
 	for _, it := range entities {
@@ -99,7 +100,7 @@ func (this *EntityValidator) ValidMult(entities []interface{}, action func(valid
 
 		if !customApplyDone {
 
-			ev, err := this.IsValid(it, funcApply)
+			ev, err := this.IsValid(it, action)
 			if err != nil {
 				return nil, err
 			}
@@ -107,7 +108,9 @@ func (this *EntityValidator) ValidMult(entities []interface{}, action func(valid
 
 			for _, ac := range this.valActions {
 
-				ev, err := this.IsValid(it, ac)
+				ev, err := this.IsValid(it, func(v *Validation) {
+					ac(it, v)
+				})
 				if err != nil {
 					return nil, err
 				}
@@ -129,8 +132,8 @@ func (this *EntityValidator) Valid(entity interface{}, action CustomAction) (*En
 
 	result := NewEntityValidatorResult()
 
-	localValid := validation.Validation{}
-	callerValid := validation.Validation{}
+	localValid := Validation{}
+	callerValid := Validation{}
 
 	typeName := ""
 

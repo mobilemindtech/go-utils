@@ -164,6 +164,28 @@ func (this *Pipe) NextMN(ctxName string, ac interface{}) *Pipe {
 	return this
 }
 
+func (this *Pipe) MergeRight(pipe *Pipe) *Pipe {
+	for _, step := range pipe.steps {
+		this.steps = append(this.steps, step)
+	}
+	return this
+}
+
+func (this *Pipe) MergeLeft(pipe *Pipe) *Pipe {
+	newSteps := []*PipeStep{}
+
+	for _, step := range pipe.steps {
+		newSteps = append(newSteps, step)
+	}
+
+	for _, step := range this.steps {
+		newSteps = append(newSteps, step)
+	}
+
+	this.steps = newSteps
+	return this
+}
+
 func (this *Pipe) Log(msg string, args ...interface{}) *Pipe {
 	this.steps = append(this.steps, &PipeStep{log: true, logMsg: msg, logArgs: args})
 	return this
