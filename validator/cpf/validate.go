@@ -11,6 +11,11 @@ func IsValid(digits string) (bool, error) {
 	return valid(digits)
 }
 
+func Validate(digits string) bool {
+	v, _ := IsValid(digits)
+	return v
+}
+
 func sanitize(data string) string {
 	data = strings.Replace(data, ".", "", -1)
 	data = strings.Replace(data, "-", "", -1)
@@ -81,4 +86,3 @@ func checkEach(data string, n int) bool {
 	}
 	return final == x
 }
-

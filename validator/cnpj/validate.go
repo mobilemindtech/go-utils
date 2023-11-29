@@ -3,12 +3,17 @@ package cnpj
 import (
 	"errors"
 	"strconv"
-	"strings"	
+	"strings"
 )
 
 // Valid validates the cpf and return a boolean and the error if any
 func IsValid(digits string) (bool, error) {
 	return valid(digits)
+}
+
+func Validate(digits string) bool {
+	v, _ := IsValid(digits)
+	return v
 }
 
 func sanitize(data string) string {
@@ -58,14 +63,14 @@ func check(data string) bool {
 	return verify(stringToIntSlice(data), 5, 12) && verify(stringToIntSlice(data), 6, 13)
 }
 
-func verify(data []int, j int, n int) bool{
-		
-	soma := 0		
+func verify(data []int, j int, n int) bool {
+
+	soma := 0
 
 	for i := 0; i < n; i++ {
 		v := data[i]
 		soma += v * j
-		
+
 		if j == 2 {
 			j = 9
 		} else {
@@ -82,7 +87,7 @@ func verify(data []int, j int, n int) bool{
 		x = 11 - resto
 	}
 
-	if  v != x {
+	if v != x {
 		return false
 	}
 

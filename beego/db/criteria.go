@@ -54,6 +54,8 @@ const (
 	CriteriaUpdate
 	CriteriaDelete
 	CriteriaExists
+	CriteriaAggregateOne
+	CriteriaAggregateList
 )
 
 type CriteriaOrder struct {
@@ -137,6 +139,12 @@ type Criteria struct {
 	Debug bool
 
 	tenantCopy interface{}
+
+	aggregate string
+	groupBy string
+
+	resultAggregate interface{}
+	resultsAggregate interface{}
 }
 
 func NewCriteria(session *Session, entity interface{}, entities interface{}) *Criteria {
@@ -145,6 +153,35 @@ func NewCriteria(session *Session, entity interface{}, entities interface{}) *Cr
 
 func NewCondition() *Criteria {
 	return &Criteria{criterias: []*Criteria{}}
+}
+
+func (this *Criteria) CopyConditions(c *Criteria) {
+	
+	for _, it := range c.criterias {
+		this.criterias = append(c.criterias, it)
+	}
+
+	for _, it := range c.criteriasOr {
+		this.criteriasOr = append(c.criteriasOr, it)
+	}
+
+
+	for _, it := range c.criteriasAndOr {
+		this.criteriasAndOr = append(c.criteriasAndOr, it)
+	}
+
+	for _, it := range c.criteriasAndOrAnd {
+		this.criteriasAndOrAnd = append(c.criteriasAndOrAnd, it)
+	}
+
+	for _, it := range c.criteriasOrAnd {
+		this.criteriasOrAnd = append(c.criteriasOrAnd, it)
+	}
+	    
+	for _, it := range c.criteriasAnd {
+		this.criteriasAnd = append(c.criteriasAnd, it)
+	}
+
 }
 
 func (this *Criteria) IsOne() bool {
@@ -167,14 +204,18 @@ func (this *Criteria) IsExists() bool {
 	return this.criteriaType == CriteriaExists
 }
 
-func (this *Criteria) Defaults() *Criteria {
+func (this *Criteria) SetDefaults() *Criteria {
+	this.RelatedSelList = []string{}
+	return this.clearConditions()
+}	
+
+func (this *Criteria) clearConditions() *Criteria {
 	this.criterias = []*Criteria{}
 	this.criteriasOr = []*Criteria{}
 	this.criteriasAnd = []*Criteria{}
 	this.criteriasAndOr = []*Criteria{}
 	this.criteriasAndOrAnd = []*CriteriaSet{}
 	this.criteriasOrAnd = []*Criteria{}
-	this.RelatedSelList = []string{}
 	return this
 }
 
@@ -357,6 +398,24 @@ func (this *Criteria) OrderDesc(path string) *Criteria {
 func (this *Criteria) List() *Criteria {
 	return this.execute(CriteriaList)
 }
+
+func (this *Criteria) GroupBy(s string) *Criteria{
+	this.groupBy = s
+	return this
+}
+
+func (this *Criteria) AggregateOne(s string, r interface{}) *Criteria {
+	this.aggregate = s
+	this.resultAggregate = r
+	return this.execute(CriteriaAggregateOne)
+}
+
+func (this *Criteria) AggregateList(s string, r interface{}) *Criteria {
+	this.aggregate = s
+	this.resultsAggregate = r
+	return this.execute(CriteriaAggregateList)
+}
+
 
 func (this *Criteria) ListAndCount() *Criteria {
 	this.execute(CriteriaList)
@@ -840,6 +899,46 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria {
 	}
 
 	switch resultType {
+
+	case CriteriaAggregateOne:
+
+		query = query.Aggregate(this.aggregate)
+
+		if len(this.groupBy) > 0 {
+			query = query.GroupBy(this.groupBy)
+		}
+		
+		err := this.Session.ToOne(query, this.resultAggregate)
+
+		if err != nil && err != orm.ErrNoRows && !strings.Contains(err.Error(), "repeat register") {
+			this.SetError(err)
+		} else {
+			this.SetError(nil)
+		}
+
+
+		break
+
+	case CriteriaAggregateList:
+
+		query = query.Aggregate(this.aggregate)
+
+		if len(this.groupBy) > 0 {
+			query = query.GroupBy(this.groupBy)
+		}
+		
+		err := this.Session.ToList(query, this.resultsAggregate)
+
+		if err != nil && err != orm.ErrNoRows && !strings.Contains(err.Error(), "repeat register") {
+			this.SetError(err)
+		} else {
+			this.SetError(nil)
+		}
+
+		this.Any = reflect.ValueOf(this.resultsAggregate).Elem().Len() > 0
+		this.Empty = !this.Any
+
+		break
 
 	case CriteriaList:
 

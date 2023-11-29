@@ -36,15 +36,21 @@ type Validation = validation.Validation
 type CustomAction func(validator *Validation)
 type CustomValidation func(entity interface{}, validator *Validation)
 
+type ValidatorForType struct {
+	Fn  CustomValidation
+	Typ reflect.Type
+}
+
 func NewEntityValidatorResult() *EntityValidatorResult {
 	return &EntityValidatorResult{Errors: make(map[string]string), ErrorsFields: make(map[string]string)}
 }
 
 type EntityValidator struct {
-	Lang       string
-	ViewPath   string
-	valActions []CustomValidation
-	values     []interface{}
+	Lang              string
+	ViewPath          string
+	valActions        []CustomValidation
+	valActionsForType []*ValidatorForType
+	values            []interface{}
 }
 
 func NewEntityValidator(lang string, viewPath string) *EntityValidator {
@@ -61,16 +67,24 @@ func (this *EntityValidator) AddValidation(acs ...CustomValidation) *EntityValid
 	return this
 }
 
-func (this *EntityValidator) AddValues(vs ...interface{}) *EntityValidator {
+func (this *EntityValidator) AddValidationForType(t reflect.Type, ac CustomValidation) *EntityValidator {
+	this.valActionsForType = append(this.valActionsForType, &ValidatorForType{ac, t})
+	return this
+}
+
+func (this *EntityValidator) AddEntities(vs ...interface{}) *EntityValidator {
 	for _, it := range vs {
 		this.values = append(this.values, it)
 	}
 	return this
 }
 
-func (this *EntityValidator) Validate(entities ...interface{}) interface{} {
+func (this *EntityValidator) AddEntity(vs interface{}) *EntityValidator {
+	this.values = append(this.values, vs)
+	return this
+}
 
-	this.AddValues(entities...)
+func (this *EntityValidator) Validate(entities ...interface{}) interface{} {
 
 	result, err := this.ValidMult(entities, nil)
 
@@ -88,11 +102,13 @@ func (this *EntityValidator) Validate(entities ...interface{}) interface{} {
 
 func (this *EntityValidator) ValidMult(entities []interface{}, action func(validator *Validation)) (*EntityValidatorResult, error) {
 
+	this.AddEntities(entities...)
+
 	result := NewEntityValidatorResult()
 
 	customApplyDone := false
 
-	for _, it := range entities {
+	for _, it := range this.values {
 
 		if it == nil {
 			continue
@@ -115,6 +131,18 @@ func (this *EntityValidator) ValidMult(entities []interface{}, action func(valid
 					return nil, err
 				}
 				result.Merge(ev)
+			}
+
+			for _, ac := range this.valActionsForType {
+				if ac.Typ == reflect.TypeOf(it) {
+					ev, err := this.IsValid(it, func(v *Validation) {
+						ac.Fn(it, v)
+					})
+					if err != nil {
+						return nil, err
+					}
+					result.Merge(ev)
+				}
 			}
 			customApplyDone = true
 		}

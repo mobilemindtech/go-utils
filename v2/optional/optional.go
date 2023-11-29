@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 	"time"
+
+	"github.com/mobilemindtec/go-utils/v2/lists"
 )
 
 type Optional[T any] struct {
@@ -395,46 +397,62 @@ func NewFailOrEmpty(val interface{}) interface{} {
 	return NewEmpty()
 }
 
-type Success struct {
-	Item interface{}
+type Success[T any] struct {
+	Item T
 }
 
-func (this *Success) WithItem(item interface{}) *Success {
-	this.Item = item
-	return this
+func NewSuccess[T any](item T) *Success[T] {
+	return &Success[T]{Item: item}
 }
 
-func NewSuccess() *Success {
-	return &Success{}
+type Either[L any, R any] struct {
+	left  L
+	right R
 }
 
-type Either struct {
+func Left[L any, R any](val L) *Either[L, R] {
+	return &Either[L, R]{left: val}
 }
 
-type Left struct {
-	Item interface{}
+func Right[L any, R any](val R) *Either[L, R] {
+	return &Either[L, R]{right: val}
 }
 
-func (this *Left) WithItem(item interface{}) *Left {
-	this.Item = item
-	return this
+func (this Either[L, R]) Left() *Optional[L] {
+	return Of[L](this.left)
 }
 
-func NewLeft() *Left {
-	return &Left{}
+func (this Either[L, R]) RawLeft() L {
+	return this.left
 }
 
-type Rigth struct {
-	Item interface{}
+func (this Either[L, R]) Right() *Optional[R] {
+	return Of[R](this.right)
 }
 
-func (this *Rigth) WithItem(item interface{}) *Rigth {
-	this.Item = item
-	return this
+func (this Either[L, R]) RawRight() R {
+	return this.right
 }
 
-func NewRigth() *Rigth {
-	return &Rigth{}
+func (this Either[L, R]) IsLeft() bool {
+	return this.Left().NonEmpty()
+}
+
+func (this Either[L, R]) IsRight() bool {
+	return this.Right().NonEmpty()
+}
+
+type Failure struct {
+	Error   error
+	Message string
+}
+
+func NewFailure(err error) *Failure {
+	return &Failure{Error: err, Message: fmt.Sprint("%v", err)}
+}
+
+func NewFailureStr(err string) *Failure {
+	return &Failure{Error: errors.New(err), Message: err}
 }
 
 func Get[R any](val interface{}) R {
@@ -467,12 +485,6 @@ func GetItem[R any](val interface{}) R {
 	switch val.(type) {
 	case *Some:
 		return GetSome(val).Item.(R)
-	case *Success:
-		return GetSuccess(val).Item.(R)
-	case *Left:
-		return GetLeft(val).Item.(R)
-	case *Rigth:
-		return GetRigth(val).Item.(R)
 	default:
 		var x R
 		return x
@@ -483,20 +495,8 @@ func GetFail(val interface{}) *Fail {
 	return val.(*Fail)
 }
 
-func GetSuccess(val interface{}) *Success {
-	return val.(*Success)
-}
-
 func GetSome(val interface{}) *Some {
 	return val.(*Some)
-}
-
-func GetLeft(val interface{}) *Left {
-	return val.(*Left)
-}
-
-func GetRigth(val interface{}) *Rigth {
-	return val.(*Rigth)
 }
 
 func GetFailError(val interface{}) error {
@@ -665,4 +665,27 @@ func IsSimple(v interface{}) bool {
 		return true
 	}
 	return false
+}
+
+func FlatMap[T any, R any](vs *Optional[[]T], fn func(T) R) []R {
+	r := []R{}
+
+	if vs.NonEmpty() {
+		return lists.Map[T, R](vs.Get(), fn)
+	}
+	return r
+}
+
+func Flatten[T any](vs *Optional[T], orElese ...T) T {
+	var r T
+
+	if len(orElese) > 0 {
+		r = orElese[0]
+	}
+
+	if vs.NonEmpty() {
+		return vs.Get()
+	}
+
+	return r
 }

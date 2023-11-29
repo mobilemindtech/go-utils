@@ -343,6 +343,22 @@ func (this *JsonParser) MapToModel(data map[string]interface{}, model interface{
 	return nil
 }
 
+func (this *JsonParser) StructToModel(data interface{}, model interface{}) error {
+	jsonData, err := json.Marshal(data)
+
+	if err != nil {
+		return errors.New(fmt.Sprintf("error on FormToModel.json.Marshal: %v", err.Error()))
+	}
+
+	err = json.Unmarshal(jsonData, model)
+
+	if err != nil {
+		return errors.New(fmt.Sprintf("error on FormToModel.json.Unmarshal: %v", err.Error()))
+	}
+
+	return nil
+}
+
 func (this *JsonParser) GetJsonObject(json map[string]interface{}, key string) map[string]interface{} {
 
 	if this.HasJsonKey(json, key) {

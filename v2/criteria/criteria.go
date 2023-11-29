@@ -122,7 +122,7 @@ func New[T any](session *db.Session) *Criteria[T] {
 	var entity T
 	entities := []*T{}
 	criteria := &Criteria[T]{}
-	criteria.Defaults()
+	criteria.SetDefaults()
 	criteria.Session = session
 	criteria.Result = &entity
 	criteria.Results = &entities

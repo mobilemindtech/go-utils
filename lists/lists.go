@@ -118,6 +118,12 @@ func Map(vs interface{}, f func(interface{}) interface{}) []interface{} {
 	return vsm
 }
 
+func MapToInterface(vs interface{}) []interface{} {
+	return Map(vs, func(i interface{}) interface{} {
+		return i
+	})
+}
+
 func Sort(vs interface{}, f func(interface{}, interface{}) int) {
 
 	ss := reflect.ValueOf(vs)

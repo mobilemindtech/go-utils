@@ -1,10 +1,10 @@
- package email
+package email
 
- import (
- 	"regexp"
- )
+import (
+	"regexp"
+)
 
- func IsValid(email string) bool{
- 		re := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
- 		return re.MatchString(email) 	
- }
+func IsValid(email string) bool {
+	re := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+	return re.MatchString(email)
+}

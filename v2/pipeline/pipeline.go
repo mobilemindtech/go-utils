@@ -59,6 +59,15 @@ type Pipe struct {
 	fail           *optional.Fail
 }
 
+type CtxItem struct {
+	Key  string
+	Item interface{}
+}
+
+func NewCtxItem(key string, val interface{}) *CtxItem {
+	return &CtxItem{key, val}
+}
+
 func New() *Pipe {
 	return &Pipe{steps: []*PipeStep{}, results: []interface{}{}, ctx: ctx.New(), State: StateCreated}
 }
@@ -388,6 +397,17 @@ func (this *Pipe) Run() *Pipe {
 
 		if r == nil {
 			continue
+		}
+
+		switch r.(type) {
+		case *CtxItem:
+			r = r.(*CtxItem).Item
+			step.ctxName = r.(*CtxItem).Key
+			break
+		case CtxItem:
+			r = r.(CtxItem).Item
+			step.ctxName = r.(CtxItem).Key
+			break
 		}
 
 		switch r.(type) {

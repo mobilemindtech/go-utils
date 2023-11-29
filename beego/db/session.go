@@ -696,6 +696,7 @@ func (this *Session) Query(entity interface{}) (orm.QuerySeter, error) {
 	return nil, errors.New("entity does not implements of Model")
 }
 
+
 func (this *Session) ToList(querySeter orm.QuerySeter, entities interface{}) error {
 	if _, err := querySeter.All(entities); err != nil {
 		logs.Debug("## Session: error on to list: %v", err.Error())

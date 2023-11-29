@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/mobilemindtec/go-utils/app/models"
 	"github.com/mobilemindtec/go-utils/beego/db"
 	"github.com/mobilemindtec/go-utils/v2/optional"
 )
@@ -64,6 +65,14 @@ func (this *RxSession[T]) AddAction(ac ...interface{}) *RxSession[T] {
 		this.actions = append(this.actions, it)
 	}
 	return this
+}
+
+func (this *RxSession[T]) RunWithTenantId(id int64, cb func(*RxSession[T]) T) T {
+	var result T
+	this.session.RunWithTenant(models.NewTenantWithId(id), func() {
+		result = cb(this)
+	})
+	return result
 }
 
 func (this *RxSession[T]) AddPersist(items ...interface{}) *RxSession[T] {
