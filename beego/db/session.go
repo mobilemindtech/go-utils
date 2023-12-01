@@ -733,10 +733,13 @@ func (this *Session) ToCount(querySeter orm.QuerySeter) (int64, error) {
 	var count int64
 	var err error
 
+	querySeter = querySeter.Limit(0).Offset(0)
+
 	if count, err = querySeter.Count(); err != nil {
-		logs.Debug("## Session: error on to count: %v", err.Error())
-		//this.SetError()
-		return count, err
+		if err != orm.ErrNoRows {
+			logs.Debug("## Session: error on to count: %v", err.Error())
+			return count, err
+		}
 	}
 	return count, err
 }
