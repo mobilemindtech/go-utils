@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -30,6 +31,26 @@ import (
 	"github.com/mobilemindtec/go-utils/v2/optional"
 	uuid "github.com/satori/go.uuid"
 )
+
+type Multipart struct {
+	FileHeader *multipart.FileHeader
+	File       *multipart.File
+	Key        string
+}
+
+func (this *Multipart) FileName() string {
+	return this.FileHeader.Filename
+}
+
+func (this *Multipart) FileExtension() string {
+	ex := ""
+	splited := strings.Split(this.FileName(), ".")
+
+	if len(splited) > 0 {
+		ex = splited[len(splited)-1]
+	}
+	return strings.ToLower(ex)
+}
 
 type WebController struct {
 	beego.Controller
@@ -472,6 +493,9 @@ func (this *WebController) RenderJsonResult(opt interface{}) {
 	case *support.JsonResult:
 		this.OnJson(opt.(*support.JsonResult))
 		break
+	case *criteria.Page:
+		page := opt.(*criteria.Page)
+		this.OnJsonResultsWithTotalCount(page.Data, page.Count())
 	default:
 		this.OnJsonError(fmt.Sprintf("unknow optional value: %v", opt))
 		break
@@ -758,12 +782,12 @@ func (this *WebController) OnPureTemplate(templateName string) {
 	this.OnFlash(false)
 }
 
-func (this *WebController) OnRedirect(action string) {
+func (this *WebController) OnRedirect(action string, args ...interface{}) {
 	this.OnFlash(true)
 	if this.Ctx.Input.URL() == "action" {
 		this.Abort("500")
 	} else {
-		this.Redirect(action, 302)
+		this.Redirect(fmt.Sprintf(action, args...), 302)
 	}
 }
 
@@ -1613,4 +1637,17 @@ func (this *WebController) GetUploadedFileExt(fieldName string, required bool) (
 	newFileName := fmt.Sprintf("%v.%v", uuid.String(), ext)
 
 	return true, newFileName, nil
+}
+
+func (this *WebController) GetFileOpt(key string) *optional.Optional[*Multipart] {
+	file, fileHeader, err := this.GetFile(key)
+
+	if err != nil {
+		if err == http.ErrMissingFile {
+			return optional.WithNone[*Multipart]()
+		}
+		return optional.WithFail[*Multipart](err)
+	}
+
+	return optional.Of[*Multipart](&Multipart{File: &file, FileHeader: fileHeader, Key: key})
 }

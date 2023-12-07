@@ -89,11 +89,12 @@ func (this *EntityValidator) Validate(entities ...interface{}) interface{} {
 	result, err := this.ValidMult(entities, nil)
 
 	if err != nil {
+		logs.Debug("err = %v", err)
 		return optional.NewFail(err)
 	}
 
 	if result.HasError {
-		results := this.GetValidationResults(result)
+		results := this.GetValidationErrors(result)
 		return optional.NewFailWithItem(errors.New("validation error"), results)
 	}
 

@@ -83,7 +83,7 @@ func (this *CriteriaSet) AddCriteria(criterias ...*Criteria) *CriteriaSet {
 	for _, it := range criterias {
 		this.Criterias = append(this.Criterias, it)
 	}
-	return this	
+	return this
 }
 
 type Criteria struct {
@@ -97,7 +97,7 @@ type Criteria struct {
 	InValues []interface{}
 
 	criterias []*Criteria
-	orderBy    []*CriteriaOrder
+	orderBy   []*CriteriaOrder
 
 	criteriasOr       []*Criteria
 	criteriasAndOr    []*Criteria
@@ -141,9 +141,9 @@ type Criteria struct {
 	tenantCopy interface{}
 
 	aggregate string
-	groupBy string
+	groupBy   string
 
-	resultAggregate interface{}
+	resultAggregate  interface{}
 	resultsAggregate interface{}
 }
 
@@ -156,7 +156,7 @@ func NewCondition() *Criteria {
 }
 
 func (this *Criteria) CopyConditions(c *Criteria) {
-	
+
 	for _, it := range c.criterias {
 		this.criterias = append(c.criterias, it)
 	}
@@ -164,7 +164,6 @@ func (this *Criteria) CopyConditions(c *Criteria) {
 	for _, it := range c.criteriasOr {
 		this.criteriasOr = append(c.criteriasOr, it)
 	}
-
 
 	for _, it := range c.criteriasAndOr {
 		this.criteriasAndOr = append(c.criteriasAndOr, it)
@@ -177,7 +176,7 @@ func (this *Criteria) CopyConditions(c *Criteria) {
 	for _, it := range c.criteriasOrAnd {
 		this.criteriasOrAnd = append(c.criteriasOrAnd, it)
 	}
-	    
+
 	for _, it := range c.criteriasAnd {
 		this.criteriasAnd = append(c.criteriasAnd, it)
 	}
@@ -207,7 +206,7 @@ func (this *Criteria) IsExists() bool {
 func (this *Criteria) SetDefaults() *Criteria {
 	this.RelatedSelList = []string{}
 	return this.clearConditions()
-}	
+}
 
 func (this *Criteria) clearConditions() *Criteria {
 	this.criterias = []*Criteria{}
@@ -399,7 +398,7 @@ func (this *Criteria) List() *Criteria {
 	return this.execute(CriteriaList)
 }
 
-func (this *Criteria) GroupBy(s string) *Criteria{
+func (this *Criteria) GroupBy(s string) *Criteria {
 	this.groupBy = s
 	return this
 }
@@ -415,7 +414,6 @@ func (this *Criteria) AggregateList(s string, r interface{}) *Criteria {
 	this.resultsAggregate = r
 	return this.execute(CriteriaAggregateList)
 }
-
 
 func (this *Criteria) ListAndCount() *Criteria {
 	this.execute(CriteriaList)
@@ -585,7 +583,7 @@ func (this *Criteria) buildConditionsOr(criterias []*Criteria, condition *orm.Co
 				b := orm.NewCondition()
 				b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
 				b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
-				cond = cond.OrCond(b)			
+				cond = cond.OrCond(b)
 			default:
 				if criteria.ForceAnd {
 					cond = cond.And(pathName, criteria.Value)
@@ -606,7 +604,7 @@ func (this *Criteria) buildConditionsOr(criterias []*Criteria, condition *orm.Co
 		}
 
 		condition = condition.OrCond(cond)
-	}	
+	}
 
 	return condition
 }
@@ -641,15 +639,14 @@ func (this *Criteria) buildConditionsAnd(criterias []*Criteria, condition *orm.C
 
 		condition = condition.AndCond(cond)
 
-	}	
+	}
 
 	return condition
 }
 
-
 func (this *Criteria) buildConditionsAndOr(criterias []*Criteria, condition *orm.Condition) *orm.Condition {
 
-for _, c := range criterias {
+	for _, c := range criterias {
 
 		cond := orm.NewCondition()
 
@@ -675,7 +672,7 @@ for _, c := range criterias {
 					cond = cond.Or(pathName, criteria.Value)
 				}
 			}
-      
+
 			if this.Debug {
 				logs.Debug("*********************************************************")
 				logs.Debug("** set condition and or %v ", pathName)
@@ -690,7 +687,7 @@ for _, c := range criterias {
 
 		condition = condition.AndCond(cond)
 
-	}	
+	}
 
 	return condition
 }
@@ -783,7 +780,7 @@ func (this *Criteria) buildConditionsOrAnd(criterias []*Criteria, condition *orm
 		}
 		condition = condition.OrCond(cond)
 
-	}	
+	}
 
 	return condition
 }
@@ -799,7 +796,7 @@ func (this *Criteria) build(query orm.QuerySeter) orm.QuerySeter {
 	condition = this.buildConditionsAndOr(this.criteriasAndOr, condition)
 
 	condition = this.buildConditionsAndOrAnd(this.criteriasAndOrAnd, condition)
-	
+
 	condition = this.buildConditionsOrAnd(this.criteriasOrAnd, condition)
 
 	query = query.SetCond(condition)
@@ -907,7 +904,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria {
 		if len(this.groupBy) > 0 {
 			query = query.GroupBy(this.groupBy)
 		}
-		
+
 		err := this.Session.ToOne(query, this.resultAggregate)
 
 		if err != nil && err != orm.ErrNoRows && !strings.Contains(err.Error(), "repeat register") {
@@ -915,7 +912,6 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria {
 		} else {
 			this.SetError(nil)
 		}
-
 
 		break
 
@@ -926,7 +922,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria {
 		if len(this.groupBy) > 0 {
 			query = query.GroupBy(this.groupBy)
 		}
-		
+
 		err := this.Session.ToList(query, this.resultsAggregate)
 
 		if err != nil && err != orm.ErrNoRows && !strings.Contains(err.Error(), "repeat register") {
@@ -1115,15 +1111,16 @@ func (this *Criteria) TryOne() interface{} {
 }
 
 func (this *Criteria) TryList() interface{} {
-	this.One()
+	this.List()
 
 	if this.HasError {
 		return optional.NewFail(this.Error)
 	}
 
 	if this.Empty {
-		return optional.NewNone()
+		return optional.NewEmpty()
 	}
 
-	return optional.NewSome(this.Results)
+	val := reflect.ValueOf(this.Results)
+	return optional.NewSome(val.Elem().Interface())
 }

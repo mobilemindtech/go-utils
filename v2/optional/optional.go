@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/beego/beego/v2/core/logs"
+
 	"github.com/mobilemindtec/go-utils/v2/lists"
 )
 
@@ -210,6 +212,22 @@ func (this *Optional[T]) IfEmpty(cb func()) *Optional[T] {
 	return this
 }
 
+func (this *Optional[T]) IsSome() bool {
+	return this.some != nil
+}
+
+func (this *Optional[T]) IsFail() bool {
+	return this.fail != nil
+}
+
+func (this *Optional[T]) IsEmpty() bool {
+	return this.empty != nil
+}
+
+func (this *Optional[T]) IsNone() bool {
+	return this.none != nil
+}
+
 func (this *Optional[T]) IfNonEmpty(cb func(T)) *Optional[T] {
 	if this.some != nil {
 		cb(GetItem[T](this.some))
@@ -248,6 +266,15 @@ func (this *Optional[T]) Map(fn func(T) interface{}) interface{} {
 		}
 	}
 	return NewNone()
+}
+
+func (this *Optional[T]) MapTo(fn func(T) *Optional[T]) *Optional[T] {
+	if this.some != nil {
+		v := GetItem[T](this.some)
+		return fn(v)
+	}
+
+	return this
 }
 
 func (this *Optional[T]) MapToNone() interface{} {
@@ -312,7 +339,7 @@ func OptionalMap[F any, T any](opt *Optional[F], fn func(F) *Optional[T], orElse
 	return New[T](x)
 }
 
-func Map[F any, T any](opt *Optional[[]F], fn func(F) T) *Optional[[]T] {
+func MapEach[F any, T any](opt *Optional[[]F], fn func(F) T) *Optional[[]T] {
 	items := []T{}
 	if opt.Any() {
 
@@ -321,6 +348,103 @@ func Map[F any, T any](opt *Optional[[]F], fn func(F) T) *Optional[[]T] {
 		}
 	}
 	return New[[]T](items)
+}
+
+func Map[F any, T any](opt *Optional[F], fn func(F) *Optional[T]) *Optional[T] {
+	if opt.Any() {
+		return fn(opt.Get())
+	}
+	return Of[T](opt.Val())
+}
+
+func MapMerge[T1 any, T2 any, R any](opt1 *Optional[T1], opt2 *Optional[T2], fn func(T1, T2) R) *Optional[R] {
+
+	if opt1.IsSome() {
+		if opt2.IsSome() {
+			return Of[R](fn(opt1.Get(), opt2.Get()))
+		}
+		return Of[R](opt2.Val())
+	}
+
+	return Of[R](opt1.Val())
+}
+
+func ForeachAll[T1 any, T2 any](opt1 *Optional[T1], opt2 *Optional[T2], fn func(T1, T2)) *Optional[bool] {
+
+	if opt1.IsSome() {
+		if opt2.IsSome() {
+			fn(opt1.Get(), opt2.Get())
+			return WithSome[bool](true)
+		}
+		return Of[bool](opt2.Val())
+	}
+
+	return Of[bool](opt1.Val())
+}
+
+func ForeachAll3[T1 any, T2 any, T3 any](
+	opt1 *Optional[T1], opt2 *Optional[T2], opt3 *Optional[T3], fn func(T1, T2, T3)) *Optional[any] {
+
+	if opt1.IsSome() {
+		logs.Debug("opt1 ok %v", opt1)
+		if opt2.IsSome() {
+			logs.Debug("opt2 ok %v", opt2)
+			if opt3.IsSome() {
+				logs.Debug("opt3 ok %v", opt3)
+				fn(opt1.Get(), opt2.Get(), opt3.Get())
+				return WithEmpty[any]()
+			}
+			return Of[any](opt3.Val())
+		}
+		return Of[any](opt2.Val())
+	}
+
+	return Of[any](opt1.Val())
+}
+
+/**
+ * Lazy expression avalidation
+ */
+type Lazy struct {
+	Exec func() interface{}
+}
+
+func NewLazy(exec func() interface{}) *Lazy {
+	return &Lazy{exec}
+}
+
+/**
+ * Run all lazy expressions, map to fn result if success
+ */
+func RunAllMap[T any](fn func() T, opts ...*Lazy) *Optional[T] {
+	r := RunAll(opts...)
+
+	if r.IsSome() {
+		return Of[T](fn())
+	}
+
+	return Of[T](r.Val())
+}
+
+/**
+ * Run all lazy expressions, map to Optional[bool](true) if success
+ */
+func RunAll(opts ...*Lazy) *Optional[bool] {
+
+	for _, lazy := range opts {
+
+		r := lazy.Exec()
+
+		switch r.(type) {
+		case *Some:
+			continue
+		default:
+			return Of[bool](r)
+		}
+	}
+
+	return Of[bool](true)
+
 }
 
 type Empty struct {

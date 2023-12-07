@@ -51,6 +51,14 @@ func NewActionRemove(e interface{}) *ActionRemove {
 	return &ActionRemove{Action{entity: e}}
 }
 
+type ActionRemoveCascade struct {
+	Action
+}
+
+func NewActionRemoveCascade(e interface{}) *ActionRemoveCascade {
+	return &ActionRemoveCascade{Action{entity: e}}
+}
+
 type RxSession[T any] struct {
 	session *db.Session
 	actions []interface{}
@@ -82,9 +90,23 @@ func (this *RxSession[T]) AddPersist(items ...interface{}) *RxSession[T] {
 	return this
 }
 
+func (this *RxSession[T]) AddPersistOf(items ...T) *RxSession[T] {
+	for _, o := range items {
+		this.AddPersist(o)
+	}
+	return this
+}
+
 func (this *RxSession[T]) AddSave(items ...interface{}) *RxSession[T] {
 	for _, o := range items {
 		this.AddAction(NewActionSave(o))
+	}
+	return this
+}
+
+func (this *RxSession[T]) AddSaveOf(items ...T) *RxSession[T] {
+	for _, o := range items {
+		this.AddSave(o)
 	}
 	return this
 }
@@ -96,11 +118,48 @@ func (this *RxSession[T]) AddUpdate(items ...interface{}) *RxSession[T] {
 	return this
 }
 
+func (this *RxSession[T]) AddUpdateOf(items ...T) *RxSession[T] {
+	for _, o := range items {
+		this.AddUpdate(o)
+	}
+	return this
+}
+
 func (this *RxSession[T]) AddRemove(items ...interface{}) *RxSession[T] {
 	for _, o := range items {
 		this.AddAction(NewActionRemove(o))
 	}
 	return this
+}
+
+func (this *RxSession[T]) AddRemoveOf(items ...T) *RxSession[T] {
+	for _, o := range items {
+		this.AddRemove(o)
+	}
+	return this
+}
+
+func (this *RxSession[T]) AddRemoveCascade(items ...interface{}) *RxSession[T] {
+	for _, o := range items {
+		this.AddAction(NewActionRemoveCascade(o))
+	}
+	return this
+}
+
+func (this *RxSession[T]) AddRemoveCascadeOf(items ...T) *RxSession[T] {
+	for _, o := range items {
+		this.AddRemoveCascade(o)
+	}
+	return this
+}
+
+func (this *RxSession[T]) Exec() *optional.Optional[bool] {
+	r := this.Run()
+
+	if r.IsEmpty() {
+		return optional.Of[bool](true)
+	}
+	return optional.Of[bool](r.Val())
 }
 
 func (this *RxSession[T]) Run() *optional.Optional[T] {
@@ -120,6 +179,9 @@ func (this *RxSession[T]) Run() *optional.Optional[T] {
 			break
 		case *ActionRemove:
 			err = this.session.Remove(ac.(*ActionRemove).Get())
+			break
+		case *ActionRemoveCascade:
+			err = this.session.RemoveCascade(ac.(*ActionRemoveCascade).Get())
 			break
 		default:
 			err = fmt.Errorf("invalid action: %v", reflect.TypeOf(ac))
@@ -152,6 +214,14 @@ func (this *RxSession[T]) Update(entity T) *optional.Optional[T] {
 func (this *RxSession[T]) Remove(entity T) *optional.Optional[bool] {
 
 	if err := this.session.Remove(entity); err != nil {
+		return optional.WithFail[bool](err)
+	}
+	return optional.WithSome[bool](true)
+}
+
+func (this *RxSession[T]) RemoveCascade(entity T) *optional.Optional[bool] {
+
+	if err := this.session.RemoveCascade(entity); err != nil {
 		return optional.WithFail[bool](err)
 	}
 	return optional.WithSome[bool](true)

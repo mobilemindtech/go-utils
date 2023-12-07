@@ -120,6 +120,16 @@ func (this *Pipe) HasCtx(key string) bool {
 	return this.ctx.Has(key)
 }
 
+func (this *Pipe) IfCtx(key string, fn func(interface{})) {
+	if this.ctx.Has(key) {
+		fn(this.GetCtx(key))
+	}
+}
+
+func (this *Pipe) CtxDump() {
+	this.ctx.Dump()
+}
+
 func (this *Pipe) ErrorHandler(ac interface{}) *Pipe {
 	this.errorHandler = ac
 	return this
@@ -401,12 +411,12 @@ func (this *Pipe) Run() *Pipe {
 
 		switch r.(type) {
 		case *CtxItem:
-			r = r.(*CtxItem).Item
 			step.ctxName = r.(*CtxItem).Key
+			r = r.(*CtxItem).Item
 			break
 		case CtxItem:
-			r = r.(CtxItem).Item
 			step.ctxName = r.(CtxItem).Key
+			r = r.(CtxItem).Item
 			break
 		}
 

@@ -309,6 +309,7 @@ func (this *Session) Save(entity interface{}) error {
 	}
 
 	if !this.checkIsAuthorizedTenant(entity, "Session.Save") {
+		this.SetError()
 		return errors.New("Tenant not authorized for entity data access. Operation: Session.Save.")
 	}
 
@@ -350,6 +351,7 @@ func (this *Session) Update(entity interface{}) error {
 	}
 
 	if !this.checkIsAuthorizedTenant(entity, "Session.Update") {
+		this.SetError()
 		return errors.New("Tenant not authorized for entity data access. Operation: Session.Update.")
 	}
 
@@ -383,6 +385,7 @@ func (this *Session) Update(entity interface{}) error {
 func (this *Session) Remove(entity interface{}) error {
 
 	if !this.checkIsAuthorizedTenant(entity, "Session.Remove") {
+		this.SetError()
 		return errors.New("Tenant not authorized for entity data access. Operation: Session.Remove.")
 	}
 
@@ -409,11 +412,18 @@ func (this *Session) Remove(entity interface{}) error {
 	return nil
 }
 
+func (this *Session) TryLoad(entity interface{}) (bool, error) {
+	return this.Load(entity)
+}
 func (this *Session) Load(entity interface{}) (bool, error) {
 	if this.IsNil(entity) {
 		return false, nil
 	}
 	return this.Get(entity)
+}
+
+func (this *Session) TryLoadBatch(entities ...interface{}) error {
+	return this.LoadBatch(entities...)
 }
 
 func (this *Session) LoadBatch(entities ...interface{}) error {
@@ -695,7 +705,6 @@ func (this *Session) Query(entity interface{}) (orm.QuerySeter, error) {
 	this.SetError()
 	return nil, errors.New("entity does not implements of Model")
 }
-
 
 func (this *Session) ToList(querySeter orm.QuerySeter, entities interface{}) error {
 	if _, err := querySeter.All(entities); err != nil {
@@ -1387,7 +1396,7 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
 							}
 
 							if !authorized {
-								logs.Debug("+++ WARN: unautorized tenant ", currentTenant.GetId(), "to entity tenant = ", entityTenant.GetId(), " for type ", fullType, " content = ", reply, ", action = ", action)
+								logs.Warn("unautorized tenant ", currentTenant.GetId(), "to entity tenant = ", entityTenant.GetId(), " for type ", fullType, " content = ", reply, ", action = ", action)
 							}
 
 							return authorized
@@ -1395,16 +1404,12 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
 						}
 
 					} else {
-						logs.Debug("=======================================================")
-						logs.Debug("=== WARN!!! Current Tenant id empty for entity type = ", fullType, " content = ", reply, ", action = ", action)
-						logs.Debug("=======================================================")
+						logs.Warn("current Tenant id empty for entity type = ", fullType, " content = ", reply, ", action = ", action)
 					}
 
 				}
 			} else if !ignoreAuthorizedTenantCheckError {
-				logs.Debug("=======================================================")
-				logs.Debug("=== WARN!!! Tenant id empty for entity type = ", fullType, " content = ", reply, ", action = ", action)
-				logs.Debug("=======================================================")
+				logs.Warn("tenant id empty for entity type = ", fullType, " content = ", reply, ", action = ", action)
 			}
 		}
 	}

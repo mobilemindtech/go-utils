@@ -59,6 +59,16 @@ func Filter[T any](vs []T, f func(T) bool) []T {
 	return vsf
 }
 
+func FilterNot[T any](vs []T, f func(T) bool) []T {
+	vsf := []T{}
+	for _, it := range vs {
+		if !f(it) {
+			vsf = append(vsf, it)
+		}
+	}
+	return vsf
+}
+
 // Filter returns a new slice containing all interface{}s in the
 // slice that satisfy the predicate `f`.
 func Find[T any](vs []T, f func(T) bool) T {
@@ -108,6 +118,24 @@ func FoldLeft[T any, Acc any](vs []T, initial Acc, fold func(Acc, T) Acc) Acc {
 		nextAcc = fold(nextAcc, it)
 	}
 	return nextAcc
+}
+
+func Contains[T any](vs1 []T, vs2 []T, test func(T, T) bool) []T {
+	return Filter[T](vs1,
+		func(v1 T) bool {
+			return Any[T](vs2, func(v2 T) bool {
+				return test(v1, v2)
+			})
+		})
+}
+
+func ContainsNot[T any](vs1 []T, vs2 []T, test func(T, T) bool) []T {
+	return Filter[T](vs1,
+		func(v1 T) bool {
+			return !Any[T](vs2, func(v2 T) bool {
+				return test(v1, v2)
+			})
+		})
 }
 
 func ListParts[T any](vs []T, size int) [][]T {

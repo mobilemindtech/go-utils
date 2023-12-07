@@ -3,6 +3,7 @@ package json
 import (
 	"encoding/json"
 	"net/url"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -149,7 +150,7 @@ func (this *Json) SetNested(key string, nestedKey string, value interface{}) {
 
 func (this *Json) OptObject(key string, def *Json) *Json {
 	r := this.GetObject(key)
-	if r != nil {
+	if r == nil {
 		r = def
 	}
 	return r
@@ -159,7 +160,7 @@ func (this *Json) GetObject(key string) *Json {
 
 	if this.HasKey(key) {
 		opt, _ := this.data[key]
-		if opt != nil {
+		if opt == nil {
 			return NewFromMap(opt.(map[string]interface{}))
 		}
 
@@ -170,7 +171,7 @@ func (this *Json) GetObject(key string) *Json {
 
 func (this *Json) OptObjectArray(key string, def []*Json) []*Json {
 	r := this.GetObjectArray(key)
-	if r != nil {
+	if r == nil {
 		r = def
 	}
 	return r
@@ -199,7 +200,7 @@ func (this *Json) GetObjectArray(key string) []*Json {
 
 func (this *Json) OptArray(key string, def []interface{}) []interface{} {
 	r := this.GetArray(key)
-	if r != nil {
+	if r == nil {
 		r = def
 	}
 	return r
@@ -217,6 +218,67 @@ func (this *Json) GetArray(key string) []interface{} {
 	}
 
 	return nil
+}
+
+func (this *Json) GetArrayOrEmpty(key string) []interface{} {
+	empty := []interface{}{}
+	return this.OptArray(key, empty)
+}
+
+func (this *Json) GetArrayOfInt(key string) []int {
+
+	if this.HasKey(key) {
+		opt, _ := this.data[key]
+
+		if array, ok := opt.([]int); ok {
+			return array
+		}
+
+	}
+
+	return nil
+}
+
+func (this *Json) OptArrayOfInt(key string, def []int) []int {
+	r := this.GetArrayOfInt(key)
+	if r == nil {
+		r = def
+	}
+	return r
+}
+
+func (this *Json) GetArrayOfString(key string) []string {
+
+	if this.HasKey(key) {
+		opt, _ := this.data[key]
+
+		logs.Debug("opt = %v, type = %v", opt, reflect.TypeOf(opt))
+
+		if array, ok := opt.([]string); ok {
+			return array
+		}
+
+	}
+
+	return nil
+}
+
+func (this *Json) GetArrayOfStringOrEmpty(key string) []string {
+	empty := []string{}
+	return this.OptArrayOfString(key, empty)
+}
+
+func (this *Json) OptArrayOfString(key string, def []string) []string {
+	r := this.GetArrayOfString(key)
+	if r != nil {
+		r = def
+	}
+	return r
+}
+
+func (this *Json) GetArrayOfIntOrEmpty(key string) []int {
+	empty := []int{}
+	return this.OptArrayOfInt(key, empty)
 }
 
 func (this *Json) OptInt(key string, def int) int {

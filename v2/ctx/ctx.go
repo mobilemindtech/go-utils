@@ -2,6 +2,8 @@ package ctx
 
 import (
 	"fmt"
+
+	"github.com/beego/beego/v2/core/logs"
 )
 
 type Ctx struct {
@@ -11,6 +13,15 @@ type Ctx struct {
 
 func New() *Ctx {
 	return &Ctx{data: map[string]interface{}{}}
+}
+
+func (this *Ctx) Dump() {
+	logs.Debug("====> CTX DUMP START")
+	for k, v := range this.data {
+		logs.Debug("==> %v = %v", k, v)
+	}
+	logs.Debug("====> CTX DUMP END")
+
 }
 
 func (this *Ctx) Put(key string, v interface{}) *Ctx {

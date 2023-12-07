@@ -4,6 +4,8 @@ import (
 	_ "fmt"
 	"reflect"
 
+	"github.com/mobilemindtec/go-utils/v2/lists"
+
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/mobilemindtec/go-utils/beego/db"
 	"github.com/mobilemindtec/go-utils/v2/optional"
@@ -18,13 +20,30 @@ func (this *Page) Count() int64 {
 	return int64(this.TotalCount)
 }
 
-type Page0[T any] struct {
+type PageOf[T any] struct {
 	TotalCount int `json:"total_count" jsonp:""`
 	Data       []T `json:"data" jsonp:""`
 }
 
-func (this *Page0[T]) Count() int64 {
+func (this *PageOf[T]) Count() int64 {
 	return int64(this.TotalCount)
+}
+
+func (this *PageOf[T]) ToPage() *Page {
+	data := lists.Map[T, interface{}](this.Data, func(t T) interface{} { return t })
+	return &Page{Data: data, TotalCount: this.TotalCount}
+}
+
+func PageOfMap[T any, R any](
+	p1 *optional.Optional[*PageOf[T]], fn func(T) R) *optional.Optional[*PageOf[R]] {
+
+	if p1.IsSome() {
+		page := p1.Get()
+		results := lists.Map[T, R](page.Data, fn)
+		return optional.Of[*PageOf[R]](&PageOf[R]{Data: results, TotalCount: page.TotalCount})
+	}
+
+	return optional.Of[*PageOf[R]](p1.Val())
 }
 
 func GetPageData[T any](rs *Page) []T {
@@ -142,6 +161,11 @@ func (this *Criteria[T]) Rx() *Reactive {
 	return NewReactive(&this.Criteria)
 }
 
+/*
+*
+
+	return empty lias as optional.Empty
+*/
 func (this *Criteria[T]) OptAll() *optional.Optional[[]*T] {
 	this.List()
 
@@ -149,14 +173,29 @@ func (this *Criteria[T]) OptAll() *optional.Optional[[]*T] {
 		return optional.WithFail[[]*T](this.Error)
 	}
 
+	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]*T)
+
 	if !this.Any {
 		logs.Debug("no data")
 		return optional.WithEmpty[[]*T]()
 	}
 
-	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]*T)
+	return optional.WithSome[[]*T](all)
+}
 
-	logs.Debug("all  = %v", all)
+/*
+*
+
+	return empty lias as optional.Some with a empty list
+*/
+func (this *Criteria[T]) OptList() *optional.Optional[[]*T] {
+	this.List()
+
+	if this.Criteria.HasError {
+		return optional.WithFail[[]*T](this.Error)
+	}
+
+	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]*T)
 
 	return optional.WithSome[[]*T](all)
 }
@@ -197,17 +236,26 @@ func (this *Criteria[T]) OptAny() *optional.Optional[bool] {
 	return optional.WithSome[bool](this.Any)
 }
 
-func (this *Criteria[T]) OptPage() *optional.Optional[*Page0[*T]] {
+func (this *Criteria[T]) OptPage() *optional.Optional[*PageOf[*T]] {
 	this.ListAndCount()
 
 	if this.Criteria.HasError {
-		return optional.WithFail[*Page0[*T]](this.Error)
+		return optional.WithFail[*PageOf[*T]](this.Error)
 	}
 
 	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]*T)
-	return optional.WithSome[*Page0[*T]](&Page0[*T]{
+	return optional.WithSome[*PageOf[*T]](&PageOf[*T]{
 		TotalCount: this.Criteria.Count32,
 		Data:       all})
+}
+
+func (this *Criteria[T]) OptDelete() *optional.Optional[int] {
+	this.Delete()
+
+	if this.Criteria.HasError {
+		return optional.WithFail[int](this.Error)
+	}
+	return optional.WithSome[int](this.Count32)
 }
 
 func (this *Criteria[T]) SetRelatedSel(related ...string) *Criteria[T] {
@@ -244,10 +292,10 @@ func (this *Criteria[T]) Exists() (bool, error) {
 	return this.Any, this.Error
 }
 
-func (this *Criteria[T]) Page() (*Page0[*T], error) {
+func (this *Criteria[T]) Page() (*PageOf[*T], error) {
 	this.Criteria.ListAndCount()
 	r, err := this.GetResults()
-	return &Page0[*T]{Data: r, TotalCount: this.Count32}, err
+	return &PageOf[*T]{Data: r, TotalCount: this.Count32}, err
 }
 
 func (this *Criteria[T]) GetResult() (*T, error) {
@@ -279,20 +327,20 @@ func (this *Criteria[T]) FindById(id int64) (*T, error) {
 	return nil, nil
 }
 
-func (this *Criteria[T]) Get(id int64) (*T, bool, error) {
+func (this *Criteria[T]) Get(id int64) *optional.Optional[*T] {
 	var entity T
 	r, err := this.Session.FindById(&entity, id)
 	if err != nil {
-		return nil, false, err
+		return optional.WithFail[*T](err)
 	}
 
 	m, _ := r.(db.Model)
 
 	if m.IsPersisted() {
-		return &entity, true, nil
+		return optional.Of[*T](&entity)
 	}
 
-	return nil, false, nil
+	return optional.WithNone[*T]()
 }
 
 func (this *Criteria[T]) OrderAsc(path string) *Criteria[T] {
