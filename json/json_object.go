@@ -11,6 +11,7 @@ import (
 	"github.com/mobilemindtec/go-utils/app/util"
 	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtec/go-utils/v2/try"
 )
 
 type JsonWriter interface {
@@ -60,7 +61,7 @@ func (this *Parser[T]) ParseInto(raw []byte, entity *T) *optional.Optional[*T] {
 	j, err := NewFromBytes(raw)
 
 	if err != nil {
-		return optional.WithFail[*T](err)
+		return optional.OfFail[*T](err)
 	}
 
 	return this.ParseJsonInto(j, entity)
@@ -79,10 +80,10 @@ func (this *Parser[T]) ParseJsonInto(j *Json, entity *T) *optional.Optional[*T] 
 		newJsonData, err := json.Marshal(j.data)
 
 		if err != nil {
-			return optional.WithFail[*T](err)
+			return optional.OfFail[*T](err)
 		}
 
-		logs.Info("=== %v", string(newJsonData))
+		//logs.Info("=== %v", string(newJsonData))
 
 		err = json.Unmarshal(newJsonData, entity)
 
@@ -91,10 +92,10 @@ func (this *Parser[T]) ParseJsonInto(j *Json, entity *T) *optional.Optional[*T] 
 	}
 
 	if err != nil {
-		return optional.WithFail[*T](err)
+		return optional.OfFail[*T](err)
 	}
 
-	return optional.WithSome[*T](entity)
+	return optional.OfSome[*T](entity)
 }
 
 type Json struct {
@@ -134,6 +135,12 @@ func New(raw []byte) interface{} {
 		return optional.NewFail(err)
 	}
 	return optional.NewSome(j)
+}
+
+func Of(raw []byte) *optional.Optional[*Json] {
+	return try.Of(func() (*Json, error) {
+		return NewFromBytes(raw)
+	})
 }
 
 func (this *Json) GetData() map[string]interface{} {
@@ -461,6 +468,22 @@ func (this *Json) GetTime(key string, layout string) time.Time {
 func (this *Json) GetTimeWithLocation(key string, layout string, loc *time.Location) time.Time {
 	date, _ := time.ParseInLocation(layout, this.GetString(key), loc)
 	return date
+}
+
+func (this *Json) HasNotKeys(keys ...string) bool {
+	return !this.HasKeys(keys...)
+}
+func (this *Json) HasKeys(keys ...string) bool {
+	for _, key := range keys {
+		if !this.HasKey(key) {
+			return false
+		}
+	}
+	return true
+}
+
+func (this *Json) HasNotKey(key string) bool {
+	return !this.HasKey(key)
 }
 
 func (this *Json) HasKey(key string) bool {

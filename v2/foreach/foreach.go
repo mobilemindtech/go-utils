@@ -2,9 +2,9 @@ package foreach
 
 import (
 	"fmt"
-
 	"github.com/mobilemindtec/go-utils/v2/optional"
-	"github.com/mobilemindtec/go-utils/v2/util"
+	"github.com/mobilemindtec/go-utils/v2/fn"
+	"reflect"
 )
 
 type ForState int
@@ -56,6 +56,7 @@ type Foreach[T any] struct {
 	_for         func(int) *optional.Optional[[]T]
 	each         func([]T) interface{}
 	eachOne      func(T) interface{}
+	filter       func(T) bool
 	errorHandler interface{}
 	doneHandler  func()
 	breakHandler func()
@@ -63,10 +64,15 @@ type Foreach[T any] struct {
 	by           int
 	State        ForState
 	fail         *optional.Fail
+	data         []T
 }
 
 func New[T any]() *Foreach[T] {
 	return &Foreach[T]{by: 1, State: ForDefault}
+}
+
+func Of[T any](data []T) *Foreach[T] {
+	return &Foreach[T]{by: 1, data: data, State: ForDefault}
 }
 
 func (this *Foreach[T]) GetResults() []T {
@@ -90,6 +96,11 @@ func (this *Foreach[T]) Each(f func([]T) interface{}) *Foreach[T] {
 
 func (this *Foreach[T]) EachOne(f func(T) interface{}) *Foreach[T] {
 	this.eachOne = f
+	return this
+}
+
+func (this *Foreach[T]) Filter(f func(T) bool) *Foreach[T] {
+	this.filter = f
 	return this
 }
 
@@ -166,35 +177,48 @@ func (this *Foreach[T]) Do() *Foreach[T] {
 
 	for {
 
-		r := this._for(counter)
+		useFor := this._for != nil
 
-		if !r.Any() {
+		if useFor {
+			r := this._for(counter)
+
+			if !r.Any() {
+				break
+			}
+			this.data = r.Get()
+		}
+
+		if len(this.data) == 0 {
 			break
 		}
-		rs := r.Get()
 
-		if len(rs) == 0 {
-			break
-		}
-
-		for _, it := range rs {
+		for _, it := range this.data {
+			if this.filter != nil {
+				if !this.filter(it) {
+					continue
+				}
+			}
 			this.results = append(this.results, it)
 		}
 
 		if this.each != nil {
 
-			if !onResult(this.each(rs)) {
+			if !onResult(this.each(this.data)) {
 				return this
 			}
 
 		} else if this.eachOne != nil {
-			for _, it := range rs {
+			for _, it := range this.data {
 
 				if !onResult(this.eachOne(it)) {
 					return this
 				}
 			}
 
+		}
+
+		if !useFor {
+			break
 		}
 
 		counter += this.by
@@ -214,14 +238,29 @@ func (this *Foreach[T]) processError(r interface{}) {
 	this.State = ForError
 	this.fail = optional.NewFailStr("%v", r)
 
+
+
 	if this.errorHandler != nil {
-		switch this.errorHandler.(type) {
-		case util.ErrorFn:
-			this.errorHandler.(util.ErrorFn)(this.fail)
-			break
-		case util.FailFn:
-			this.errorHandler.(util.FailFn)(this.fail)
-			break
+
+		info := fn.NewFuncInfo(this.errorHandler)
+
+		if info.ArgsCount == 0 {
+			info.CallEmpty()
+		} else {
+
+			if info.ArgsCount != 1  { // onSuccess = func(interface{})
+				panic("step OnError: func must have one argument of error or Fail")
+			}
+
+			args := []reflect.Value{}
+			if info.ArgsTypes[0] == reflect.TypeOf(this.fail.Error) {
+				args = append(args, reflect.ValueOf(this.fail.Error))
+			}else {
+				args = append(args, reflect.ValueOf(this.fail))
+			}
+
+			info.Call(args)
+
 		}
 	}
 }
@@ -231,7 +270,6 @@ func (this *Foreach[T]) SetErrorHandler(errorHandler interface{}) {
 }
 
 func (this *Foreach[T]) ErrorHandler(errorHandler interface{}) *Foreach[T] {
-	util.ValidateErrorHandler(errorHandler)
 	this.errorHandler = errorHandler
 	return this
 }

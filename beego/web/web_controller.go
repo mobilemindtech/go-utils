@@ -28,6 +28,7 @@ import (
 	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-utils/v2/criteria"
 	"github.com/mobilemindtec/go-utils/v2/ioc"
+	"github.com/mobilemindtec/go-utils/v2/maps"
 	"github.com/mobilemindtec/go-utils/v2/optional"
 	uuid "github.com/satori/go.uuid"
 )
@@ -472,17 +473,33 @@ func (this *WebController) OnResultsWithTotalCount(viewName string, results inte
 
 func (this *WebController) RenderJsonResult(opt interface{}) {
 
+	logs.Debug("RenderJsonResult = %v", opt)
+
 	switch opt.(type) {
 	case *optional.Some:
-		it := opt.(*optional.Some).Item
-		if optional.IsSlice(it) {
-			this.OnJsonResults(it)
-		} else {
-			this.OnJsonResult(it)
+		someVal := opt.(*optional.Some).Item
+
+		switch someVal.(type) {
+		case *criteria.Page:
+			page := someVal.(*criteria.Page)
+			this.OnJsonResultsWithTotalCount(page.Data, page.Count())
+			break
+		case *optional.Ok:
+			this.OnJson200()
+			break
+		default:
+
+			if val, ok := criteria.TryExtractPageIfPegeOf(someVal); ok {
+				this.RenderJson(val)
+				return
+			}
+
+			if optional.IsSlice(someVal) {
+				this.OnJsonResults(someVal)
+			} else {
+				this.OnJsonResult(someVal)
+			}
 		}
-		break
-	case *optional.Empty:
-		this.OnJsonResults([]interface{}{})
 		break
 	case *optional.None:
 		this.OnJson200()
@@ -496,8 +513,27 @@ func (this *WebController) RenderJsonResult(opt interface{}) {
 	case *criteria.Page:
 		page := opt.(*criteria.Page)
 		this.OnJsonResultsWithTotalCount(page.Data, page.Count())
+		break
 	default:
-		this.OnJsonError(fmt.Sprintf("unknow optional value: %v", opt))
+
+		if val, ok := optional.TryExtractValIfOptional(opt); ok {
+			this.RenderJsonResult(val)
+			return
+		}
+
+		if val, ok := criteria.TryExtractPageIfPegeOf(opt); ok {
+			this.RenderJsonResult(val)
+			return
+		}
+
+		if optional.IsSlice(opt) {
+			this.OnJsonResults(opt)
+		} else {
+			this.OnJsonResult(opt)
+		}
+
+
+		//this.OnJsonError(fmt.Sprintf("unknow optional value: %v", opt))
 		break
 	}
 
@@ -509,6 +545,9 @@ func (this *WebController) RenderJson(opt interface{}) {
 	var statusCodeResult = 200
 
 	switch opt.(type) {
+	case *criteria.Page:
+		dataResult = opt
+		break
 	case *optional.Some:
 		someVal := opt.(*optional.Some).Item
 
@@ -516,14 +555,23 @@ func (this *WebController) RenderJson(opt interface{}) {
 		case *criteria.Page:
 			dataResult = someVal
 			break
+		case *optional.Ok:
+			dataResult = map[string]interface{}{}
+			break
 		default:
+
+			if val, ok := criteria.TryExtractPageIfPegeOf(someVal); ok {
+				this.RenderJson(val)
+				return
+			}
+
 			dataResult = map[string]interface{}{
 				"data": someVal,
 			}
 		}
 
 		break
-	case *optional.None, *optional.Empty:
+	case *optional.None:
 		statusCodeResult = 404
 		dataResult = map[string]interface{}{
 			"error":   true,
@@ -550,12 +598,28 @@ func (this *WebController) RenderJson(opt interface{}) {
 		statusCodeResult = statusCode
 		break
 	default:
+
+		if val, ok := optional.TryExtractValIfOptional(opt); ok {
+			this.RenderJson(val)
+			return
+		}
+
+		if val, ok := criteria.TryExtractPageIfPegeOf(opt); ok {
+			this.RenderJson(val)
+			return
+		}
+
+		dataResult = map[string]interface{}{
+			"data": opt,
+		}
+
+		/*
 		dataResult = map[string]interface{}{
 			"error":   true,
 			"message": fmt.Sprintf("unknow optional value: %v", opt),
-		}
+		}*/
 
-		statusCodeResult = 500
+		//statusCodeResult = 500
 		break
 	}
 
@@ -712,6 +776,13 @@ func (this *WebController) OnJsonOk(format string, v ...interface{}) {
 
 func (this *WebController) OnJson200() {
 	this.OnJson(&support.JsonResult{CurrentUnixTime: this.GetCurrentTimeUnix()})
+}
+
+func (this *WebController) NotFoundAsJson() {
+	this.Data["json"] = maps.JSON("message", "not found")
+	this.NotFound()
+	this.ServeJSON()
+
 }
 
 func (this *WebController) OkAsJson(format string, v ...interface{}) {
@@ -1644,9 +1715,9 @@ func (this *WebController) GetFileOpt(key string) *optional.Optional[*Multipart]
 
 	if err != nil {
 		if err == http.ErrMissingFile {
-			return optional.WithNone[*Multipart]()
+			return optional.OfNone[*Multipart]()
 		}
-		return optional.WithFail[*Multipart](err)
+		return optional.OfFail[*Multipart](err)
 	}
 
 	return optional.Of[*Multipart](&Multipart{File: &file, FileHeader: fileHeader, Key: key})

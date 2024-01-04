@@ -4,21 +4,20 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
-	"github.com/beego/beego/v2/core/logs"
-
+	lst "github.com/mobilemindtec/go-utils/lists"
 	"github.com/mobilemindtec/go-utils/v2/lists"
 )
 
 type Optional[T any] struct {
-	some  *Some
-	none  *None
-	fail  *Fail
-	empty *Empty
+	some *Some
+	none *None
+	fail *Fail
 }
 
-func WithSome[T any](v interface{}) *Optional[T] {
+func OfSome[T any](v interface{}) *Optional[T] {
 
 	var s *Some
 
@@ -34,10 +33,6 @@ func WithSome[T any](v interface{}) *Optional[T] {
 }
 
 func OfFail[T any](v interface{}) *Optional[T] {
-	return WithFail[T](v)
-}
-
-func WithFail[T any](v interface{}) *Optional[T] {
 
 	var s *Fail
 
@@ -60,26 +55,15 @@ func WithFail[T any](v interface{}) *Optional[T] {
 }
 
 func OfNone[T any]() *Optional[T] {
-	return WithNone[T]()
-}
-
-func WithNone[T any]() *Optional[T] {
 	return &Optional[T]{none: NewNone()}
 }
 
-func OfEmpty[T any]() *Optional[T] {
-	return WithEmpty[T]()
+// OfOk represents ok empty result or so ignore result
+func OfOk[T any]() *Optional[T] {
+	return &Optional[T]{some: SomeOk()}
 }
 
-func WithEmpty[T any]() *Optional[T] {
-	return &Optional[T]{empty: NewEmpty()}
-}
-
-func NewE[T any](val interface{}, err interface{}) *Optional[T] {
-	return TryMake[T](val, err)
-}
-
-func TryMake[T any](val interface{}, err interface{}) *Optional[T] {
+func Try[T any](val interface{}, err interface{}) *Optional[T] {
 	if !IsNilFixed(err) {
 		return New[T](err)
 	}
@@ -109,14 +93,11 @@ func New[T any](val interface{}) *Optional[T] {
 	case *Fail:
 		opt.fail = val.(*Fail)
 		break
-	case *Empty:
-		opt.empty = val.(*Empty)
-		break
 	case error:
 		opt.fail = NewFail(val.(error))
 		break
 	default:
-		mkd := Make(val, nil)
+		mkd := MakeTry(val, nil)
 		switch mkd.(type) {
 		case *Some:
 			opt.some = mkd.(*Some)
@@ -124,18 +105,73 @@ func New[T any](val interface{}) *Optional[T] {
 		case *None:
 			opt.none = mkd.(*None)
 			break
-		case *Empty:
-			opt.empty = mkd.(*Empty)
-			break
 		case *Fail:
 			opt.fail = mkd.(*Fail)
 			break
 		default:
-			panic(fmt.Sprint("can't get type from: %v", mkd))
+			panic(fmt.Sprintf("can't get type from: %v", mkd))
 		}
 		break
 	}
 	return &opt
+}
+
+func (this *Optional[T]) PanicIfFail(msg ...string) *Optional[T] {
+	if this.IsFail() {
+
+		m := ""
+
+		if len(msg) > 0 {
+			m = msg[0]
+		}
+
+		m = fmt.Sprintf(": %v", this.GetFail().ErrorString())
+
+		panic(m)
+	}
+
+	return this
+}
+
+func (this *Optional[T]) PanicIfNone(msg ...string) *Optional[T] {
+	if this.IsNone() {
+
+		m := ""
+
+		if len(msg) > 0 {
+			m = msg[0]
+		}
+
+		m = fmt.Sprintf(": None type")
+
+		panic(m)
+	}
+
+	return this
+}
+
+func (this *Optional[T]) PanicIfNotSome(msg ...string) *Optional[T] {
+	this.PanicIfFail(msg...)
+	this.PanicIfNone(msg...)
+	return this
+}
+
+// Try fail only if a Fail is returned
+func (this *Optional[T]) Try(f func(T) interface{}) *Optional[T] {
+	if this.IsSome() {
+
+		r := f(this.some.Item.(T))
+
+		if val, ok := TryExtractValIfOptional(r); ok {
+			r = val
+		}
+
+		switch r.(type) {
+		case *Fail:
+			return Of[T](r)
+		}
+	}
+	return this
 }
 
 func (this *Optional[T]) GetFail() *Fail {
@@ -147,9 +183,12 @@ func (this *Optional[T]) GetSome() *Some {
 }
 
 func (this *Optional[T]) OrElse(v T) T {
-	return GetOrElese[T](this.some, v)
+	return GetOrElse[T](this.some, v)
 }
 
+func (this *Optional[T]) UnWrap() T {
+	return this.Get()
+}
 func (this *Optional[T]) Get() T {
 	return Get[T](this.some.Item)
 }
@@ -170,17 +209,27 @@ func (this *Optional[T]) NonEmpty() bool {
 	return this.none == nil && this.fail == nil
 }
 
+func (this *Optional[T]) IsSome() bool {
+	return this.some != nil
+}
+
+func (this *Optional[T]) IsFail() bool {
+	return this.fail != nil
+}
+
+func (this *Optional[T]) IsNone() bool {
+	return this.none != nil
+}
+
 func (this *Optional[T]) Val() interface{} {
 	if this.some != nil {
 		return this.some
 	} else if this.none != nil {
 		return this.none
-	} else if this.empty != nil {
-		return this.empty
 	} else if this.fail != nil {
 		return this.fail
 	} else {
-		return NewEmpty()
+		return NewNone()
 	}
 }
 
@@ -205,32 +254,16 @@ func (this *Optional[T]) IfNone(cb func()) *Optional[T] {
 	return this
 }
 
-func (this *Optional[T]) IfEmpty(cb func()) *Optional[T] {
-	if this.empty != nil || this.none != nil {
-		cb()
+func (this *Optional[T]) IfNonEmpty(cb func(T)) *Optional[T] {
+	if this.some != nil {
+		cb(GetItem[T](this.some))
 	}
 	return this
 }
 
-func (this *Optional[T]) IsSome() bool {
-	return this.some != nil
-}
-
-func (this *Optional[T]) IsFail() bool {
-	return this.fail != nil
-}
-
-func (this *Optional[T]) IsEmpty() bool {
-	return this.empty != nil
-}
-
-func (this *Optional[T]) IsNone() bool {
-	return this.none != nil
-}
-
-func (this *Optional[T]) IfNonEmpty(cb func(T)) *Optional[T] {
-	if this.some != nil {
-		cb(GetItem[T](this.some))
+func (this *Optional[T]) IfEmpty(cb func()) *Optional[T] {
+	if this.some == nil && this.fail == nil {
+		cb()
 	}
 	return this
 }
@@ -239,10 +272,10 @@ func (this *Optional[T]) Filter(filter func(T) bool) *Optional[T] {
 	if this.some != nil {
 		v := GetItem[T](this.some)
 		if filter(v) {
-			return WithSome[T](v)
+			return OfSome[T](v)
 		}
 	}
-	return WithNone[T]()
+	return OfNone[T]()
 }
 
 func (this *Optional[T]) Foreach(each func(T)) *Optional[T] {
@@ -253,21 +286,98 @@ func (this *Optional[T]) Foreach(each func(T)) *Optional[T] {
 	return this
 }
 
+// Exec Execute operation and map success to Some of Ok
+func (this *Optional[T]) Exec(each func(T) *Optional[bool]) *Optional[T] {
+	if this.some != nil {
+		v := GetItem[T](this.some)
+		r := each(v)
+		if r.IsSome() {
+			return OfOk[T]()
+		}
+		return Of[T](r.Val())
+	}
+	return this
+}
+
+// ListForeach Try to apply f to each list item if Some is a slice. If Some is not a list, throw panic
+func (this *Optional[T]) ListForeach(f interface{}) *Optional[T] {
+
+	if this.IsSome() {
+		fnType := reflect.TypeOf(f)
+		fnArgsCount := fnType.NumIn()
+
+		if fnArgsCount != 1 {
+			panic("map func should be one args ")
+		}
+
+		if !IsSlice(this.some.Item) {
+			panic("optional wrapped value is not a slice")
+		}
+
+		fnValue := reflect.ValueOf(f)
+
+		lst.Foreach(this.some.Item, func(i interface{}) {
+			fnValue.Call([]reflect.Value{reflect.ValueOf(i)})
+		})
+
+	}
+	return this
+}
+
+// ListFilter Try to apply list filter if Some is a slice. If Some is not a list, throw panic
+func (this *Optional[T]) ListFilter(f interface{}) *Optional[T] {
+
+	if this.IsSome() {
+		fnType := reflect.TypeOf(f)
+		fnArgsCount := fnType.NumIn()
+
+		if fnArgsCount != 1 {
+			panic("map func should be one args ")
+		}
+
+		if !IsSlice(this.some.Item) {
+			panic("optional wrapped value is not a slice")
+		}
+
+		fnValue := reflect.ValueOf(f)
+
+		items := lst.Filter(this.some.Item, func(i interface{}) bool {
+			ret := fnValue.Call([]reflect.Value{reflect.ValueOf(i)})
+
+			if len(ret) != 1 {
+				panic("filter func should be one result")
+			}
+
+			if ret[0].Type().Kind() != reflect.Bool {
+				panic("filter func should be bool")
+			}
+
+			return ret[0].Bool()
+		})
+
+		return Of[T](items)
+	}
+
+	return this
+}
+
+// Map map Some to another thing
 func (this *Optional[T]) Map(fn func(T) interface{}) interface{} {
 	if this.some != nil {
 		v := GetItem[T](this.some)
 		r := fn(v)
 
 		switch r.(type) {
-		case *Some, *None, *Empty, *Fail:
+		case *Some, *None, *Fail:
 			return r
 		default:
-			return Make0(r)
+			return Make(r)
 		}
 	}
 	return NewNone()
 }
 
+// MapTo map Some to same thing
 func (this *Optional[T]) MapTo(fn func(T) *Optional[T]) *Optional[T] {
 	if this.some != nil {
 		v := GetItem[T](this.some)
@@ -277,16 +387,47 @@ func (this *Optional[T]) MapTo(fn func(T) *Optional[T]) *Optional[T] {
 	return this
 }
 
-func (this *Optional[T]) MapToNone() interface{} {
-	return NewNone()
+// MapToBool map Some to true
+func (this *Optional[T]) MapToBool() *Optional[bool] {
+	if this.IsSome() {
+		return Of[bool](true)
+	}
+	return Of[bool](this.Val())
 }
 
-func (this *Optional[T]) MapToEmpty() interface{} {
-	return NewEmpty()
+func (this *Optional[T]) MapToOk() *Optional[T] {
+	if this.IsSome() {
+		return OfOk[T]()
+	}
+	return this
+}
+
+func (this *Optional[T]) MapBool(f func(T) bool) *Optional[bool] {
+	if this.IsSome() {
+		return Of[bool](f(this.some.Item.(T)))
+	}
+	return Of[bool](this.Val())
+}
+
+func (this *Optional[T]) MapBoolOpt(f func(T) *Optional[bool]) *Optional[bool] {
+	if this.IsSome() {
+		return f(this.some.Item.(T))
+	}
+	return Of[bool](this.Val())
+}
+
+func (this *Optional[T]) MapToNone() interface{} {
+	if this.IsSome() {
+		return NewNone()
+	}
+	return this.Val()
 }
 
 func (this *Optional[T]) MapToSome(v interface{}) interface{} {
-	return NewSome(v)
+	if this.IsSome() {
+		return NewSome(v)
+	}
+	return  this.Val()
 }
 
 func (this *Optional[T]) MapOpt(fn func(T) interface{}) *Optional[T] {
@@ -311,10 +452,18 @@ func (this *Optional[T]) OrElseOpt(v interface{}) *Optional[T] {
 	if this.some == nil {
 		return Of[T](v)
 	}
+
 	return this
 }
 
-func (this *Optional[T]) IfOrElse(cbSome func(T), cbNone func()) *Optional[T] {
+func (this *Optional[T]) If(cbSome func(T), cbNone func(), cbError func(err error)) *Optional[T] {
+	this.IfFail(cbError)
+	this.IfNonEmpty(cbSome)
+	this.IfEmpty(cbNone)
+	return this
+}
+
+func (this *Optional[T]) IfNonEmptyOrElse(cbSome func(T), cbNone func()) *Optional[T] {
 
 	this.IfNonEmpty(cbSome)
 	this.IfEmpty(cbNone)
@@ -369,94 +518,6 @@ func MapMerge[T1 any, T2 any, R any](opt1 *Optional[T1], opt2 *Optional[T2], fn 
 	return Of[R](opt1.Val())
 }
 
-func ForeachAll[T1 any, T2 any](opt1 *Optional[T1], opt2 *Optional[T2], fn func(T1, T2)) *Optional[bool] {
-
-	if opt1.IsSome() {
-		if opt2.IsSome() {
-			fn(opt1.Get(), opt2.Get())
-			return WithSome[bool](true)
-		}
-		return Of[bool](opt2.Val())
-	}
-
-	return Of[bool](opt1.Val())
-}
-
-func ForeachAll3[T1 any, T2 any, T3 any](
-	opt1 *Optional[T1], opt2 *Optional[T2], opt3 *Optional[T3], fn func(T1, T2, T3)) *Optional[any] {
-
-	if opt1.IsSome() {
-		logs.Debug("opt1 ok %v", opt1)
-		if opt2.IsSome() {
-			logs.Debug("opt2 ok %v", opt2)
-			if opt3.IsSome() {
-				logs.Debug("opt3 ok %v", opt3)
-				fn(opt1.Get(), opt2.Get(), opt3.Get())
-				return WithEmpty[any]()
-			}
-			return Of[any](opt3.Val())
-		}
-		return Of[any](opt2.Val())
-	}
-
-	return Of[any](opt1.Val())
-}
-
-/**
- * Lazy expression avalidation
- */
-type Lazy struct {
-	Exec func() interface{}
-}
-
-func NewLazy(exec func() interface{}) *Lazy {
-	return &Lazy{exec}
-}
-
-/**
- * Run all lazy expressions, map to fn result if success
- */
-func RunAllMap[T any](fn func() T, opts ...*Lazy) *Optional[T] {
-	r := RunAll(opts...)
-
-	if r.IsSome() {
-		return Of[T](fn())
-	}
-
-	return Of[T](r.Val())
-}
-
-/**
- * Run all lazy expressions, map to Optional[bool](true) if success
- */
-func RunAll(opts ...*Lazy) *Optional[bool] {
-
-	for _, lazy := range opts {
-
-		r := lazy.Exec()
-
-		switch r.(type) {
-		case *Some:
-			continue
-		default:
-			return Of[bool](r)
-		}
-	}
-
-	return Of[bool](true)
-
-}
-
-type Empty struct {
-}
-
-func NewEmpty() *Empty {
-	return &Empty{}
-}
-
-func DoNext() *Empty {
-	return NewEmpty()
-}
 
 type None struct {
 }
@@ -473,11 +534,27 @@ func NewSome(item interface{}) *Some {
 	return &Some{Item: item}
 }
 
-func NewSomeEmpty() *Some {
-	return &Some{}
+// represents ignore result
+type Ok struct{}
+
+// represents ignore result
+func SomeOk() *Some {
+	return NewSome(&Ok{})
 }
 
-type Try struct {
+func IsSomeOk(v *Some) bool {
+	switch v.Item.(type) {
+	case *Ok:
+		return true
+	}
+	return false
+}
+func IsOk(v interface{}) bool {
+	switch v.(type) {
+	case *Some:
+		return IsSomeOk(v.(*Some))
+	}
+	return false
 }
 
 type Fail struct {
@@ -501,220 +578,33 @@ func NewFailStr(format string, v ...interface{}) *Fail {
 	return &Fail{Error: errors.New(fmt.Sprintf(format, v...))}
 }
 
-func NextOrFail(val interface{}) interface{} {
-	return NewFailOrEmpty(val)
-}
-
-func NewFailOrEmpty(val interface{}) interface{} {
-
-	if val == nil || IsNilFixed(val) {
-		return NewEmpty()
-	}
-
-	switch val.(type) {
-	case error:
-		return NewFail(val.(error))
-	case *Fail:
-		return val.(*Fail)
-	}
-
-	return NewEmpty()
-}
-
-type Success[T any] struct {
-	Item T
-}
-
-func NewSuccess[T any](item T) *Success[T] {
-	return &Success[T]{Item: item}
-}
-
-type Either[L any, R any] struct {
-	left  L
-	right R
-}
-
-func Left[L any, R any](val L) *Either[L, R] {
-	return &Either[L, R]{left: val}
-}
-
-func Right[L any, R any](val R) *Either[L, R] {
-	return &Either[L, R]{right: val}
-}
-
-func (this Either[L, R]) Left() *Optional[L] {
-	return Of[L](this.left)
-}
-
-func (this Either[L, R]) RawLeft() L {
-	return this.left
-}
-
-func (this Either[L, R]) Right() *Optional[R] {
-	return Of[R](this.right)
-}
-
-func (this Either[L, R]) RawRight() R {
-	return this.right
-}
-
-func (this Either[L, R]) IsLeft() bool {
-	return this.Left().NonEmpty()
-}
-
-func (this Either[L, R]) IsRight() bool {
-	return this.Right().NonEmpty()
-}
-
-type Failure struct {
-	Error   error
-	Message string
-}
-
-func NewFailure(err error) *Failure {
-	return &Failure{Error: err, Message: fmt.Sprint("%v", err)}
-}
-
-func NewFailureStr(err string) *Failure {
-	return &Failure{Error: errors.New(err), Message: err}
-}
-
-func Get[R any](val interface{}) R {
-	switch val.(type) {
-	case *Some:
-		return val.(*Some).Item.(R)
-	default:
-		return val.(R)
-	}
-}
-
-func GetPtr[R any](val interface{}) *R {
-	return Get[*R](val)
-}
-
-func GetOrElese[R any](val interface{}, r R) R {
-	if !IsNilFixed(val) {
-		switch val.(type) {
-		case *Some:
-			return val.(*Some).Item.(R)
-		default:
-			return val.(R)
-		}
-	}
-	return r
-}
-
-func GetItem[R any](val interface{}) R {
-
-	switch val.(type) {
-	case *Some:
-		return GetSome(val).Item.(R)
-	default:
-		var x R
-		return x
-	}
-}
-
-func GetFail(val interface{}) *Fail {
-	return val.(*Fail)
-}
-
-func GetSome(val interface{}) *Some {
-	return val.(*Some)
-}
-
-func GetFailError(val interface{}) error {
-	return val.(*Fail).Error
-}
-
-func OrElse[T any](e interface{}, v T) T {
-	switch e.(type) {
-	case *Some:
-		return e.(*Some).Item.(T)
-	case *Optional[T]:
-		t := e.(*Optional[T])
-		if t.Any() {
-			return t.Get()
-		}
-	}
-	return v
-}
-
-func OrElseSome(e interface{}, v interface{}) *Some {
-	switch e.(type) {
-	case *Some:
-		return e.(*Some)
-	}
-	return NewSome(v)
-}
-
-func Just[T any](e interface{}) *Optional[T] {
-	return New[T](e)
-}
-
-func IfNonEmpty[T any](e interface{}, cb func(T)) bool {
-	switch e.(type) {
-	case Some:
-		cb(e.(T))
-		return true
-	default:
-		return false
-	}
-}
-
-func IfEmpty[T any](e interface{}, cb func()) bool {
-	switch e.(type) {
-	case None, Empty:
-		cb()
-		return true
-	default:
-		return false
-	}
-}
-
-func IfEmptyOrElse[T any](e interface{}, emptyCb func(), elseCb func(T)) {
-	if !IfEmpty[T](e, emptyCb) {
-		elseCb(GetItem[T](e))
-	}
-}
-
-func IfFail[T any](e interface{}, cb func(error)) bool {
-	switch e.(type) {
-	case error:
-		cb(e.(error))
-		return true
-	default:
-		return false
-	}
-}
-
-func MakeSlice(val interface{}, err error) interface{} {
-
-	if err != nil {
-		return NewFail(err)
-	}
-
-	if val == nil || IsNilFixed(val) {
-		return NewNone()
-	}
-
-	ss := reflect.ValueOf(val)
-	s := reflect.Indirect(ss)
-	if s.Len() > 0 {
-		return NewSome(val)
+func FailIf(val bool, msg string, args ...interface{}) interface{} {
+	if val {
+		return NewFailStr(msg, args...)
 	}
 	return NewNone()
 }
 
+func FailIfOrElseDefault(val bool, msg string, def interface{}) interface{} {
+	if val {
+		return NewFailStr(msg)
+	}
+	return def
+}
+
+func FailIfFn(f func() bool, msg string, args ...interface{}) interface{} {
+	return FailIf(f(), msg, args...)
+}
+
 func Maybe(val interface{}) interface{} {
-	return Make0(val)
+	return Make(val)
 }
 
-func Make0(val interface{}) interface{} {
-	return Make(val, nil)
+func Make(val interface{}) interface{} {
+	return MakeTry(val, nil)
 }
 
-func Make(val interface{}, err error) interface{} {
+func MakeTry(val interface{}, err error) interface{} {
 
 	if err != nil {
 		return NewFail(err)
@@ -765,8 +655,139 @@ func Make(val interface{}, err error) interface{} {
 	default:
 		return NewSome(val)
 	}
-
 }
+
+func Get[R any](val interface{}) R {
+	switch val.(type) {
+	case *Some:
+		return tryCastSome[R](val.(*Some))
+	default:
+		return val.(R)
+	}
+}
+
+func GetPtr[R any](val interface{}) *R {
+	return Get[*R](val)
+}
+
+func GetOrElse[R any](val interface{}, r R) R {
+	if !IsNilFixed(val) {
+		switch val.(type) {
+		case *Some:
+			return tryCastSome[R](val.(*Some))
+		default:
+			return val.(R)
+		}
+	}
+	return r
+}
+
+func GetItem[R any](val interface{}) R {
+
+	switch val.(type) {
+	case *Some:
+		return tryCastSome[R](GetSome(val))
+	}
+	var x R
+	return x
+}
+
+func tryCastSome[T any](some *Some) T {
+	item := some.Item
+	if v, ok := item.(T); ok {
+		return  v
+	}
+	var x T
+	return x
+}
+
+func GetFail(val interface{}) *Fail {
+	return val.(*Fail)
+}
+
+func GetSome(val interface{}) *Some {
+	return val.(*Some)
+}
+
+func GetFailError(val interface{}) error {
+	return val.(*Fail).Error
+}
+
+func OrElse[T any](e interface{}, v T) T {
+	switch e.(type) {
+	case *Some:
+		return tryCastSome[T](e.(*Some))
+	case *Optional[T]:
+		t := e.(*Optional[T])
+		if t.Any() {
+			return t.Get()
+		}
+	}
+	return v
+}
+
+func OrElseSome(e interface{}, v interface{}) *Some {
+	switch e.(type) {
+	case *Some:
+		return e.(*Some)
+	}
+	return NewSome(v)
+}
+
+func IfNonEmpty[T any](e interface{}, cb func(T)) bool {
+	switch e.(type) {
+	case Some:
+		cb(e.(T))
+		return true
+	default:
+		return false
+	}
+}
+
+func IfEmpty[T any](e interface{}, cb func()) bool {
+	switch e.(type) {
+	case None:
+		cb()
+		return true
+	default:
+		return false
+	}
+}
+
+func IfEmptyOrElse[T any](e interface{}, emptyCb func(), elseCb func(T)) {
+	if !IfEmpty[T](e, emptyCb) {
+		elseCb(GetItem[T](e))
+	}
+}
+
+func IfFail[T any](e interface{}, cb func(error)) bool {
+	switch e.(type) {
+	case error:
+		cb(e.(error))
+		return true
+	default:
+		return false
+	}
+}
+
+/*
+func MakeSlice(val interface{}, err error) interface{} {
+
+	if err != nil {
+		return NewFail(err)
+	}
+
+	if val == nil || IsNilFixed(val) {
+		return NewNone()
+	}
+
+	ss := reflect.ValueOf(val)
+	s := reflect.Indirect(ss)
+	if s.Len() > 0 {
+		return NewSome(val)
+	}
+	return NewNone()
+}*/
 
 func IsSlice(v interface{}) bool {
 	return reflect.TypeOf(v).Kind() == reflect.Slice || reflect.TypeOf(v).Kind() == reflect.Array
@@ -783,7 +804,7 @@ func IsNilFixed(i interface{}) bool {
 	return false
 }
 
-func IsSimple(v interface{}) bool {
+func IsSimpleType(v interface{}) bool {
 	switch v.(type) {
 	case int, int64, float32, float64, bool, string:
 		return true
@@ -792,7 +813,7 @@ func IsSimple(v interface{}) bool {
 }
 
 func FlatMap[T any, R any](vs *Optional[[]T], fn func(T) R) []R {
-	r := []R{}
+	var r []R
 
 	if vs.NonEmpty() {
 		return lists.Map[T, R](vs.Get(), fn)
@@ -800,11 +821,11 @@ func FlatMap[T any, R any](vs *Optional[[]T], fn func(T) R) []R {
 	return r
 }
 
-func Flatten[T any](vs *Optional[T], orElese ...T) T {
+func Flatten[T any](vs *Optional[T], orElse ...T) T {
 	var r T
 
-	if len(orElese) > 0 {
-		r = orElese[0]
+	if len(orElse) > 0 {
+		r = orElse[0]
 	}
 
 	if vs.NonEmpty() {
@@ -812,4 +833,71 @@ func Flatten[T any](vs *Optional[T], orElese ...T) T {
 	}
 
 	return r
+}
+
+func Foreach[T any](optList *Optional[[]T], f func(T)) *Optional[[]T] {
+	if optList.IsSome() {
+		lst := optList.UnWrap()
+		for _, it := range lst {
+			f(it)
+		}
+	}
+	return optList
+}
+
+func Filter[T any](optList *Optional[[]T], f func(T) bool) *Optional[[]T] {
+	items := []T{}
+	if optList.IsSome() {
+		lst := optList.UnWrap()
+		for _, it := range lst {
+			if f(it) {
+				items = append(items, it)
+			}
+		}
+		return Of[[]T](items)
+	}
+	return optList
+}
+
+func UnwrapAll[T1 any, T2 any](opt1 *Optional[T1], opt2 *Optional[T2], fn func(T1, T2)) *Optional[bool] {
+	if opt1.IsSome() {
+		if opt2.IsSome() {
+			fn(opt1.Get(), opt2.Get())
+			return OfSome[bool](true)
+		}
+		return Of[bool](opt2.Val())
+	}
+
+	return Of[bool](opt1.Val())
+}
+
+func UnwrapAll3[T1 any, T2 any, T3 any](
+	opt1 *Optional[T1],
+	opt2 *Optional[T2],
+	opt3 *Optional[T3],
+	fn func(T1, T2, T3)) *Optional[bool] {
+	if opt1.IsSome() {
+		if opt2.IsSome() {
+			if opt3.IsSome() {
+				fn(opt1.Get(), opt2.Get(), opt3.Get())
+				return Of[bool](true)
+			}
+			return Of[bool](opt3.Val())
+		}
+		return Of[bool](opt2.Val())
+	}
+	return Of[bool](opt1.Val())
+}
+
+// TryExtractValIfOptional Extract Optional.Val() from maybeOpt if it's a Optional.
+func TryExtractValIfOptional(maybeOpt interface{}) (interface{}, bool) {
+	typeOf := reflect.TypeOf(maybeOpt)
+	valueOf := reflect.ValueOf(maybeOpt)
+	if typeOf.Kind() == reflect.Ptr &&
+		strings.Contains(typeOf.Elem().Name(), "Optional") {
+		method := valueOf.MethodByName("Val")
+		val := method.Call([]reflect.Value{})
+		return val[0].Interface(), true
+	}
+	return maybeOpt, false
 }

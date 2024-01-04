@@ -3,6 +3,8 @@ package session
 import (
 	_ "errors"
 
+	"github.com/mobilemindtec/go-utils/v2/criteria"
+
 	"fmt"
 	"reflect"
 
@@ -62,10 +64,58 @@ func NewActionRemoveCascade(e interface{}) *ActionRemoveCascade {
 type RxSession[T any] struct {
 	session *db.Session
 	actions []interface{}
+	where   *criteria.Reactive
+}
+
+func WithTxOpt[T any]() *optional.Optional[*RxSession[T]] {
+	s := db.NewSession()
+	err := s.OpenTx()
+	if err != nil {
+		return optional.OfFail[*RxSession[T]](err)
+	}
+	val := &RxSession[T]{session: s, actions: []interface{}{}}
+	return optional.Of[*RxSession[T]](val)
+}
+
+func WithNoTx[T any]() *RxSession[T] {
+	s := db.NewSession()
+	err := s.OpenNoTx()
+	if err != nil {
+		panic(err)
+	}
+	return New[T](s)
+}
+
+func WithTx[T any]() *RxSession[T] {
+	s := db.NewSession()
+	err := s.OpenTx()
+	if err != nil {
+		panic(err)
+	}
+	return New[T](s)
+}
+
+func WithNoTxOpt[T any]() *optional.Optional[*RxSession[T]] {
+	s := db.NewSession()
+	err := s.OpenNoTx()
+	if err != nil {
+		return optional.OfFail[*RxSession[T]](err)
+	}
+	val := &RxSession[T]{session: s, actions: []interface{}{}}
+	return optional.Of[*RxSession[T]](val)
 }
 
 func New[T any](session *db.Session) *RxSession[T] {
 	return &RxSession[T]{session: session, actions: []interface{}{}}
+}
+
+func (this *RxSession[T]) Close() {
+	this.session.Close()
+}
+
+func (this *RxSession[T]) Where(c *criteria.Reactive) *RxSession[T] {
+	this.where = c
+	return this
 }
 
 func (this *RxSession[T]) AddAction(ac ...interface{}) *RxSession[T] {
@@ -155,14 +205,33 @@ func (this *RxSession[T]) AddRemoveCascadeOf(items ...T) *RxSession[T] {
 
 func (this *RxSession[T]) Exec() *optional.Optional[bool] {
 	r := this.Run()
-
-	if r.IsEmpty() {
+	switch r.Val().(type) {
+	case *optional.Some:
 		return optional.Of[bool](true)
 	}
 	return optional.Of[bool](r.Val())
 }
 
+func (this *RxSession[T]) ExecWhere(c *criteria.Reactive) *optional.Optional[bool] {
+	this.Where(c)
+	return this.Exec()
+}
+
 func (this *RxSession[T]) Run() *optional.Optional[T] {
+
+	if this.where != nil {
+		first := this.where.Any()
+		r := optional.Of[bool](first.Get())
+
+		if r.IsFail() {
+			return optional.OfFail[T](r.GetFail())
+		}
+
+		if r.UnWrap() {
+			return optional.OfOk[T]()
+		}
+	}
+
 	for _, ac := range this.actions {
 
 		var err error
@@ -188,49 +257,81 @@ func (this *RxSession[T]) Run() *optional.Optional[T] {
 		}
 
 		if err != nil {
-			return optional.WithFail[T](err)
+			return optional.OfFail[T](err)
 		}
 	}
 
-	return optional.WithEmpty[T]()
+	return optional.OfOk[T]()
 }
 
 func (this *RxSession[T]) Save(entity T) *optional.Optional[T] {
 
 	if err := this.session.Save(entity); err != nil {
-		return optional.WithFail[T](err)
+		return optional.OfFail[T](err)
 	}
-	return optional.WithSome[T](entity)
+	return optional.OfSome[T](entity)
+}
+
+func (this *RxSession[T]) SaveCascade(entity T) *optional.Optional[T] {
+
+	if err := this.session.SaveCascade(entity); err != nil {
+		return optional.OfFail[T](err)
+	}
+	return optional.OfSome[T](entity)
 }
 
 func (this *RxSession[T]) Update(entity T) *optional.Optional[T] {
 
 	if err := this.session.Update(entity); err != nil {
-		return optional.WithFail[T](err)
+		return optional.OfFail[T](err)
 	}
-	return optional.WithSome[T](entity)
+	return optional.OfSome[T](entity)
+}
+
+func (this *RxSession[T]) UpdateCascade(entity T) *optional.Optional[T] {
+
+	if err := this.session.Update(entity); err != nil {
+		return optional.OfFail[T](err)
+	}
+	return optional.OfSome[T](entity)
 }
 
 func (this *RxSession[T]) Remove(entity T) *optional.Optional[bool] {
 
 	if err := this.session.Remove(entity); err != nil {
-		return optional.WithFail[bool](err)
+		return optional.OfFail[bool](err)
 	}
-	return optional.WithSome[bool](true)
+	return optional.OfSome[bool](true)
 }
 
 func (this *RxSession[T]) RemoveCascade(entity T) *optional.Optional[bool] {
 
 	if err := this.session.RemoveCascade(entity); err != nil {
-		return optional.WithFail[bool](err)
+		return optional.OfFail[bool](err)
 	}
-	return optional.WithSome[bool](true)
+	return optional.OfSome[bool](true)
 }
 
 func (this *RxSession[T]) Persist(entity T) *optional.Optional[T] {
 
 	if err := this.session.SaveOrUpdate(entity); err != nil {
-		return optional.WithFail[T](err)
+		return optional.OfFail[T](err)
 	}
-	return optional.WithSome[T](entity)
+	return optional.OfSome[T](entity)
+}
+
+func (this *RxSession[T]) SaveWhere(entity T, c *criteria.Reactive) *optional.Optional[T] {
+
+	first := c.First()
+	r := optional.Of[T](first.Get())
+
+	if r.IsFail() {
+		return r
+	}
+
+	if r.IsNone() {
+		return this.Save(entity)
+	}
+
+	return r
 }

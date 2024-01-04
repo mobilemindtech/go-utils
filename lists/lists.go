@@ -59,6 +59,17 @@ func All(vs interface{}, f func(interface{}) bool) bool {
 	return true
 }
 
+func Foreach(vs interface{}, f func(interface{})) {
+
+	ss := reflect.ValueOf(vs)
+	s := reflect.Indirect(ss)
+
+	for i := 0; i < s.Len(); i++ {
+		it := s.Index(i)
+		f(it.Interface())
+	}
+}
+
 // Filter returns a new slice containing all interface{}s in the
 // slice that satisfy the predicate `f`.
 func FindAll(vs interface{}, f func(interface{}) bool) []interface{} {

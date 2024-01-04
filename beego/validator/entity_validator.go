@@ -98,7 +98,7 @@ func (this *EntityValidator) Validate(entities ...interface{}) interface{} {
 		return optional.NewFailWithItem(errors.New("validation error"), results)
 	}
 
-	return optional.NewEmpty()
+	return optional.SomeOk()
 }
 
 func (this *EntityValidator) ValidMult(entities []interface{}, action func(validator *Validation)) (*EntityValidatorResult, error) {

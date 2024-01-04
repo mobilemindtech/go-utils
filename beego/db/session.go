@@ -81,8 +81,13 @@ func (this *Session) SetDatabase(dt *DataBase) *Session {
 	return this
 }
 
-func OrmVerbose(verbose bool) {
-	orm.Debug = verbose
+func SetOrmVerbose() {
+	orm.Debug = true
+}
+
+func (this *Session) SetDebug() *Session {
+	this.Debug = true
+	return this
 }
 
 func (this *Session) GetDb() *DataBase {
@@ -191,15 +196,15 @@ func (this *Session) WithoutTx() (*Session, error) {
 }
 
 func (this *Session) OpenTxOpt() interface{} {
-	return optional.Make(this, this.OpenTx())
+	return optional.MakeTry(this, this.OpenTx())
 }
 
 func (this *Session) OpenTxWithOptsOpt(opts *sql.TxOptions) interface{} {
-	return optional.Make(this, this.OpenTxWithOpts(opts))
+	return optional.MakeTry(this, this.OpenTxWithOpts(opts))
 }
 
 func (this *Session) OpenOpt() interface{} {
-	return optional.Make(this, this.OpenNoTx())
+	return optional.MakeTry(this, this.OpenNoTx())
 }
 
 func (this *Session) OpenTx() error {
@@ -317,6 +322,10 @@ func (this *Session) Save(entity interface{}) error {
 		if err := hook.BeforeSave(); err != nil {
 			return err
 		}
+	}
+
+	if this.Debug {
+		logs.Debug("insert data %v", getTypeName(entity))
 	}
 
 	_, err := this.GetDb().Insert(entity)
@@ -531,28 +540,28 @@ func (this *Session) FindById(entity interface{}, id int64) (interface{}, error)
 		err := query.One(entity)
 
 		if err == orm.ErrNoRows {
-			return nil, nil
+			return entity, nil
 		}
 
 		if err != nil {
 			logs.Debug("## Session: error on find by id table %v: %v", model.TableName(), err.Error())
 			//this.SetError()
-			return nil, err
+			return entity, err
 		}
 
 		if !model.IsPersisted() {
-			return nil, nil
+			return entity, nil
 		}
 
 		if hook, ok := entity.(ModelHookAfterLoad); ok {
 			if next, err := hook.AfterLoad(entity); !next || err != nil {
 
 				if err != nil {
-					return nil, err
+					return entity, err
 				}
 
 				if !next {
-					return nil, nil
+					return entity, nil
 				}
 
 			}
@@ -562,7 +571,7 @@ func (this *Session) FindById(entity interface{}, id int64) (interface{}, error)
 	}
 
 	this.SetError()
-	return false, errors.New("entity does not implements of Model")
+	return entity, errors.New("entity does not implements of Model")
 }
 
 func (this *Session) SaveOrUpdate(entity interface{}) error {
@@ -1417,6 +1426,13 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
 	//logs.Debug("does not authorize data access")
 	//logs.Debug("## not set tenant")
 	return tenantFieldNotFound || ignoreAuthorizedTenantCheckError
+}
+
+func getTypeName(reply interface{}) string {
+	refValue := reflect.ValueOf(reply)
+	fullValue := refValue.Elem()
+	fullType := fullValue.Type()
+	return fullType.Name()
 }
 
 func (this *Session) HasFilterTenant(reply interface{}) bool {

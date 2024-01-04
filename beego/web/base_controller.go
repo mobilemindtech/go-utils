@@ -230,14 +230,20 @@ func (this *BaseController) RenderJsonResult(opt interface{}) {
 
 	switch opt.(type) {
 	case *optional.Some:
-		it := opt.(*optional.Some).Item
-		if optional.IsSlice(it) {
-			this.OnJsonResults(it)
+
+		if optional.IsOk(opt) {
+			this.OnJson200()
 		} else {
-			this.OnJsonResult(it)
+
+			it := opt.(*optional.Some).Item
+			if optional.IsSlice(it) {
+				this.OnJsonResults(it)
+			} else {
+				this.OnJsonResult(it)
+			}
 		}
 		break
-	case *optional.None, *optional.Empty:
+	case *optional.None:
 		this.OnJson200()
 		break
 	case *optional.Fail:
@@ -260,18 +266,23 @@ func (this *BaseController) RenderJson(opt interface{}) {
 
 		someVal := opt.(*optional.Some).Item
 
-		switch someVal.(type) {
-		case *criteria.Page:
-			dataResult = someVal
-			break
-		default:
-			dataResult = map[string]interface{}{
-				"data": someVal,
+		if optional.IsOk(someVal) {
+			statusCodeResult = 404
+		} else {
+
+			switch someVal.(type) {
+			case *criteria.Page:
+				dataResult = someVal
+				break
+			default:
+				dataResult = map[string]interface{}{
+					"data": someVal,
+				}
 			}
 		}
 
 		break
-	case *optional.None, *optional.Empty:
+	case *optional.None:
 		statusCodeResult = 404
 		break
 	case *optional.Fail:

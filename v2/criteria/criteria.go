@@ -3,10 +3,10 @@ package criteria
 import (
 	_ "fmt"
 	"reflect"
+	"strings"
 
 	"github.com/mobilemindtec/go-utils/v2/lists"
 
-	"github.com/beego/beego/v2/core/logs"
 	"github.com/mobilemindtec/go-utils/beego/db"
 	"github.com/mobilemindtec/go-utils/v2/optional"
 )
@@ -34,7 +34,7 @@ func (this *PageOf[T]) ToPage() *Page {
 	return &Page{Data: data, TotalCount: this.TotalCount}
 }
 
-func PageOfMap[T any, R any](
+func MapPageOf[T any, R any](
 	p1 *optional.Optional[*PageOf[T]], fn func(T) R) *optional.Optional[*PageOf[R]] {
 
 	if p1.IsSome() {
@@ -48,6 +48,18 @@ func PageOfMap[T any, R any](
 
 func GetPageData[T any](rs *Page) []T {
 	return rs.Data.([]T)
+}
+
+func TryExtractPageIfPegeOf(maybePage interface{}) (interface{}, bool) {
+	typeOf := reflect.TypeOf(maybePage)
+	valueOf := reflect.ValueOf(maybePage)
+	if typeOf.Kind() == reflect.Ptr &&
+		strings.Contains(typeOf.Elem().Name(), "PageOf") {
+		method := valueOf.MethodByName("ToPage")
+		val := method.Call([]reflect.Value{})
+		return val[0].Interface(), true
+	}
+	return maybePage, false
 }
 
 type Reactive struct {
@@ -74,7 +86,7 @@ func (this *Reactive) Get() interface{} {
 		r = this.criteria.Any
 	}
 
-	return optional.Make(r, this.criteria.Error)
+	return optional.MakeTry(r, this.criteria.Error)
 }
 
 func (this *Reactive) GetAsPage() *optional.Optional[*Page] {
@@ -137,6 +149,14 @@ func NewCond() *db.Criteria {
 	return db.NewCondition()
 }
 
+func Read[T any]() *Criteria[T] {
+	s := db.NewSession()
+	if err := s.OpenNoTx(); err != nil {
+		panic(err)
+	}
+	return New[T](s)
+}
+
 func New[T any](session *db.Session) *Criteria[T] {
 	var entity T
 	entities := []*T{}
@@ -170,17 +190,18 @@ func (this *Criteria[T]) OptAll() *optional.Optional[[]*T] {
 	this.List()
 
 	if this.Criteria.HasError {
-		return optional.WithFail[[]*T](this.Error)
+		return optional.OfFail[[]*T](this.Error)
 	}
 
 	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]*T)
 
-	if !this.Any {
-		logs.Debug("no data")
-		return optional.WithEmpty[[]*T]()
-	}
+	/*
+		if !this.Any {
+			//logs.Debug("no data")
+			return optional.OfOk[[]*T]()
+		}*/
 
-	return optional.WithSome[[]*T](all)
+	return optional.OfSome[[]*T](all)
 }
 
 /*
@@ -192,12 +213,12 @@ func (this *Criteria[T]) OptList() *optional.Optional[[]*T] {
 	this.List()
 
 	if this.Criteria.HasError {
-		return optional.WithFail[[]*T](this.Error)
+		return optional.OfFail[[]*T](this.Error)
 	}
 
 	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]*T)
 
-	return optional.WithSome[[]*T](all)
+	return optional.OfSome[[]*T](all)
 }
 
 func (this *Criteria[T]) OptOne() *optional.Optional[*T] {
@@ -208,43 +229,43 @@ func (this *Criteria[T]) OptFirst() *optional.Optional[*T] {
 	this.One()
 
 	if this.Criteria.HasError {
-		return optional.WithFail[*T](this.Error)
+		return optional.OfFail[*T](this.Error)
 	}
 
 	if !this.Any {
-		return optional.WithNone[*T]()
+		return optional.OfNone[*T]()
 	}
 
-	return optional.WithSome[*T](this.Result.(*T))
+	return optional.OfSome[*T](this.Result.(*T))
 }
 
 func (this *Criteria[T]) OptCount() *optional.Optional[int] {
 	this.Count()
 
 	if this.Criteria.HasError {
-		return optional.WithFail[int](this.Error)
+		return optional.OfFail[int](this.Error)
 	}
-	return optional.WithSome[int](this.Count32)
+	return optional.OfSome[int](this.Count32)
 }
 
 func (this *Criteria[T]) OptAny() *optional.Optional[bool] {
 	this.Exists()
 
 	if this.Criteria.HasError {
-		return optional.WithFail[bool](this.Error)
+		return optional.OfFail[bool](this.Error)
 	}
-	return optional.WithSome[bool](this.Any)
+	return optional.OfSome[bool](this.Any)
 }
 
 func (this *Criteria[T]) OptPage() *optional.Optional[*PageOf[*T]] {
 	this.ListAndCount()
 
 	if this.Criteria.HasError {
-		return optional.WithFail[*PageOf[*T]](this.Error)
+		return optional.OfFail[*PageOf[*T]](this.Error)
 	}
 
 	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]*T)
-	return optional.WithSome[*PageOf[*T]](&PageOf[*T]{
+	return optional.OfSome[*PageOf[*T]](&PageOf[*T]{
 		TotalCount: this.Criteria.Count32,
 		Data:       all})
 }
@@ -253,9 +274,9 @@ func (this *Criteria[T]) OptDelete() *optional.Optional[int] {
 	this.Delete()
 
 	if this.Criteria.HasError {
-		return optional.WithFail[int](this.Error)
+		return optional.OfFail[int](this.Error)
 	}
-	return optional.WithSome[int](this.Count32)
+	return optional.OfSome[int](this.Count32)
 }
 
 func (this *Criteria[T]) SetRelatedSel(related ...string) *Criteria[T] {
@@ -331,7 +352,7 @@ func (this *Criteria[T]) Get(id int64) *optional.Optional[*T] {
 	var entity T
 	r, err := this.Session.FindById(&entity, id)
 	if err != nil {
-		return optional.WithFail[*T](err)
+		return optional.OfFail[*T](err)
 	}
 
 	m, _ := r.(db.Model)
@@ -340,7 +361,7 @@ func (this *Criteria[T]) Get(id int64) *optional.Optional[*T] {
 		return optional.Of[*T](&entity)
 	}
 
-	return optional.WithNone[*T]()
+	return optional.OfNone[*T]()
 }
 
 func (this *Criteria[T]) OrderAsc(path string) *Criteria[T] {

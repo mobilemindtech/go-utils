@@ -114,7 +114,7 @@ func (this *CacheService) Get(key string, value interface{}) interface{} {
 		return optional.NewNone()
 	}
 
-	return optional.Make(value, err)
+	return optional.MakeTry(value, err)
 }
 
 func (this *CacheService) GetVal(key string) interface{} {

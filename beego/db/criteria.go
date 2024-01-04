@@ -1117,9 +1117,11 @@ func (this *Criteria) TryList() interface{} {
 		return optional.NewFail(this.Error)
 	}
 
-	if this.Empty {
-		return optional.NewEmpty()
-	}
+	/*
+		if this.Empty {
+			return optional.NewEmpty()
+		}
+	*/
 
 	val := reflect.ValueOf(this.Results)
 	return optional.NewSome(val.Elem().Interface())
