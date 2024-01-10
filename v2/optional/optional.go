@@ -361,6 +361,43 @@ func (this *Optional[T]) ListFilter(f interface{}) *Optional[T] {
 	return this
 }
 
+// ListMap Try to apply list filter if Some is a slice. If Some is not a list, throw panic
+func (this *Optional[T]) ListMap(f interface{}) interface{} {
+
+	if this.IsSome() {
+		fnType := reflect.TypeOf(f)
+		fnArgsCount := fnType.NumIn()
+
+		if fnArgsCount != 1 {
+			panic("map func should be one args ")
+		}
+
+		if !IsSlice(this.some.Item) {
+			panic("optional wrapped value is not a slice")
+		}
+
+		fnValue := reflect.ValueOf(f)
+
+		items := lst.Map(this.some.Item, func(i interface{}) interface{} {
+			ret := fnValue.Call([]reflect.Value{reflect.ValueOf(i)})
+
+			if len(ret) != 1 {
+				panic("filter func should be one result")
+			}
+
+			return  ret
+		})
+
+		return NewSome(items)
+	}
+
+	if this.IsFail() {
+		return  this.GetFail()
+	}
+
+	return NewNone()
+}
+
 // Map map Some to another thing
 func (this *Optional[T]) Map(fn func(T) interface{}) interface{} {
 	if this.some != nil {
@@ -468,6 +505,15 @@ func (this *Optional[T]) IfNonEmptyOrElse(cbSome func(T), cbNone func()) *Option
 	this.IfNonEmpty(cbSome)
 	this.IfEmpty(cbNone)
 
+	return this
+}
+
+func (this *Optional[T]) ValTo(f func(interface{})) *Optional[T] {
+	return this.UnwrapTo(f)
+}
+
+func (this *Optional[T]) UnwrapTo(f func(interface{})) *Optional[T] {
+	f(this.Val())
 	return this
 }
 

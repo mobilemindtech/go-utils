@@ -34,6 +34,8 @@ type JSON struct {
 	DebugParse  bool
 	DebugFormat bool
 	DateLayouts []string
+
+	CamelCase bool
 }
 
 func NewJSON() *JSON {
@@ -178,10 +180,14 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
 		}
 
 		if len(strings.TrimSpace(attr)) == 0 {
-			attr = Underscore(field.Name)
+				attr = Underscore(field.Name)
 		}
 
-		//logs.Debug("Field ", attr)
+		if this.CamelCase {
+			attr = field.Name
+		}
+
+			//logs.Debug("Field ", attr)
 
 		fieldStruct := fullValue.FieldByName(field.Name)
 		fieldValue := fieldStruct.Interface()
@@ -208,6 +214,7 @@ func (this *JSON) convertItem(jsonResult map[string]interface{}, attr string, ta
 	realType := ftype
 
 	if reflect.TypeOf(fieldValue) == nil {
+		jsonResult[attr] = nil
 		return nil
 	}
 
@@ -246,6 +253,7 @@ func (this *JSON) convertItem(jsonResult map[string]interface{}, attr string, ta
 		zero := reflect.Zero(reflect.TypeOf(slice)).Interface() == slice
 
 		if slice.IsNil() || zero {
+			jsonResult[attr] = nil
 			return nil
 		}
 
@@ -298,6 +306,7 @@ func (this *JSON) convertItem(jsonResult map[string]interface{}, attr string, ta
 		zero := reflect.Zero(reflect.TypeOf(fieldValue)).Interface() == fieldValue
 
 		if zero {
+			jsonResult[attr] = nil
 			return nil
 		}
 
@@ -312,12 +321,10 @@ func (this *JSON) convertItem(jsonResult map[string]interface{}, attr string, ta
 		} else {
 
 			if !isPtr {
-
 				if fieldStruct.CanAddr() {
 					addr := fieldStruct.Addr()
 					fieldValue = addr.Interface()
 				}
-
 			}
 
 			var e error
@@ -389,6 +396,10 @@ func (this *JSON) DecodeFromMap(jsonData map[string]interface{}, obj interface{}
 
 		if len(strings.TrimSpace(attr)) == 0 {
 			attr = Underscore(field.Name)
+		}
+
+		if this.CamelCase {
+			attr = field.Name
 		}
 
 		if val, ok := jsonData[attr]; ok {
@@ -804,8 +815,20 @@ func Decode(b []byte, obj interface{}) error {
 	return NewJSON().Decode(b, obj)
 }
 
+func DecodeAsCamelCase(b []byte, obj interface{}) error {
+	j := NewJSON()
+	j.CamelCase  = true
+	return j.Decode(b, obj)
+}
+
 func Encode(obj interface{}) ([]byte, error) {
 	return NewJSON().Encode(obj)
+}
+
+func EncodeAsCamelCase(obj interface{}) ([]byte, error) {
+	j := NewJSON()
+	j.CamelCase = true
+	return j.Encode(obj)
 }
 
 func EncodeToString(obj interface{}) (string, error) {

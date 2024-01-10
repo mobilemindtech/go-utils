@@ -1,5 +1,8 @@
 package maps
 
+type Map = map[string]interface{}
+type ListOfMap = []Map
+
 func JSON(args ...interface{}) map[string]interface{}{
 	return Of[string, interface{}](args...)
 }

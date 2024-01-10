@@ -361,10 +361,12 @@ func (this *Pipe) findInCtxbyType(argType reflect.Type, step string) reflect.Val
 
 func (this *Pipe) Run() *Pipe {
 
+	currentStep := -1
+
 	defer func() {
 
 		if r := recover(); r != nil {
-			logs.Info("Pipeline recover. Message %v. StackTrae: %v", r, string(debug.Stack()))
+			logs.Error("Pipeline recover on step %v. Message %v. StackTrae: %v", currentStep, r, string(debug.Stack()))
 
 			this.executeErrorHandler(optional.NewFailStr("%v", r))
 		}
@@ -391,6 +393,8 @@ func (this *Pipe) Run() *Pipe {
 			logs.Info(step.logMsg, step.logArgs...)
 			continue
 		}
+
+		currentStep = i
 
 		nextFnInfo := fn.NewFuncInfo(step.action)
 		step.typeResolve = nextFnInfo.HasTypedArgs()

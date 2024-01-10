@@ -84,12 +84,17 @@ func (this *EntityValidator) AddEntity(vs interface{}) *EntityValidator {
 	return this
 }
 
+func (this *EntityValidator) ValidateOpt(entities ...interface{}) *optional.Optional[*EntityValidator] {
+	return optional.Of[*EntityValidator](
+		this.Validate(entities...))
+}
+
 func (this *EntityValidator) Validate(entities ...interface{}) interface{} {
 
 	result, err := this.ValidMult(entities, nil)
 
 	if err != nil {
-		logs.Debug("err = %v", err)
+		logs.Error("err = %v", err)
 		return optional.NewFail(err)
 	}
 
@@ -118,6 +123,7 @@ func (this *EntityValidator) ValidMult(entities []interface{}, action func(valid
 		if !customApplyDone {
 
 			ev, err := this.IsValid(it, action)
+
 			if err != nil {
 				return nil, err
 			}

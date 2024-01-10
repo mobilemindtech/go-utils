@@ -433,6 +433,36 @@ func (this *Criteria[T]) LikeMatch(path string, value interface{}, likeMatch db.
 	return this
 }
 
+func (this *Criteria[T]) LikeAnyware(path string, value interface{}) *Criteria[T] {
+	this.Criteria.LikeMatch(path, value, db.Anywhare)
+	return this
+}
+
+func (this *Criteria[T]) LikeIAnyware(path string, value interface{}) *Criteria[T] {
+	this.Criteria.LikeMatch(path, value, db.IAnywhare)
+	return this
+}
+
+func (this *Criteria[T]) LikeStarts(path string, value interface{}) *Criteria[T] {
+	this.Criteria.LikeMatch(path, value, db.StartsWith)
+	return this
+}
+
+func (this *Criteria[T]) LikeIStarts(path string, value interface{}) *Criteria[T] {
+	this.Criteria.LikeMatch(path, value, db.IStartsWith)
+	return this
+}
+
+func (this *Criteria[T]) LikeEnds(path string, value interface{}) *Criteria[T] {
+	this.Criteria.LikeMatch(path, value, db.EndsWith)
+	return this
+}
+
+func (this *Criteria[T]) LikeIEnds(path string, value interface{}) *Criteria[T] {
+	this.Criteria.LikeMatch(path, value, db.IEndsWith)
+	return this
+}
+
 func (this *Criteria[T]) NotLikeMatch(path string, value interface{}, likeMatch db.CriteriaLikeMatch) *Criteria[T] {
 	this.Criteria.NotLikeMatch(path, value, likeMatch)
 	return this

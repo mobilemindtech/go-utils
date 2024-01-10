@@ -86,6 +86,9 @@ type WebController struct {
 	Auth *services.AuthService
 
 	UseJsonPackage bool
+	JsonPackageAsCamelCase bool
+
+	CustonJsonEncoder func(interface{}) ([]byte, error)
 
 	InheritedController interface{}
 
@@ -106,6 +109,16 @@ func init() {
 
 func (this *WebController) SetUseJsonPackage() *WebController {
 	this.UseJsonPackage = true
+	return this
+}
+
+func (this *WebController) SetJsonPackageAsCamelCase() *WebController {
+	this.JsonPackageAsCamelCase = true
+	return this
+}
+
+func (this *WebController) SetCustonJsonEncoder(f func(interface{}) ([]byte, error)) *WebController{
+	this.CustonJsonEncoder = f
 	return this
 }
 
@@ -473,7 +486,7 @@ func (this *WebController) OnResultsWithTotalCount(viewName string, results inte
 
 func (this *WebController) RenderJsonResult(opt interface{}) {
 
-	logs.Debug("RenderJsonResult = %v", opt)
+	logs.Debug("RenderJsonResult = %v type of %v", opt, reflect.TypeOf(opt).Kind())
 
 	switch opt.(type) {
 	case *optional.Some:
@@ -490,7 +503,7 @@ func (this *WebController) RenderJsonResult(opt interface{}) {
 		default:
 
 			if val, ok := criteria.TryExtractPageIfPegeOf(someVal); ok {
-				this.RenderJson(val)
+				this.RenderJsonResult(val)
 				return
 			}
 
@@ -502,10 +515,18 @@ func (this *WebController) RenderJsonResult(opt interface{}) {
 		}
 		break
 	case *optional.None:
-		this.OnJson200()
+		this.NotFoundAsJson()
 		break
 	case *optional.Fail:
-		this.OnJsonError(fmt.Sprintf("%v", opt.(*optional.Fail).Error))
+
+		fail := opt.(*optional.Fail)
+		err := opt.(*optional.Fail).Error
+
+		if err.Error() == "validation error" {
+			this.OnJsonValidationWithErrors(fail.Item.(map[string]string))
+		} else {
+			this.OnJsonError(fmt.Sprintf("%v", err))
+		}
 		break
 	case *support.JsonResult:
 		this.OnJson(opt.(*support.JsonResult))
@@ -526,9 +547,12 @@ func (this *WebController) RenderJsonResult(opt interface{}) {
 			return
 		}
 
+
 		if optional.IsSlice(opt) {
+			logs.Debug("render as results")
 			this.OnJsonResults(opt)
 		} else {
+			logs.Debug("render as result")
 			this.OnJsonResult(opt)
 		}
 
@@ -721,9 +745,28 @@ func (this *WebController) OnJsonError(format string, v ...interface{}) {
 }
 
 func (this *WebController) ServeJSON() {
-	if this.UseJsonPackage {
+
+	if this.CustonJsonEncoder != nil {
 		result := this.Data["json"]
-		bdata, err := json.Encode(result)
+		bdata, err := this.CustonJsonEncoder(result)
+		if err != nil {
+			this.Data["json"] = &support.JsonResult{Message: fmt.Sprintf("Error json.Encode: %v", err), Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()}
+			this.Controller.ServeJSON()
+		} else {
+			this.Ctx.Output.Header("Content-Type", "application/json")
+			this.Ctx.Output.Body(bdata)
+		}
+	} else if this.UseJsonPackage {
+		result := this.Data["json"]
+
+		encoder := func(interface{}) ([]byte, error) {
+			if this.JsonPackageAsCamelCase {
+				return json.EncodeAsCamelCase(result)
+			}
+			return json.Encode(result)
+		}
+
+		bdata, err := encoder(result)
 		if err != nil {
 			this.Data["json"] = &support.JsonResult{Message: fmt.Sprintf("Error json.Encode: %v", err), Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()}
 			this.Controller.ServeJSON()

@@ -86,6 +86,39 @@ func WithNoTx[T any]() *RxSession[T] {
 	return New[T](s)
 }
 
+func RunWithNoTxWithTenantId[T any](id int64, f func (*RxSession[T]) T) T {
+	s := db.NewSession()
+	if id > 0 {
+		s.Tenant = models.NewTenantWithId(id)
+	}
+	err := s.OpenNoTx()
+	if err != nil {
+		panic(err)
+	}
+	defer s.Close()
+	return f(New[T](s))
+}
+func RunWithNoTx[T any](f func (*RxSession[T]) T) T {
+	return RunWithNoTxWithTenantId[T](0, f)
+}
+
+func RunWithTxWithTenantId[T any](id int64, f func (*RxSession[T]) T) T {
+	s := db.NewSession()
+	if id > 0 {
+		s.Tenant = models.NewTenantWithId(id)
+	}
+	err := s.OpenTx()
+	if err != nil {
+		panic(err)
+	}
+	defer s.Close()
+	return f(New[T](s))
+}
+
+func RunWithTx[T any](f func (*RxSession[T]) T) T {
+	return RunWithTxWithTenantId[T](0, f)
+}
+
 func WithTx[T any]() *RxSession[T] {
 	s := db.NewSession()
 	err := s.OpenTx()
@@ -103,6 +136,26 @@ func WithNoTxOpt[T any]() *optional.Optional[*RxSession[T]] {
 	}
 	val := &RxSession[T]{session: s, actions: []interface{}{}}
 	return optional.Of[*RxSession[T]](val)
+}
+
+func NewDbSesion() *db.Session {
+	return db.NewSession()
+}
+
+func ReadNoTx() *db.Session {
+	s := NewDbSesion()
+	if err := s.OpenNoTx(); err != nil {
+		panic(err)
+	}
+	return  s
+}
+
+func ReadTx() *db.Session {
+	s := NewDbSesion()
+	if err := s.OpenTx(); err != nil {
+		panic(err)
+	}
+	return  s
 }
 
 func New[T any](session *db.Session) *RxSession[T] {
