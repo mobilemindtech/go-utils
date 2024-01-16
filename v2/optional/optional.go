@@ -194,39 +194,39 @@ func (this *Optional[T]) Get() T {
 }
 
 func (this *Optional[T]) Any() bool {
-	return this.some != nil
+	return ! IsNilFixed(this.some)
 }
 
 func (this *Optional[T]) Fail() bool {
-	return this.fail != nil
+	return !IsNilFixed(this.fail)
 }
 
 func (this *Optional[T]) Empty() bool {
-	return this.none != nil
+	return !IsNilFixed(this.none)
 }
 
 func (this *Optional[T]) NonEmpty() bool {
-	return this.none == nil && this.fail == nil
+	return !this.IsNone() && !this.IsFail()
 }
 
 func (this *Optional[T]) IsSome() bool {
-	return this.some != nil
+	return !IsNilFixed(this.some)
 }
 
 func (this *Optional[T]) IsFail() bool {
-	return this.fail != nil
+	return !IsNilFixed(this.fail)
 }
 
 func (this *Optional[T]) IsNone() bool {
-	return this.none != nil
+	return !IsNilFixed(this.none)
 }
 
 func (this *Optional[T]) Val() interface{} {
-	if this.some != nil {
+	if this.IsSome() {
 		return this.some
-	} else if this.none != nil {
+	} else if this.IsNone() {
 		return this.none
-	} else if this.fail != nil {
+	} else if this.IsFail() {
 		return this.fail
 	} else {
 		return NewNone()
@@ -234,36 +234,29 @@ func (this *Optional[T]) Val() interface{} {
 }
 
 func (this *Optional[T]) IfFail(cb func(error)) *Optional[T] {
-	if this.fail != nil {
+	if this.IsFail() {
 		cb(this.fail.Error)
 	}
 	return this
 }
 
 func (this *Optional[T]) IfSome(cb func(T)) *Optional[T] {
-	if this.some != nil {
+	if this.IsSome() {
 		cb(GetItem[T](this.some))
 	}
 	return this
 }
 
 func (this *Optional[T]) IfNone(cb func()) *Optional[T] {
-	if this.none != nil {
+	if this.IsNone() {
 		cb()
 	}
 	return this
 }
 
 func (this *Optional[T]) IfNonEmpty(cb func(T)) *Optional[T] {
-	if this.some != nil {
+	if this.IsSome() {
 		cb(GetItem[T](this.some))
-	}
-	return this
-}
-
-func (this *Optional[T]) IfEmpty(cb func()) *Optional[T] {
-	if this.some == nil && this.fail == nil {
-		cb()
 	}
 	return this
 }
@@ -299,6 +292,57 @@ func (this *Optional[T]) Exec(each func(T) *Optional[bool]) *Optional[T] {
 	return this
 }
 
+func (this *Optional[T]) ListNonEmpty() bool {
+	if this.IsSome() {
+		if !IsSlice(this.some.Item) {
+			panic("optional wrapped value is not a slice")
+		}
+		ss := reflect.ValueOf(this.some.Item)
+		s := reflect.Indirect(ss)
+		return  s.Len() > 0
+	}
+	return false
+}
+
+func (this *Optional[T]) ListEmpty() bool {
+	if this.IsSome() {
+		if !IsSlice(this.some.Item) {
+			panic("optional wrapped value is not a slice")
+		}
+		ss := reflect.ValueOf(this.some.Item)
+		s := reflect.Indirect(ss)
+		return  s.Len() == 0
+	}
+	return false
+}
+
+func (this *Optional[T]) ListIfEmpty(cb func()) *Optional[T] {
+	if this.IsSome() {
+		if !IsSlice(this.some.Item) {
+			panic("optional wrapped value is not a slice")
+		}
+		ss := reflect.ValueOf(this.some.Item)
+		s := reflect.Indirect(ss)
+		if s.Len() == 0 {
+			cb()
+		}
+	}
+	return this
+}
+
+func (this *Optional[T]) ListIfNonEmpty(cb func(T)) *Optional[T] {
+	if this.IsSome() {
+		if !IsSlice(this.some.Item) {
+			panic("optional wrapped value is not a slice")
+		}
+		ss := reflect.ValueOf(this.some.Item)
+		s := reflect.Indirect(ss)
+		if s.Len() > 0 {
+			cb(this.some.Item.(T))
+		}
+	}
+	return this
+}
 // ListForeach Try to apply f to each list item if Some is a slice. If Some is not a list, throw panic
 func (this *Optional[T]) ListForeach(f interface{}) *Optional[T] {
 
@@ -400,7 +444,7 @@ func (this *Optional[T]) ListMap(f interface{}) interface{} {
 
 // Map map Some to another thing
 func (this *Optional[T]) Map(fn func(T) interface{}) interface{} {
-	if this.some != nil {
+	if this.IsSome() {
 		v := GetItem[T](this.some)
 		r := fn(v)
 
@@ -416,7 +460,7 @@ func (this *Optional[T]) Map(fn func(T) interface{}) interface{} {
 
 // MapTo map Some to same thing
 func (this *Optional[T]) MapTo(fn func(T) *Optional[T]) *Optional[T] {
-	if this.some != nil {
+	if this.IsSome() {
 		v := GetItem[T](this.some)
 		return fn(v)
 	}
@@ -469,11 +513,11 @@ func (this *Optional[T]) MapToSome(v interface{}) interface{} {
 
 func (this *Optional[T]) MapOpt(fn func(T) interface{}) *Optional[T] {
 
-	if this.fail != nil {
+	if this.IsFail() {
 		return this
 	}
 
-	if this.some != nil {
+	if this.IsSome() {
 		r := fn(this.some.Item.(T))
 		return Of[T](r)
 	}
@@ -482,11 +526,11 @@ func (this *Optional[T]) MapOpt(fn func(T) interface{}) *Optional[T] {
 
 func (this *Optional[T]) OrElseOpt(v interface{}) *Optional[T] {
 
-	if this.fail != nil {
+	if this.IsFail() {
 		return this
 	}
 
-	if this.some == nil {
+	if this.IsSome() {
 		return Of[T](v)
 	}
 
@@ -496,15 +540,7 @@ func (this *Optional[T]) OrElseOpt(v interface{}) *Optional[T] {
 func (this *Optional[T]) If(cbSome func(T), cbNone func(), cbError func(err error)) *Optional[T] {
 	this.IfFail(cbError)
 	this.IfNonEmpty(cbSome)
-	this.IfEmpty(cbNone)
-	return this
-}
-
-func (this *Optional[T]) IfNonEmptyOrElse(cbSome func(T), cbNone func()) *Optional[T] {
-
-	this.IfNonEmpty(cbSome)
-	this.IfEmpty(cbNone)
-
+	this.IfNone(cbNone)
 	return this
 }
 
