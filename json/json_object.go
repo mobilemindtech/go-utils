@@ -155,6 +155,10 @@ func Of(raw []byte) *optional.Optional[*Json] {
 	})
 }
 
+func NewEmpty() *Json {
+	return &Json{data: make(map[string]interface{})}
+}
+
 func (this *Json) GetData() map[string]interface{} {
 	return this.data
 }
@@ -179,7 +183,7 @@ func (this *Json) GetObject(key string) *Json {
 
 	if this.HasKey(key) {
 		opt, _ := this.data[key]
-		if opt == nil {
+		if opt != nil {
 			return NewFromMap(opt.(map[string]interface{}))
 		}
 

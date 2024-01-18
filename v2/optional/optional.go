@@ -304,6 +304,11 @@ func (this *Optional[T]) ListNonEmpty() bool {
 	return false
 }
 
+// ListMapToBool map to true id list len > 0 or else false
+func (this *Optional[T]) ListMapToBool() *Optional[bool] {
+	return Of[bool](!this.ListEmpty())
+}
+
 func (this *Optional[T]) ListEmpty() bool {
 	if this.IsSome() {
 		if !IsSlice(this.some.Item) {
@@ -398,6 +403,10 @@ func (this *Optional[T]) ListFilter(f interface{}) *Optional[T] {
 
 			return ret[0].Bool()
 		})
+
+		if len(items) == 0 {
+			return OfNone[T]()
+		}
 
 		return Of[T](items)
 	}
