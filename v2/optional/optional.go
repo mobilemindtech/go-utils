@@ -261,6 +261,15 @@ func (this *Optional[T]) IfNonEmpty(cb func(T)) *Optional[T] {
 	return this
 }
 
+func (this *Optional[T]) IfNonEmptyOrElse(cb func(T), emptyCb func()) *Optional[T] {
+	if this.IsSome() {
+		cb(GetItem[T](this.some))
+	} else {
+		emptyCb()
+	}
+	return this
+}
+
 func (this *Optional[T]) Filter(filter func(T) bool) *Optional[T] {
 	if this.some != nil {
 		v := GetItem[T](this.some)
