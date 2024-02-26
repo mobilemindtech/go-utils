@@ -261,6 +261,15 @@ func (this *Optional[T]) IfNonEmpty(cb func(T)) *Optional[T] {
 	return this
 }
 
+func (this *Optional[T]) IfNonEmptyOrElse(cb func(T), elseCb func()) *Optional[T] {
+	if this.IsSome() {
+		cb(GetItem[T](this.some))
+	} else {
+		elseCb()
+	}
+	return this
+}
+
 func (this *Optional[T]) Filter(filter func(T) bool) *Optional[T] {
 	if this.some != nil {
 		v := GetItem[T](this.some)
@@ -834,6 +843,7 @@ func IfNonEmpty[T any](e interface{}, cb func(T)) bool {
 		return false
 	}
 }
+
 
 func IfEmpty[T any](e interface{}, cb func()) bool {
 	switch e.(type) {
