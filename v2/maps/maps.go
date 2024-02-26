@@ -1,5 +1,10 @@
 package maps
 
+import (
+	"fmt"
+	"strings"
+)
+
 type Map = map[string]interface{}
 type ListOfMap = []Map
 
@@ -49,4 +54,24 @@ func New(args ...interface{}) map[interface{}]interface{} {
 
 	return result
 
+}
+func ToUrlQuery(m map[string]interface{}, replacers ...func(string, interface{}) interface{}) string {
+	var values []string
+	var replacer func(string, interface{}) interface{}
+
+	if len(replacers) > 0 {
+		replacer = replacers[0]
+	}
+
+	for k, v := range m {
+
+		value := v
+
+		if replacer != nil {
+			value = replacer(k, v)
+		}
+
+		values = append(values,fmt.Sprintf("%v=%v", k, value))
+	}
+	return strings.Join(values, "&")
 }

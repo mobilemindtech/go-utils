@@ -477,6 +477,21 @@ func (this *WebController) SetResult(result interface{}) *WebController {
 	return this
 }
 
+func (this *WebController) SetData(values ...interface{}) *WebController{
+
+	if len(values) % 2 > 0 {
+		panic("set data expect key pair values")
+	}
+
+	data := maps.Of[string, interface{}](values...)
+
+	for k, v := range data {
+		this.Data[k] = v
+	}
+
+	return this
+}
+
 func (this *WebController) OnResultsWithTotalCount(viewName string, results interface{}, totalCount int64) {
 	this.Data["results"] = results
 	this.Data["totalCount"] = totalCount
@@ -916,6 +931,7 @@ func (this *WebController) OnRedirectError(action string, format string, v ...in
 		this.Redirect(action, 302)
 	}
 }
+
 
 func (this *WebController) OnRedirectSuccess(action string, format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
@@ -1765,3 +1781,24 @@ func (this *WebController) GetFileOpt(key string) *optional.Optional[*Multipart]
 
 	return optional.Of[*Multipart](&Multipart{File: &file, FileHeader: fileHeader, Key: key})
 }
+
+func (this *WebController) FlashError(msg string, args ...interface{}) *WebController{
+	this.Flash.Error(msg, args...)
+	return  this
+}
+
+func (this *WebController) FlashSuccess(msg string, args ...interface{}) *WebController{
+	this.Flash.Success(msg, args...)
+	return  this
+}
+
+func (this *WebController) FlashWarn(msg string, args ...interface{}) *WebController{
+	this.Flash.Warning(msg, args...)
+	return  this
+}
+
+func (this *WebController) FlashNotice(msg string, args ...interface{}) *WebController{
+	this.Flash.Notice(msg, args...)
+	return  this
+}
+

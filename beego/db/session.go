@@ -160,6 +160,18 @@ func (this *Session) RunWithTenant(tenant interface{}, runner func()) {
 	runner()
 }
 
+func RunWithTenant[T any](s *Session, tenant interface{}, runner func() T) T {
+
+	tmp := s.Tenant
+	s.Tenant = tenant
+
+	defer func() {
+		s.Tenant = tmp
+	}()
+
+	return runner()
+}
+
 func (this *Session) WithTenant(tenant interface{}, runner func() error) error {
 
 	tmp := this.Tenant

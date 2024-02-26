@@ -11,6 +11,8 @@ import (
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/mobilemindtec/go-utils/app/util"
 	"github.com/mobilemindtec/go-utils/support"
+	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtec/go-utils/v2/try"
 )
 
 const (
@@ -48,7 +50,7 @@ func NewJSON() *JSON {
 	}
 }
 
-func (this *JSON) EncodeToString(obj interface{}) (string, error) {
+func (this *JSON) EncodeAsString(obj interface{}) (string, error) {
 	result, err := this.Encode(obj)
 
 	if err != nil {
@@ -56,6 +58,34 @@ func (this *JSON) EncodeToString(obj interface{}) (string, error) {
 	}
 
 	return string(result), err
+}
+
+func (this *JSON) EncodeAsMap(obj interface{}) (map[string]interface{}, error) {
+	result, err := this.ParseObj(obj)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if m, ok := result.(map[string]interface{}); ok {
+		return m, nil
+	}
+
+	return nil, errors.New("content is not a map")
+}
+
+func (this *JSON) EncodeAsSlice(obj interface{}) ([]interface{}, error) {
+	result, err := this.ParseObj(obj)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if m, ok := result.([]interface{}); ok {
+		return m, nil
+	}
+
+	return nil, errors.New("content is not a map")
 }
 
 func (this *JSON) Encode(obj interface{}) ([]byte, error) {
@@ -130,7 +160,7 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			logs.Debug("JSON TO MAP ERROR: ", r, ", OBJ = ", obj)
+			logs.Error("JSON TO MAP ERROR: ", r, ", OBJ = ", obj)
 			panic(r)
 		}
 	}()
@@ -212,9 +242,12 @@ func (this *JSON) convertItem(jsonResult map[string]interface{}, attr string, ta
 	isInterface := ftype.Kind() == reflect.Interface
 	realKind := ftype.Kind()
 	realType := ftype
+	omitEmpty := this.hasTagByName(tags, "omitempty")
 
 	if reflect.TypeOf(fieldValue) == nil {
-		jsonResult[attr] = nil
+		if !omitEmpty {
+			jsonResult[attr] = nil
+		}
 		return nil
 	}
 
@@ -239,28 +272,99 @@ func (this *JSON) convertItem(jsonResult map[string]interface{}, attr string, ta
 		//logs.Debug("Attr = ", attr, ", Field = ", field.Name, ", Type = ", ftype, "Kind = ", fieldStruct.Type().Kind(), ", Real Kind", realKind, "isPtr = ", isPtr) //, ", Value = ", fieldValue)
 	}
 
+
+
 	switch realKind {
-	case reflect.Int64, reflect.Int, reflect.Bool, reflect.Float32, reflect.Float64, reflect.String:
-
-		jsonResult[attr] = fieldValue
-
+	case reflect.String:
+		if omitEmpty {
+			// converte caso o valor for um custom type, ex: `type Status string`
+			st := reflect.TypeOf("")
+			s := reflect.ValueOf(fieldValue).Convert(st).Interface()
+			if len(s.(string)) > 0 {
+				jsonResult[attr] = fieldValue
+			}
+		} else {
+			jsonResult[attr] = fieldValue
+		}
 		break
-
+	case reflect.Bool:
+		if omitEmpty {
+			st := reflect.TypeOf(true)
+			s := reflect.ValueOf(fieldValue).Convert(st).Interface()
+			if s.(bool) {
+				jsonResult[attr] = fieldValue
+			}
+		} else {
+			jsonResult[attr] = fieldValue
+		}
+		break
+	case reflect.Int64:
+		if omitEmpty {
+			st := reflect.TypeOf(int64(1))
+			s := reflect.ValueOf(fieldValue).Convert(st).Interface()
+			if s.(int64) > 0 {
+				jsonResult[attr] = fieldValue
+			}
+		} else {
+			jsonResult[attr] = fieldValue
+		}
+		break
+	case reflect.Int:
+		if omitEmpty {
+			st := reflect.TypeOf(int(1))
+			s := reflect.ValueOf(fieldValue).Convert(st).Interface()
+			if s.(int) > 0 {
+				jsonResult[attr] = fieldValue
+			}
+		} else {
+			jsonResult[attr] = fieldValue
+		}
+		break
+	case reflect.Float32:
+		if omitEmpty {
+			st := reflect.TypeOf(float32((1)))
+			s := reflect.ValueOf(fieldValue).Convert(st).Interface()
+			if s.(float32) > 0 {
+				jsonResult[attr] = fieldValue
+			}
+		} else {
+			jsonResult[attr] = fieldValue
+		}
+		break
+	case reflect.Float64:
+		if omitEmpty {
+			st := reflect.TypeOf(float64(1))
+			s := reflect.ValueOf(fieldValue).Convert(st).Interface()
+			if s.(float64) > 0 {
+				jsonResult[attr] = fieldValue
+			}
+		} else {
+			jsonResult[attr] = fieldValue
+		}
+		break
 	case reflect.Slice:
 
 		slice := reflect.ValueOf(fieldValue)
-		//logs.Debug("slice 1 ", slice)
 		zero := reflect.Zero(reflect.TypeOf(slice)).Interface() == slice
 
 		if slice.IsNil() || zero {
-			jsonResult[attr] = nil
+			if !omitEmpty {
+				jsonResult[attr] = nil
+			}
 			return nil
 		}
+
 
 		//logs.Debug("slice 2 ", slice)
 
 		if isPtr || (isInterface && realTypePrt) {
 			slice = slice.Elem()
+		}
+
+		if slice.Len() == 0 {
+			if omitEmpty {
+				return nil
+			}
 		}
 
 		//logs.Debug("slice", slice)
@@ -299,14 +403,36 @@ func (this *JSON) convertItem(jsonResult map[string]interface{}, attr string, ta
 
 	case reflect.Map:
 
+		if omitEmpty {
+			mp := reflect.ValueOf(fieldValue)
+			zero := reflect.Zero(reflect.TypeOf(mp)).Interface() == mp
+
+			if mp.IsNil() || zero {
+				return  nil
+			}
+
+			if isPtr || (isInterface && realTypePrt) {
+				mp = mp.Elem()
+			}
+
+			if mp.Len() == 0 {
+				return nil
+			}
+
+		}
+
 		jsonResult[attr] = fieldValue
+
+		break
 
 	case reflect.Struct:
 
 		zero := reflect.Zero(reflect.TypeOf(fieldValue)).Interface() == fieldValue
 
 		if zero {
-			jsonResult[attr] = nil
+			if !omitEmpty{
+				jsonResult[attr] = nil
+			}
 			return nil
 		}
 
@@ -804,7 +930,11 @@ func (this *JSON) getTagsByTagName(field reflect.StructField, tagName string) (b
 	var tags []string
 
 	if len(strings.TrimSpace(tag)) > 0 {
-		tags = strings.Split(tag, ";")
+		if strings.Contains(tag,";") {
+			tags = strings.Split(tag, ";")
+		}else{
+			tags = strings.Split(tag, ",")
+		}
 		return true, tags
 	}
 
@@ -813,6 +943,13 @@ func (this *JSON) getTagsByTagName(field reflect.StructField, tagName string) (b
 
 func Decode(b []byte, obj interface{}) error {
 	return NewJSON().Decode(b, obj)
+}
+
+func DecodeOpt[T any](b []byte) *optional.Optional[*T] {
+	return try.Of(func()(*T, error){
+		var t T
+		return &t, NewJSON().Decode(b, &t)
+	})
 }
 
 func DecodeAsCamelCase(b []byte, obj interface{}) error {
@@ -824,6 +961,31 @@ func DecodeAsCamelCase(b []byte, obj interface{}) error {
 func Encode(obj interface{}) ([]byte, error) {
 	return NewJSON().Encode(obj)
 }
+func EncodeOpt(obj interface{}) *optional.Optional[[]byte] {
+	return try.Of(func()([]byte, error){
+		return Encode(obj)
+	})
+}
+
+func EncodeAsMap(obj interface{}) (map[string]interface{}, error) {
+	return NewJSON().EncodeAsMap(obj)
+}
+
+func EncodeAsMapOpt(obj interface{}) *optional.Optional[map[string]interface{}] {
+	return try.Of(func()(map[string]interface{}, error){
+		return EncodeAsMap(obj)
+	})
+}
+
+func EncodeAsSlice(obj interface{}) ([]interface{}, error) {
+	return NewJSON().EncodeAsSlice(obj)
+}
+
+func EncodeAsSliceOpt(obj interface{}) *optional.Optional[[]interface{}] {
+	return try.Of(func()([]interface{}, error){
+		return EncodeAsSlice(obj)
+	})
+}
 
 func EncodeAsCamelCase(obj interface{}) ([]byte, error) {
 	j := NewJSON()
@@ -831,6 +993,12 @@ func EncodeAsCamelCase(obj interface{}) ([]byte, error) {
 	return j.Encode(obj)
 }
 
-func EncodeToString(obj interface{}) (string, error) {
-	return NewJSON().EncodeToString(obj)
+func EncodeAsString(obj interface{}) (string, error) {
+	return NewJSON().EncodeAsString(obj)
+}
+
+func EncodeAsStringOpt(obj interface{}) *optional.Optional[string] {
+	return try.Of(func()(string, error){
+		return NewJSON().EncodeAsString(obj)
+	})
 }
