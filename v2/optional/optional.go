@@ -192,6 +192,12 @@ func (this *Optional[T]) UnWrap() T {
 func (this *Optional[T]) Get() T {
 	return Get[T](this.some.Item)
 }
+func (this *Optional[T]) GetOrElse(val T) T {
+	if this.IsSome() {
+		return Get[T](this.some.Item)
+	}
+	return val
+}
 
 func (this *Optional[T]) Any() bool {
 	return ! IsNilFixed(this.some)
@@ -549,10 +555,10 @@ func (this *Optional[T]) OrElseOpt(v interface{}) *Optional[T] {
 	}
 
 	if this.IsSome() {
-		return Of[T](v)
+		return this
 	}
 
-	return this
+	return Of[T](v)
 }
 
 func (this *Optional[T]) If(cbSome func(T), cbNone func(), cbError func(err error)) *Optional[T] {

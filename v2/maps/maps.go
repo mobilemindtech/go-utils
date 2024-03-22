@@ -5,8 +5,16 @@ import (
 	"strings"
 )
 
-type Map = map[string]interface{}
-type ListOfMap = []Map
+type TMap = map[string]interface{}
+type ListOfMap = []TMap
+
+func Map[F any, T any](data map[string]F, f func(F) T) map[string]T {
+	var m map[string]T
+	for k, v := range data {
+		m[k] = f(v)
+	} 
+	return m
+}
 
 func JSON(args ...interface{}) map[string]interface{}{
 	return Of[string, interface{}](args...)
