@@ -85,7 +85,7 @@ type WebController struct {
 
 	Auth *services.AuthService
 
-	UseJsonPackage bool
+	UseJsonPackage         bool
 	JsonPackageAsCamelCase bool
 
 	CustonJsonEncoder func(interface{}) ([]byte, error)
@@ -117,7 +117,7 @@ func (this *WebController) SetJsonPackageAsCamelCase() *WebController {
 	return this
 }
 
-func (this *WebController) SetCustonJsonEncoder(f func(interface{}) ([]byte, error)) *WebController{
+func (this *WebController) SetCustonJsonEncoder(f func(interface{}) ([]byte, error)) *WebController {
 	this.CustonJsonEncoder = f
 	return this
 }
@@ -477,9 +477,9 @@ func (this *WebController) SetResult(result interface{}) *WebController {
 	return this
 }
 
-func (this *WebController) SetData(values ...interface{}) *WebController{
+func (this *WebController) SetData(values ...interface{}) *WebController {
 
-	if len(values) % 2 > 0 {
+	if len(values)%2 > 0 {
 		panic("set data expect key pair values")
 	}
 
@@ -562,7 +562,6 @@ func (this *WebController) RenderJsonResult(opt interface{}) {
 			return
 		}
 
-
 		if optional.IsSlice(opt) {
 			logs.Debug("render as results")
 			this.OnJsonResults(opt)
@@ -570,7 +569,6 @@ func (this *WebController) RenderJsonResult(opt interface{}) {
 			logs.Debug("render as result")
 			this.OnJsonResult(opt)
 		}
-
 
 		//this.OnJsonError(fmt.Sprintf("unknow optional value: %v", opt))
 		break
@@ -653,10 +651,10 @@ func (this *WebController) RenderJson(opt interface{}) {
 		}
 
 		/*
-		dataResult = map[string]interface{}{
-			"error":   true,
-			"message": fmt.Sprintf("unknow optional value: %v", opt),
-		}*/
+			dataResult = map[string]interface{}{
+				"error":   true,
+				"message": fmt.Sprintf("unknow optional value: %v", opt),
+			}*/
 
 		//statusCodeResult = 500
 		break
@@ -932,7 +930,6 @@ func (this *WebController) OnRedirectError(action string, format string, v ...in
 	}
 }
 
-
 func (this *WebController) OnRedirectSuccess(action string, format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
 	this.Flash.Success(message)
@@ -1202,6 +1199,9 @@ func (this *WebController) GetPage() *db.Page {
 	page := new(db.Page)
 
 	var defaultLimit int64 = 25
+	filter := func(i int64) bool {
+		return i > 0
+	}
 
 	if this.IsJson() {
 
@@ -1211,17 +1211,18 @@ func (this *WebController) GetPage() *db.Page {
 			if _, ok := jsonMap["limit"]; ok {
 				page.Limit = optional.
 					New[int64](this.GetJsonInt64(jsonMap, "limit")).
-					OrElse(defaultLimit)
+					Filter(filter).
+					GetOr(defaultLimit)
 
 				page.Offset = this.GetJsonInt64(jsonMap, "offset")
 
 				page.Sort = optional.
 					New[string](this.GetJsonString(jsonMap, "order_column")).
-					OrElse(this.GetJsonString(jsonMap, "sort"))
+					GetOr(this.GetJsonString(jsonMap, "sort"))
 
 				page.Order = optional.
 					New[string](this.GetJsonString(jsonMap, "order_sort")).
-					OrElse(this.GetJsonString(jsonMap, "order"))
+					GetOr(this.GetJsonString(jsonMap, "order"))
 
 				page.Order = this.GetJsonString(jsonMap, "order_sort")
 				page.Search = this.GetJsonString(jsonMap, "search")
@@ -1233,15 +1234,16 @@ func (this *WebController) GetPage() *db.Page {
 
 	page.Limit = optional.
 		New[int64](this.GetIntByKey("limit")).
-		OrElse(defaultLimit)
+		Filter(filter).
+		GetOr(defaultLimit)
 
 	page.Sort = optional.
 		New[string](this.GetStringByKey("order_column")).
-		OrElse(this.GetStringByKey("sort"))
+		GetOr(this.GetStringByKey("sort"))
 
 	page.Order = optional.
 		New[string](this.GetStringByKey("order_sort")).
-		OrElse(this.GetStringByKey("order"))
+		GetOr(this.GetStringByKey("order"))
 
 	page.Offset = this.GetIntByKey("offset")
 	page.Search = this.GetStringByKey("search")
@@ -1782,23 +1784,22 @@ func (this *WebController) GetFileOpt(key string) *optional.Optional[*Multipart]
 	return optional.Of[*Multipart](&Multipart{File: &file, FileHeader: fileHeader, Key: key})
 }
 
-func (this *WebController) FlashError(msg string, args ...interface{}) *WebController{
+func (this *WebController) FlashError(msg string, args ...interface{}) *WebController {
 	this.Flash.Error(msg, args...)
-	return  this
+	return this
 }
 
-func (this *WebController) FlashSuccess(msg string, args ...interface{}) *WebController{
+func (this *WebController) FlashSuccess(msg string, args ...interface{}) *WebController {
 	this.Flash.Success(msg, args...)
-	return  this
+	return this
 }
 
-func (this *WebController) FlashWarn(msg string, args ...interface{}) *WebController{
+func (this *WebController) FlashWarn(msg string, args ...interface{}) *WebController {
 	this.Flash.Warning(msg, args...)
-	return  this
+	return this
 }
 
-func (this *WebController) FlashNotice(msg string, args ...interface{}) *WebController{
+func (this *WebController) FlashNotice(msg string, args ...interface{}) *WebController {
 	this.Flash.Notice(msg, args...)
-	return  this
+	return this
 }
-

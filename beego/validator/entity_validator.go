@@ -163,6 +163,10 @@ func (this *EntityValidator) IsValid(entity interface{}, action CustomAction) (*
 	return this.Valid(entity, action)
 }
 
+func (this *EntityValidator) ValidSimple(entity interface{}) (*EntityValidatorResult, error) {
+	return this.Valid(entity, nil)
+}
+
 func (this *EntityValidator) Valid(entity interface{}, action CustomAction) (*EntityValidatorResult, error) {
 
 	result := NewEntityValidatorResult()
