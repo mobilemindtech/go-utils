@@ -2,6 +2,10 @@ package session
 
 import (
 	_ "errors"
+	"github.com/mobilemindtec/go-io/io"
+	"github.com/mobilemindtec/go-io/option"
+	"github.com/mobilemindtec/go-io/result"
+	"github.com/mobilemindtec/go-io/types"
 
 	"github.com/mobilemindtec/go-utils/v2/criteria"
 
@@ -86,7 +90,7 @@ func WithNoTx[T any]() *RxSession[T] {
 	return New[T](s)
 }
 
-func RunWithNoTxWithTenantId[T any](id int64, f func (*RxSession[T]) T) T {
+func RunWithNoTxWithTenantId[T any](id int64, f func(*RxSession[T]) T) T {
 	s := db.NewSession()
 	if id > 0 {
 		s.Tenant = models.NewTenantWithId(id)
@@ -98,11 +102,11 @@ func RunWithNoTxWithTenantId[T any](id int64, f func (*RxSession[T]) T) T {
 	defer s.Close()
 	return f(New[T](s))
 }
-func RunWithNoTx[T any](f func (*RxSession[T]) T) T {
+func RunWithNoTx[T any](f func(*RxSession[T]) T) T {
 	return RunWithNoTxWithTenantId[T](0, f)
 }
 
-func RunWithTxWithTenantId[T any](id int64, f func (*RxSession[T]) T) T {
+func RunWithTxWithTenantId[T any](id int64, f func(*RxSession[T]) T) T {
 	s := db.NewSession()
 	if id > 0 {
 		s.Tenant = models.NewTenantWithId(id)
@@ -115,7 +119,7 @@ func RunWithTxWithTenantId[T any](id int64, f func (*RxSession[T]) T) T {
 	return f(New[T](s))
 }
 
-func RunWithTx[T any](f func (*RxSession[T]) T) T {
+func RunWithTx[T any](f func(*RxSession[T]) T) T {
 	return RunWithTxWithTenantId[T](0, f)
 }
 
@@ -147,7 +151,7 @@ func ReadNoTx() *db.Session {
 	if err := s.OpenNoTx(); err != nil {
 		panic(err)
 	}
-	return  s
+	return s
 }
 
 func ReadTx() *db.Session {
@@ -155,7 +159,7 @@ func ReadTx() *db.Session {
 	if err := s.OpenTx(); err != nil {
 		panic(err)
 	}
-	return  s
+	return s
 }
 
 func New[T any](session *db.Session) *RxSession[T] {
@@ -371,6 +375,21 @@ func (this *RxSession[T]) Persist(entity T) *optional.Optional[T] {
 		return optional.OfFail[T](err)
 	}
 	return optional.OfSome[T](entity)
+}
+
+func (this *RxSession[T]) PersistResult(entity T) *result.Result[*option.Option[T]] {
+	if err := this.session.SaveOrUpdate(entity); err != nil {
+		return result.OfError[*option.Option[T]](err)
+	}
+	return result.OfValue(option.Some(entity))
+}
+
+func (this *RxSession[T]) PersistIO(entity T) *types.IO[T] {
+	return io.IO[T](
+		io.AttemptOfResultOption(
+			func() *result.Result[*option.Option[T]] {
+				return this.PersistResult(entity)
+			}))
 }
 
 func (this *RxSession[T]) SaveWhere(entity T, c *criteria.Reactive) *optional.Optional[T] {

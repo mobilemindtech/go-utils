@@ -7,6 +7,7 @@ import (
 
 type TMap = map[string]interface{}
 type ListOfMap = []TMap
+type JsonData = TMap
 
 func Map[F any, T any](data map[string]F, f func(F) T) map[string]T {
 	var m map[string]T
@@ -16,7 +17,7 @@ func Map[F any, T any](data map[string]F, f func(F) T) map[string]T {
 	return m
 }
 
-func JSON(args ...interface{}) map[string]interface{}{
+func JSON(args ...interface{}) JsonData{
 	return Of[string, interface{}](args...)
 }
 

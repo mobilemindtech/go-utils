@@ -1,2 +1,4 @@
 go.sum
 .idea
+go.work
+go.work.sum

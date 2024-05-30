@@ -3,13 +3,14 @@ package optional
 import (
 	"errors"
 	"fmt"
+	"github.com/mobilemindtec/go-io/option"
+	"github.com/mobilemindtec/go-io/result"
 	"github.com/mobilemindtec/go-utils/v2/inline"
 	"reflect"
 	"strings"
 	"time"
 
 	lst "github.com/mobilemindtec/go-utils/lists"
-	"github.com/mobilemindtec/go-utils/v2/lists"
 )
 
 type Optional[T any] struct {
@@ -324,7 +325,24 @@ func (this *Optional[T]) Exec(f func(T) *Optional[bool]) *Optional[T] {
 	return this
 }
 
-func (this *Optional[T]) ListNonEmpty() bool {
+func (this *Optional[T]) ToResult() *result.Result[*option.Option[T]] {
+	if this.IsFail() {
+		return result.OfError[*option.Option[T]](this.GetFail().Error)
+	} else if this.Empty() {
+		return result.OfValue(option.None[T]())
+	} else {
+		return result.OfValue(option.Of(this.Get()))
+	}
+}
+
+func (this *Optional[T]) ToOption() *option.Option[T] {
+	if this.NonEmpty() {
+		return option.Of(this.Get())
+	}
+	return option.None[T]()
+}
+
+func (this *Optional[T]) SliceNonEmpty() bool {
 	if this.IsSome() {
 		if !IsSlice(this.some.Item) {
 			panic("optional wrapped value is not a slice")
@@ -337,11 +355,11 @@ func (this *Optional[T]) ListNonEmpty() bool {
 }
 
 // ListMapToBool map to true id list len > 0 or else false
-func (this *Optional[T]) ListMapToBool() *Optional[bool] {
-	return Of[bool](!this.ListEmpty())
+func (this *Optional[T]) SliceMapToBool() *Optional[bool] {
+	return Of[bool](!this.SliceEmpty())
 }
 
-func (this *Optional[T]) ListEmpty() bool {
+func (this *Optional[T]) SliceEmpty() bool {
 	if this.IsSome() {
 		if !IsSlice(this.some.Item) {
 			panic("optional wrapped value is not a slice")
@@ -353,7 +371,7 @@ func (this *Optional[T]) ListEmpty() bool {
 	return false
 }
 
-func (this *Optional[T]) ListIfEmpty(cb func()) *Optional[T] {
+func (this *Optional[T]) SliceIfEmpty(cb func()) *Optional[T] {
 	if this.IsSome() {
 		if !IsSlice(this.some.Item) {
 			panic("optional wrapped value is not a slice")
@@ -367,7 +385,7 @@ func (this *Optional[T]) ListIfEmpty(cb func()) *Optional[T] {
 	return this
 }
 
-func (this *Optional[T]) ListIfNonEmpty(cb func(T)) *Optional[T] {
+func (this *Optional[T]) SliceIfNonEmpty(cb func(T)) *Optional[T] {
 	if this.IsSome() {
 		if !IsSlice(this.some.Item) {
 			panic("optional wrapped value is not a slice")
@@ -382,7 +400,7 @@ func (this *Optional[T]) ListIfNonEmpty(cb func(T)) *Optional[T] {
 }
 
 // ListForeach Try to apply f to each list item if Some is a slice. If Some is not a list, throw panic
-func (this *Optional[T]) ListForeach(f interface{}) *Optional[T] {
+func (this *Optional[T]) SliceForeach(f interface{}) *Optional[T] {
 
 	if this.IsSome() {
 		fnType := reflect.TypeOf(f)
@@ -407,7 +425,7 @@ func (this *Optional[T]) ListForeach(f interface{}) *Optional[T] {
 }
 
 // ListFilter Try to apply list filter if Some is a slice. If Some is not a list, throw panic
-func (this *Optional[T]) ListFilter(f interface{}) *Optional[T] {
+func (this *Optional[T]) SliceFilter(f interface{}) *Optional[T] {
 
 	if this.IsSome() {
 		fnType := reflect.TypeOf(f)
@@ -448,7 +466,7 @@ func (this *Optional[T]) ListFilter(f interface{}) *Optional[T] {
 }
 
 // ListMap Try to apply list filter if Some is a slice. If Some is not a list, throw panic
-func (this *Optional[T]) ListMap(f interface{}) interface{} {
+func (this *Optional[T]) SliceMap(f interface{}) interface{} {
 
 	if this.IsSome() {
 		fnType := reflect.TypeOf(f)
@@ -904,14 +922,6 @@ func Foreach[T any](v *Optional[T], f func(T)) *Optional[T] {
 	return v
 }
 
-func SliceFlatten[T any, R any](vs *Optional[[]T], fn func(T) R) []R {
-	var r []R
-	if vs.NonEmpty() {
-		return lists.Map[T, R](vs.Get(), fn)
-	}
-	return r
-}
-
 /*
 func Flatten[T any](vs *Optional[T], orElse ...T) T {
 	var r T
@@ -951,7 +961,7 @@ func SliceFilter[T any](optList *Optional[[]T], f func(T) bool) *Optional[[]T] {
 	return optList
 }
 
-func MapEach[F any, T any](opt *Optional[[]F], fn func(F) T) *Optional[[]T] {
+func SliceMap[F any, T any](opt *Optional[[]F], fn func(F) T) *Optional[[]T] {
 	items := []T{}
 	if opt.Any() {
 
@@ -960,6 +970,16 @@ func MapEach[F any, T any](opt *Optional[[]F], fn func(F) T) *Optional[[]T] {
 		}
 	}
 	return New[[]T](items)
+}
+
+func SliceFlatten[T any](opt *Optional[[]T]) []T {
+	var t []T
+
+	if opt.IsSome() {
+		return opt.Get()
+	}
+
+	return t
 }
 
 func MapMerge[T1 any, T2 any, R any](opt1 *Optional[T1], opt2 *Optional[T2], fn func(T1, T2) R) *Optional[R] {
