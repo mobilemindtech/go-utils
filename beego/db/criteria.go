@@ -113,6 +113,8 @@ type Criteria struct {
 	UpdateParams map[string]interface{}
 
 	Page *Page
+	searchPaths []string
+	searchValue string
 
 	Error error
 
@@ -148,7 +150,19 @@ type Criteria struct {
 }
 
 func NewCriteria(session *Session, entity interface{}, entities interface{}) *Criteria {
-	return &Criteria{criterias: []*Criteria{}, criteriasOr: []*Criteria{}, criteriasAnd: []*Criteria{}, criteriasAndOr: []*Criteria{}, criteriasAndOrAnd: []*CriteriaSet{}, criteriasOrAnd: []*Criteria{}, Session: session, Result: entity, Results: entities, RelatedSelList: []string{}}
+	return &Criteria{
+		criterias: []*Criteria{},
+		criteriasOr: []*Criteria{},
+		criteriasAnd: []*Criteria{},
+		criteriasAndOr: []*Criteria{},
+		criteriasAndOrAnd: []*CriteriaSet{},
+		criteriasOrAnd: []*Criteria{},
+		Session: session,
+		Result: entity,
+		Results: entities,
+		RelatedSelList: []string{},
+		searchPaths: []string{},
+	}
 }
 
 func NewCondition() *Criteria {
@@ -286,6 +300,18 @@ func (this *Criteria) SetDistinct() *Criteria {
 	return this
 }
 
+func (this *Criteria) SearchVal(value string) *Criteria {
+	this.searchValue = value
+	return this
+}
+
+func (this *Criteria) SearchCols(paths ...string) *Criteria {
+	for _, path := range paths {
+		this.searchPaths = append(this.searchPaths, path)
+	}
+	return this
+}
+
 func (this *Criteria) Eq(path string, value interface{}) *Criteria {
 	return this.add(path, value, Eq, false, false)
 }
@@ -384,13 +410,17 @@ func (this *Criteria) NotIn(path string, values ...interface{}) *Criteria {
 	return this
 }
 
-func (this *Criteria) OrderAsc(path string) *Criteria {
-	this.orderBy = append(this.orderBy, &CriteriaOrder{Path: path})
+func (this *Criteria) OrderAsc(paths ...string) *Criteria {
+	for _, path := range paths {
+		this.orderBy = append(this.orderBy, &CriteriaOrder{Path: path})
+	}
 	return this
 }
 
-func (this *Criteria) OrderDesc(path string) *Criteria {
-	this.orderBy = append(this.orderBy, &CriteriaOrder{Path: path, Desc: true})
+func (this *Criteria) OrderDesc(paths ...string) *Criteria {
+	for _, path := range paths {
+		this.orderBy = append(this.orderBy, &CriteriaOrder{Path: path, Desc: true})
+	}
 	return this
 }
 
@@ -468,6 +498,23 @@ func (this *Criteria) Query() orm.QuerySeter {
 func (this *Criteria) SetDebug(debug bool) *Criteria {
 	this.Debug = debug
 	return this
+}
+
+func (this *Criteria) buildSearchPaths(paths []string, val string) {
+	if len(paths) > 0 && len(val) > 0 {
+		if len(paths) == 1 {
+			for _, path := range paths {
+				this.Eq(path, val)
+			}
+		} else {
+			cond := NewCondition()
+			for _, path := range paths {
+				this.Eq(path, val)
+			}
+			this.AndOr(cond)
+		}
+
+	}
 }
 
 func (this *Criteria) buildPage() {
@@ -888,6 +935,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria {
 		this.Eq("Tenant", this.Session.Tenant)
 	}
 
+	this.buildSearchPaths(this.searchPaths, this.searchValue)
 	this.buildPage()
 	query = this.build(query)
 

@@ -10,6 +10,7 @@ import (
 
 	"github.com/beego/beego/v2/server/web/context"
 	"github.com/leekchan/accounting"
+	"github.com/mobilemindtec/go-utils/v2/maps"
 )
 
 func FilterNumber(text string) string {
@@ -52,15 +53,25 @@ func SliceIndex(limit int, predicate func(i int) bool) int {
 }
 
 // troca , por .(ponto), posi alterei o js maskMoney pra #.###,##
-func NormalizeSemicolon(key string, ctx *context.Context) {
-	if _, ok := ctx.Request.Form[key]; ok {
-		ctx.Request.Form[key][0] = strings.Replace(ctx.Request.Form[key][0], ",", "", -1)
+func NormalizeSemicolon(ctx *context.Context, keys ...string) {
+	for _, key := range keys {
+		if _, ok := ctx.Request.Form[key]; ok {
+			ctx.Request.Form[key][0] = strings.Replace(ctx.Request.Form[key][0], ",", "", -1)
+		}
 	}
 }
 
-func RemoveAllSemicolon(key string, ctx *context.Context) {
-	if _, ok := ctx.Request.Form[key]; ok {
-		ctx.Request.Form[key][0] = strings.Replace(ctx.Request.Form[key][0], ",", "", -1)
+func RemoveAllSemicolon(ctx *context.Context, keys ...string) {
+	for _, key := range keys {
+		if _, ok := ctx.Request.Form[key]; ok {
+			ctx.Request.Form[key][0] = strings.Replace(ctx.Request.Form[key][0], ",", "", -1)
+		}
+	}
+}
+
+func SetFormDefaults(ctx *context.Context, vals ...interface{}) {
+	for k, v := range maps.Of[string, string](vals...) {
+		SetFormDefault(k, v, ctx)
 	}
 }
 
@@ -192,4 +203,27 @@ func AnyToInt(s interface{}) int {
 
 func AnyToInt64(s interface{}) int64 {
 	return int64(AnyToInt(s))
+}
+
+func StrToFloat(s string) float32 {
+	i, _ := strconv.ParseFloat(s, 32)
+	return float32(i)
+}
+
+func StrToFloat64(s string) float64 {
+	i, _ := strconv.ParseFloat(s, 32)
+	return i
+}
+
+func AnyToFloat(s interface{}) float32 {
+
+	if i, ok := s.(float32); ok {
+		return i
+	}
+
+	return StrToFloat(s.(string))
+}
+
+func AnyToFloat64(s interface{}) float64 {
+	return float64(AnyToInt(s))
 }

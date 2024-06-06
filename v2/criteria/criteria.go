@@ -29,6 +29,12 @@ type PageOf[T any] struct {
 	Data       []T `json:"data" jsonp:""`
 }
 
+func (this *PageOf[T]) Foreach(f func(T)) {
+	for _, it := range this.Data {
+		f(it)
+	}
+}
+
 func (this *PageOf[T]) Count() int64 {
 	return int64(this.TotalCount)
 }
@@ -290,6 +296,22 @@ func (this *Criteria[T]) GetFirstIO() *types.IO[*T] {
 		}))
 }
 
+func (this *Criteria[T]) GetFirstOrNil() *T {
+
+	res := this.GetFirst()
+
+	if res.IsError() {
+		panic(res.GetError())
+	}
+
+	if res.Get().IsEmpty() {
+		var x T
+		return &x
+	}
+	
+	return this.GetFirst().Get().Get()
+}
+
 func (this *Criteria[T]) GetFirst() *result.Result[*option.Option[*T]] {
 	this.One()
 
@@ -370,6 +392,16 @@ func (this *Criteria[T]) GetPage() *result.Result[*PageOf[*T]] {
 
 func (this *Criteria[T]) Eager(related ...string) *Criteria[T] {
 	this.Criteria.SetRelatedsSel(related...)
+	return this
+}
+
+func (this *Criteria[T]) SearchVal(val string) *Criteria[T] {
+	this.Criteria.SearchVal(val)
+	return this
+}
+
+func (this *Criteria[T]) SearchCols(paths ...string) *Criteria[T] {
+	this.Criteria.SearchCols(paths...)
 	return this
 }
 
@@ -458,13 +490,13 @@ func (this *Criteria[T]) Get(id int64) *optional.Optional[*T] {
 	return optional.OfNone[*T]()
 }
 
-func (this *Criteria[T]) OrderAsc(path string) *Criteria[T] {
-	this.Criteria.OrderAsc(path)
+func (this *Criteria[T]) OrderAsc(paths ...string) *Criteria[T] {
+	this.Criteria.OrderAsc(paths...)
 	return this
 }
 
-func (this *Criteria[T]) OrderDesc(path string) *Criteria[T] {
-	this.Criteria.OrderDesc(path)
+func (this *Criteria[T]) OrderDesc(paths ...string) *Criteria[T] {
+	this.Criteria.OrderDesc(paths...)
 	return this
 }
 

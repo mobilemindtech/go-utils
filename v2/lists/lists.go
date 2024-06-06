@@ -91,6 +91,27 @@ func Map[T any, R any](vs []T, f func(T) R) []R {
 	return vsf
 }
 
+func MapFilter[T any, R any](vs []T, f func(T) R, filter func(R) bool) []R {
+	vsf := []R{}
+	for _, it := range vs {
+		r := f(it)
+		if filter(r) {
+			vsf = append(vsf, r)
+		}
+	}
+	return vsf
+}
+
+func FilterMap[T any, R any](vs []T, filter func(T) bool, f func(T) R) []R {
+	vsf := []R{}
+	for _, it := range vs {
+		if filter(it) {
+			vsf = append(vsf, f(it))
+		}
+	}
+	return vsf
+}
+
 func Sort[T any](vs []T, f func(T, T) int) {
 
 	l := len(vs)

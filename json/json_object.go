@@ -12,6 +12,7 @@ import (
 	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-utils/v2/optional"
 	"github.com/mobilemindtec/go-utils/v2/try"
+	"github.com/mobilemindtec/go-io/result"
 )
 
 type JsonWriter interface {
@@ -154,6 +155,13 @@ func Of(raw []byte) *optional.Optional[*Json] {
 		return NewFromBytes(raw)
 	})
 }
+
+func Try(raw []byte) *result.Result[*Json] {
+	return result.Try(func() (*Json, error){
+		return NewFromBytes(raw)
+	})
+}
+
 
 func NewEmpty() *Json {
 	return &Json{data: make(map[string]interface{})}

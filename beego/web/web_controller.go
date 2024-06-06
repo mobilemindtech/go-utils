@@ -101,11 +101,14 @@ type WebController struct {
 	UploadPathDestination   string
 
 	Container *ioc.Container
+
+
 }
 
 func init() {
 	LoadIl8n()
 	LoadFuncs()
+
 }
 
 func (this *WebController) SetUseJsonPackage() *WebController {
@@ -646,6 +649,9 @@ func (this *WebController) RenderJson(opt interface{}) {
 	}
 
 	this.ServeJSON()
+}
+func (this *WebController) OnJsonResultNil() {
+	this.OnJsonResult(nil)
 }
 
 func (this *WebController) OnJsonResult(result interface{}) {
