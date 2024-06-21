@@ -168,11 +168,16 @@ func ValueToInt64(val interface{}) int64 {
 }
 
 func ValueToTime(val interface{}) (time.Time, error) {
+	return ValueToTimeWithPattetn(val, "2006-01-02T15:04:05-07:00")
+}
+
+
+func ValueToTimeWithPattetn(val interface{}, pattern string) (time.Time, error) {
 	switch val.(type) {
 	case time.Time:
 		return val.(time.Time), nil
 	case string:
-		return util.DateParse("2006-01-02 15:04:05", val.(string))
+		return util.DateParse(pattern, val.(string))
 	default:
 		return time.Time{}, fmt.Errorf("can't parse %v to time", val )
 	}
