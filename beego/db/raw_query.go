@@ -168,10 +168,10 @@ func ValueToInt64(val interface{}) int64 {
 }
 
 func ValueToTime(val interface{}) (time.Time, error) {
-	return ValueToTimeWithPattetn(val, util.DateTimeDbLayout)
+	return ValueToTimeWithPattern(val, util.DateTimeDbLayout)
 }
 
-func ValueToTimeWithPattetn(val interface{}, pattern string) (time.Time, error) {
+func ValueToTimeWithPattern(val interface{}, pattern string) (time.Time, error) {
 	switch val.(type) {
 	case time.Time:
 		return val.(time.Time), nil
