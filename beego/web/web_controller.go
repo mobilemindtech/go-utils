@@ -3,6 +3,7 @@ package web
 import (
 	"errors"
 	"fmt"
+	"github.com/mobilemindtec/go-utils/app/util"
 	"github.com/mobilemindtec/go-utils/beego/web/response"
 	"html/template"
 	"mime/multipart"
@@ -101,8 +102,6 @@ type WebController struct {
 	UploadPathDestination   string
 
 	Container *ioc.Container
-
-
 }
 
 func init() {
@@ -163,9 +162,9 @@ func (this *WebController) Prepare() {
 	// Set template level language option.
 	this.Data["Lang"] = this.Lang
 	this.Data["xsrfdata"] = template.HTML(this.XSRFFormHTML())
-	this.Data["dateLayout"] = dateLayout
-	this.Data["datetimeLayout"] = datetimeLayout
-	this.Data["timeLayout"] = timeLayout
+	this.Data["dateLayout"] = util.DateBrLayout
+	this.Data["datetimeLayout"] = util.DateTimeBrLayout
+	this.Data["timeLayout"] = util.TimeMinutesLayout
 	this.Data["today"] = time.Now().In(this.DefaultLocation).Format("02.01.2006")
 
 	this.Session = this.WebControllerCreateSession()
@@ -1376,17 +1375,17 @@ func (this *WebController) ParseDateByKey(key string, layout string) (time.Time,
 
 // deprecated
 func (this *WebController) ParseDate(date string) (time.Time, error) {
-	return time.ParseInLocation(dateLayout, date, this.DefaultLocation)
+	return time.ParseInLocation(util.DateBrLayout, date, this.DefaultLocation)
 }
 
 // deprecated
 func (this *WebController) ParseDateTime(date string) (time.Time, error) {
-	return time.ParseInLocation(datetimeLayout, date, this.DefaultLocation)
+	return time.ParseInLocation(util.DateTimeBrLayout, date, this.DefaultLocation)
 }
 
 // deprecated
 func (this *WebController) ParseJsonDate(date string) (time.Time, error) {
-	return time.ParseInLocation(jsonDateLayout, date, this.DefaultLocation)
+	return time.ParseInLocation(util.DateTimeDbLayout, date, this.DefaultLocation)
 }
 
 func (this *WebController) NormalizePageSortKey(key string) string {

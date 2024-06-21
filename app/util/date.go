@@ -4,6 +4,16 @@ import (
 	"time"
 )
 
+const (
+	DateTimeDbLayout  = "2006-01-02T15:04:05-07:00"
+	DateLayout        = "2006-01-02"
+	TimeLayout        = "15:04:05"
+	TimeMinutesLayout = "15:04"
+	DateTimeLayout    = "2006-01-02 15:04:05"
+	DateBrLayout      = "02/01/2006"
+	DateTimeBrLayout  = "02/01/2006 15:04:05"
+)
+
 func GetDefaultLocation() *time.Location {
 	location, _ := time.LoadLocation("America/Sao_Paulo")
 	return location

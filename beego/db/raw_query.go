@@ -2,10 +2,10 @@ package db
 
 import (
 	"fmt"
-	"strconv"
-	"time"
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/mobilemindtec/go-utils/app/util"
+	"strconv"
+	"time"
 )
 
 type RawQuery struct {
@@ -168,9 +168,8 @@ func ValueToInt64(val interface{}) int64 {
 }
 
 func ValueToTime(val interface{}) (time.Time, error) {
-	return ValueToTimeWithPattetn(val, "2006-01-02T15:04:05-07:00")
+	return ValueToTimeWithPattetn(val, util.DateTimeDbLayout)
 }
-
 
 func ValueToTimeWithPattetn(val interface{}, pattern string) (time.Time, error) {
 	switch val.(type) {
@@ -179,7 +178,7 @@ func ValueToTimeWithPattetn(val interface{}, pattern string) (time.Time, error) 
 	case string:
 		return util.DateParse(pattern, val.(string))
 	default:
-		return time.Time{}, fmt.Errorf("can't parse %v to time", val )
+		return time.Time{}, fmt.Errorf("can't parse %v to time", val)
 	}
 }
 
