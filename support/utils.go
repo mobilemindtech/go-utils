@@ -61,11 +61,15 @@ func NormalizeSemicolon(ctx *context.Context, keys ...string) {
 	}
 }
 
-func RemoveAllSemicolon(ctx *context.Context, keys ...string) {
+func RemoveAllSemicolonByKey(key string, ctx *context.Context) {
+	if _, ok := ctx.Request.Form[key]; ok {
+		ctx.Request.Form[key][0] = strings.Replace(ctx.Request.Form[key][0], ",", "", -1)
+	}
+}
+
+func RemoveAllSemicolonByKeys(ctx *context.Context, keys ...string) {
 	for _, key := range keys {
-		if _, ok := ctx.Request.Form[key]; ok {
-			ctx.Request.Form[key][0] = strings.Replace(ctx.Request.Form[key][0], ",", "", -1)
-		}
+		RemoveAllSemicolonByKey(key, ctx)
 	}
 }
 

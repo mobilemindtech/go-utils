@@ -3,6 +3,7 @@ package lists
 import (
 	_ "fmt"
 	"reflect"
+	"github.com/mobilemindtec/go-io/option"
 )
 
 // Index returns the first index of the target interface{} `t`, or
@@ -71,6 +72,15 @@ func FilterNot[T any](vs []T, f func(T) bool) []T {
 
 // Filter returns a new slice containing all interface{}s in the
 // slice that satisfy the predicate `f`.
+func FirstOption[T any](vs []T, f func(T) bool) *option.Option[T] {
+	return option.Of(Find(vs, f))
+}
+
+
+func First[T any](vs []T, f func(T) bool) T {
+	return Find(vs, f)
+}
+
 func Find[T any](vs []T, f func(T) bool) T {
 	var x T
 	for _, it := range vs {
@@ -87,6 +97,14 @@ func Map[T any, R any](vs []T, f func(T) R) []R {
 	vsf := []R{}
 	for _, it := range vs {
 		vsf = append(vsf, f(it))
+	}
+	return vsf
+}
+
+func MapToInterface[T any](vs []T) []interface{} {
+	vsf := []interface{}{}
+	for _, it := range vs {
+		vsf = append(vsf, it)
 	}
 	return vsf
 }

@@ -11,12 +11,32 @@ import (
 	"github.com/beego/i18n"
 	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtec/go-io/result"
+	iov "github.com/mobilemindtec/go-io/validation"
+	"strings"
 )
+
+
 
 type EntityValidatorResult struct {
 	Errors       map[string]string
 	ErrorsFields map[string]string
 	HasError     bool
+}
+
+
+func (this *EntityValidatorResult) Error() string {
+	if len(this.Errors) == 0 && len(this.ErrorsFields)  == 0 {
+		return  ""
+	}
+
+	var lst []string
+
+	for k, v := range this.Errors {
+		lst = append(lst, fmt.Sprintf("%v: %v", k, v))
+	}
+
+	return strings.Join(lst, ", ")
 }
 
 func (this *EntityValidatorResult) Merge(result *EntityValidatorResult) {
@@ -104,6 +124,32 @@ func (this *EntityValidator) Validate(entities ...interface{}) interface{} {
 	}
 
 	return optional.SomeOk()
+}
+
+
+func (this *EntityValidator) ValidateResultWith(entity interface{}, f func(validator *Validation)) *result.Result[iov.Validation] {
+	return result.Try(func() (iov.Validation, error) {
+		val, err := this.ValidMult([]interface{}{entity}, f)
+		if err != nil {
+			return nil, err
+		}
+		if val.HasError {
+			return iov.WithErrors(val.Errors), nil
+		}
+		return iov.NewSuccess(), nil
+	})
+}
+func (this *EntityValidator) ValidatetResult(entities ...interface{}) *result.Result[iov.Validation] {
+	return result.Try(func() (iov.Validation, error) {
+		val, err := this.ValidMult(entities, nil)
+		if err != nil {
+			return nil, err
+		}
+		if val.HasError {
+			return iov.WithErrors(val.Errors), nil
+		}
+		return iov.NewSuccess(), nil
+	})
 }
 
 func (this *EntityValidator) ValidMult(entities []interface{}, action func(validator *Validation)) (*EntityValidatorResult, error) {

@@ -395,6 +395,19 @@ func (this *Criteria[T]) Eager(related ...string) *Criteria[T] {
 	return this
 }
 
+func (this *Criteria[T]) Builder(f func (c *Criteria[T])) *Criteria[T] {
+	f(this)
+	return this
+}
+
+func (this *Criteria[T]) BuilderIf(cond bool, f func (c *Criteria[T])) *Criteria[T] {
+	if cond {
+		f(this)
+	}
+	return this
+}
+
+
 func (this *Criteria[T]) SearchVal(val string) *Criteria[T] {
 	this.Criteria.SearchVal(val)
 	return this

@@ -3,8 +3,9 @@ package db
 import (
 	"fmt"
 	"strconv"
-
+	"time"
 	"github.com/beego/beego/v2/client/orm"
+	"github.com/mobilemindtec/go-utils/app/util"
 )
 
 type RawQuery struct {
@@ -163,6 +164,17 @@ func ValueToInt64(val interface{}) int64 {
 	default:
 		v, _ := strconv.Atoi(val.(string))
 		return int64(v)
+	}
+}
+
+func ValueToTime(val interface{}) (time.Time, error) {
+	switch val.(type) {
+	case time.Time:
+		return val.(time.Time), nil
+	case string:
+		return util.DateParse("2006-01-02 15:04:05", val.(string))
+	default:
+		return time.Time{}, fmt.Errorf("can't parse %v to time", val )
 	}
 }
 

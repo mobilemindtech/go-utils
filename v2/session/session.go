@@ -166,6 +166,35 @@ func New[T any](session *db.Session) *RxSession[T] {
 	return &RxSession[T]{session: session, actions: []interface{}{}}
 }
 
+func (this *RxSession[T]) Load(value T) *result.Result[T] {
+	opt := this.LoadOption(value)
+
+	if opt.IsError() {
+		return result.OfError[T](opt.Failure())
+	}
+
+	if opt.Get().IsNone() {
+		return result.OfError[T](fmt.Errorf("row not found: %v", value))
+	}
+
+	return result.OfValue(opt.Get().Get())
+}
+
+func (this *RxSession[T]) LoadOption(value T) *result.Result[*option.Option[T]] {
+	return result.Try(func() (*option.Option[T], error) {
+		ok, err := this.session.Load(value)
+
+		if err != nil {
+			return option.None[T](), err
+		}
+
+		if !ok {
+			return option.None[T](), nil
+		}
+		return option.Some(value), nil
+	})
+}
+
 func (this *RxSession[T]) Close() {
 	this.session.Close()
 }
@@ -378,6 +407,20 @@ func (this *RxSession[T]) Persist(entity T) *optional.Optional[T] {
 }
 
 func (this *RxSession[T]) PersistResult(entity T) *result.Result[*option.Option[T]] {
+	if err := this.session.SaveOrUpdate(entity); err != nil {
+		return result.OfError[*option.Option[T]](err)
+	}
+	return result.OfValue(option.Some(entity))
+}
+
+func (this *RxSession[T]) PersistWithBatch(entity T, entities ...interface{}) *result.Result[*option.Option[T]] {
+
+	for _, it := range entities {
+		if err := this.session.SaveOrUpdate(it); err != nil {
+			return result.OfError[*option.Option[T]](err)
+		}
+	}
+
 	if err := this.session.SaveOrUpdate(entity); err != nil {
 		return result.OfError[*option.Option[T]](err)
 	}

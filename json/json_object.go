@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/core/logs"
+	"github.com/mobilemindtec/go-io/result"
 	"github.com/mobilemindtec/go-utils/app/util"
 	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-utils/v2/optional"
 	"github.com/mobilemindtec/go-utils/v2/try"
-	"github.com/mobilemindtec/go-io/result"
 )
 
 type JsonWriter interface {
@@ -28,7 +28,7 @@ type Converter func(j *Json)
 type Parser[T any] struct {
 	converter         Converter
 	useDefaultEncoder bool
-	useCamelCase bool
+	useCamelCase      bool
 }
 
 func NewParser[T any]() *Parser[T] {
@@ -61,6 +61,15 @@ func (this *Parser[T]) AddConverter(c Converter) *Parser[T] {
 func (this *Parser[T]) Parse(raw []byte) *optional.Optional[*T] {
 	var entity T
 	return this.ParseInto(raw, &entity)
+}
+
+func (this *Parser[T]) ParseFormTo(form url.Values, entity *T) *optional.Optional[*T] {
+	return this.ParseJsonInto(NewFromUrlValues(form), entity)
+}
+
+func (this *Parser[T]) ParseForm(form url.Values) *optional.Optional[*T] {
+	var entity T
+	return this.ParseJsonInto(NewFromUrlValues(form), &entity)
 }
 
 func (this *Parser[T]) ParseJson(j *Json) *optional.Optional[*T] {
@@ -157,11 +166,10 @@ func Of(raw []byte) *optional.Optional[*Json] {
 }
 
 func Try(raw []byte) *result.Result[*Json] {
-	return result.Try(func() (*Json, error){
+	return result.Try(func() (*Json, error) {
 		return NewFromBytes(raw)
 	})
 }
-
 
 func NewEmpty() *Json {
 	return &Json{data: make(map[string]interface{})}

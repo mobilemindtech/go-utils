@@ -436,6 +436,7 @@ func (this *Session) Remove(entity interface{}) error {
 func (this *Session) TryLoad(entity interface{}) (bool, error) {
 	return this.Load(entity)
 }
+
 func (this *Session) Load(entity interface{}) (bool, error) {
 	if this.IsNil(entity) {
 		return false, nil
@@ -1488,4 +1489,11 @@ func (this *Session) HasFilterTenant(reply interface{}) bool {
 	}
 	//logs.Debug("## filter tenant")
 	return false
+}
+
+func IsPersisted(entity Model) bool {
+	if entity == nil || reflect.ValueOf(entity).IsNil() {
+		return false
+	}
+	return entity.IsPersisted()
 }

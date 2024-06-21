@@ -501,15 +501,16 @@ func (this *Criteria) SetDebug(debug bool) *Criteria {
 }
 
 func (this *Criteria) buildSearchPaths(paths []string, val string) {
+
 	if len(paths) > 0 && len(val) > 0 {
 		if len(paths) == 1 {
 			for _, path := range paths {
-				this.Eq(path, val)
+				this.LikeMatch(path, val, IAnywhare)
 			}
 		} else {
 			cond := NewCondition()
 			for _, path := range paths {
-				this.Eq(path, val)
+				cond.LikeMatch(path, val, IAnywhare)
 			}
 			this.AndOr(cond)
 		}
@@ -530,7 +531,7 @@ func (this *Criteria) buildPage() {
 			}
 		}
 
-		if this.Page.FilterColumns != nil && len(this.Page.FilterColumns) > 0 {
+		if this.Page.FilterColumns != nil && len(this.Page.FilterColumns) > 0{
 
 			if len(this.Page.FilterColumns) == 1 {
 
