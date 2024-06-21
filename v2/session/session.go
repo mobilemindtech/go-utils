@@ -400,14 +400,14 @@ func (this *RxSession[T]) RemoveCascade(entity T) *optional.Optional[bool] {
 
 func (this *RxSession[T]) Persist(entity T) *optional.Optional[T] {
 
-	if err := this.session.SaveOrUpdate(entity); err != nil {
+	if err := this.session.SaveOrUpdateCascade(entity); err != nil {
 		return optional.OfFail[T](err)
 	}
 	return optional.OfSome[T](entity)
 }
 
 func (this *RxSession[T]) PersistResult(entity T) *result.Result[*option.Option[T]] {
-	if err := this.session.SaveOrUpdate(entity); err != nil {
+	if err := this.session.SaveOrUpdateCascade(entity); err != nil {
 		return result.OfError[*option.Option[T]](err)
 	}
 	return result.OfValue(option.Some(entity))
@@ -416,12 +416,12 @@ func (this *RxSession[T]) PersistResult(entity T) *result.Result[*option.Option[
 func (this *RxSession[T]) PersistWithBatch(entity T, entities ...interface{}) *result.Result[*option.Option[T]] {
 
 	for _, it := range entities {
-		if err := this.session.SaveOrUpdate(it); err != nil {
+		if err := this.session.SaveOrUpdateCascade(it); err != nil {
 			return result.OfError[*option.Option[T]](err)
 		}
 	}
 
-	if err := this.session.SaveOrUpdate(entity); err != nil {
+	if err := this.session.SaveOrUpdateCascade(entity); err != nil {
 		return result.OfError[*option.Option[T]](err)
 	}
 	return result.OfValue(option.Some(entity))

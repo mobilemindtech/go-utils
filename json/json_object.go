@@ -29,6 +29,7 @@ type Parser[T any] struct {
 	converter         Converter
 	useDefaultEncoder bool
 	useCamelCase      bool
+	debug             bool
 }
 
 func NewParser[T any]() *Parser[T] {
@@ -41,6 +42,11 @@ func NewParserDefault[T any]() *Parser[T] {
 
 func (this *Parser[T]) UseDefaultEncoder() *Parser[T] {
 	return this.SetUseDefaultEncoder(true)
+}
+
+func (this *Parser[T]) Debug() *Parser[T] {
+	this.debug = true
+	return this
 }
 
 func (this *Parser[T]) UseCamelCase() *Parser[T] {
@@ -95,22 +101,33 @@ func (this *Parser[T]) ParseJsonInto(j *Json, entity *T) *optional.Optional[*T] 
 
 	var err error
 
+	if this.debug {
+		logs.Debug("JSON DATA = %v", j.data)
+	}
+	
 	if this.useDefaultEncoder {
 
+
 		newJsonData, err := json.Marshal(j.data)
+
 
 		if err != nil {
 			return optional.OfFail[*T](err)
 		}
 
-		//logs.Info("=== %v", string(newJsonData))
+		if this.debug {
+			logs.Debug("JSON RAW = %v", string(newJsonData))
+		}
 
 		err = json.Unmarshal(newJsonData, entity)
 
 	} else {
+
 		jsn := NewJSON()
 		jsn.CamelCase = this.useCamelCase
 		err = jsn.DecodeFromMap(j.data, entity)
+
+
 	}
 
 	if err != nil {
