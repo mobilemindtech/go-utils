@@ -324,8 +324,8 @@ func (this *Criteria[T]) GetFirst() *result.Result[*option.Option[*T]] {
 	return result.OfValue(option.Some(this.Result.(*T)))
 }
 
-func (this *Criteria[T]) GetAllIO() *types.IO[*[]T] {
-	return io.IO[*[]T](
+func (this *Criteria[T]) GetAllIO() *types.IO[[]*T] {
+	return io.IO[[]*T](
 		io.Attempt(func() *result.Result[[]*T] {
 			return this.GetAll()
 		}))

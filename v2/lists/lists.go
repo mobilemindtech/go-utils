@@ -159,6 +159,36 @@ func FoldLeft[T any, Acc any](vs []T, initial Acc, fold func(Acc, T) Acc) Acc {
 	return nextAcc
 }
 
+func Revese[T any](vs []T) []T {
+	var vsf []T
+	l := len(vs) - 1
+	for i := l; i >= 0 ; i-- {
+		vsf = append(vsf, vs[i])
+	}
+	return  vsf
+}
+
+func FoldRight[T any, Acc any](vs []T, initial Acc, fold func(Acc, T) Acc) Acc {
+	nextAcc := initial
+	l := len(vs) - 1
+	for i := l; i >= 0 ; i-- {
+		nextAcc = fold(nextAcc, vs[i])
+	}
+	return nextAcc
+}
+
+func ContainsVals[T comparable](vs1 []T, vs2 ...T) bool {
+	for _, v1 := range vs1 {
+		for _, v2 := range vs2 {
+			if v1 == v2 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+
 func Contains[T any](vs1 []T, vs2 []T, test func(T, T) bool) []T {
 	return Filter[T](vs1,
 		func(v1 T) bool {
