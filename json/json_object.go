@@ -13,6 +13,8 @@ import (
 	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-utils/v2/optional"
 	"github.com/mobilemindtec/go-utils/v2/try"
+	"github.com/mobilemindtec/go-utils/v2/lists"
+	"fmt"
 )
 
 type JsonWriter interface {
@@ -282,14 +284,42 @@ func (this *Json) GetArrayOrEmpty(key string) []interface{} {
 }
 
 func (this *Json) GetArrayOfInt(key string) []int {
-
 	if this.HasKey(key) {
+
 		opt, _ := this.data[key]
 
-		if array, ok := opt.([]int); ok {
-			return array
+		switch opt.(type) {
+		case []interface{}:
+			var arr  []int
+			for _, it := range opt.([]interface{}) {
+				switch it.(type) {
+				case int:
+					arr = append(arr, it.(int))
+					break
+				case int64:
+					arr = append(arr, int(it.(int64)))
+					break
+				case float32:
+					arr = append(arr, int(it.(float32)))
+					break
+				case float64:
+					arr = append(arr, int(it.(float64)))
+					break
+				case string:
+					arr = append(arr, support.StrToInt(it.(string)))
+					break
+				default:
+				panic(fmt.Errorf("can't parse %v item of type %v of int", key, reflect.TypeOf(it)))
+				}
+			}
+			return  arr
+		case []int:
+			return opt.([]int)
+		case []int64:
+			return lists.Map(opt.([]int64), func(i int64) int { return int(i)})
+		//default:
+		//	panic(fmt.Errorf("can't parse %v of type %v to array of int", key, reflect.TypeOf(opt)))
 		}
-
 	}
 
 	return nil
@@ -308,11 +338,26 @@ func (this *Json) GetArrayOfString(key string) []string {
 	if this.HasKey(key) {
 		opt, _ := this.data[key]
 
-		logs.Debug("opt = %v, type = %v", opt, reflect.TypeOf(opt))
-
-		if array, ok := opt.([]string); ok {
-			return array
+		switch opt.(type) {
+		case []string:
+			return opt.([]string)
+		case []interface{}:
+			var arr []string
+			for _, it := range opt.([]interface{}) {
+				switch it.(type) {
+				case string:
+					arr = append(arr, it.(string))
+					break
+				default:
+					arr = append(arr, fmt.Sprintf("%v", it))
+				}
+			}
+			return arr
+		//default:
+		//	panic(fmt.Errorf("can't parse %v of type %v to array of string", key, reflect.TypeOf(opt)))
 		}
+
+
 
 	}
 

@@ -231,3 +231,20 @@ func AnyToFloat(s interface{}) float32 {
 func AnyToFloat64(s interface{}) float64 {
 	return float64(AnyToInt(s))
 }
+
+
+func RemoveAllNonAlphaNumeric(s string) string {
+
+	var result strings.Builder
+	for i := 0; i < len(s); i++ {
+		b := s[i]
+		if ('a' <= b && b <= 'z') ||
+			('A' <= b && b <= 'Z') ||
+			('0' <= b && b <= '9') ||
+			b == ' ' {
+			result.WriteByte(b)
+		}
+	}
+	return result.String()
+
+}

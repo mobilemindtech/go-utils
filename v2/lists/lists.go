@@ -59,6 +59,15 @@ func Filter[T any](vs []T, f func(T) bool) []T {
 	}
 	return vsf
 }
+func Count[T any](vs []T, f func(T) bool) int {
+	count := 0
+	for _, it := range vs {
+		if f(it) {
+			count = count  + 1
+		}
+	}
+	return count
+}
 
 func FilterNot[T any](vs []T, f func(T) bool) []T {
 	vsf := []T{}
@@ -229,6 +238,51 @@ func ListParts[T any](vs []T, size int) [][]T {
 
 	return all
 
+}
+
+func FindAllNotIn[T any](l1 []T, l2 []T, f func(T, T) bool) []T {
+	var vs []T
+	for _, it1 := range l1 {
+		found := false
+		for _, it2 := range l2 {
+			if f(it1, it2) {
+				found = true
+			}
+		}
+		if !found {
+			vs = append(vs, it1)
+		}
+	}
+	return vs
+}
+
+func MergeUnique[T any](l1 []T, l2 []T, f func(T, T) bool) []T {
+	var vs []T
+	for _, it1 := range l1 {
+		found := false
+		for _, it2 := range l2 {
+			if f(it1, it2) {
+				found = true
+			}
+		}
+		if !found {
+			vs = append(vs, it1)
+		}
+	}
+
+	for _, it2 := range l2 {
+		found := false
+		for _, v := range vs {
+			if f(it2, v) {
+				found = true
+			}
+		}
+		if !found {
+			vs = append(vs, it2)
+		}
+	}
+
+	return vs
 }
 
 func UniqueValues(vs interface{}, uniqueValueResolver func(data interface{}) interface{}) []interface{} {

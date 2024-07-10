@@ -33,6 +33,7 @@ const (
 	AndOr
 	OrAnd
 	AndOrAnd
+	Raw
 )
 
 const (
@@ -316,6 +317,10 @@ func (this *Criteria) Eq(path string, value interface{}) *Criteria {
 	return this.add(path, value, Eq, false, false)
 }
 
+func (this *Criteria) Raw(path string, query string) *Criteria {
+	return this.add(path, query, Raw, false, false)
+}
+
 func (this *Criteria) EqAnd(path string, value interface{}) *Criteria {
 	return this.add(path, value, Eq, true, false)
 }
@@ -591,6 +596,8 @@ func (this *Criteria) buildCriterias(criterias []*Criteria) *orm.Condition {
 			b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
 			b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
 			cond = cond.AndCond(b)
+		case Raw:
+			cond = cond.Raw(pathName, criteria.Value.(string))
 		default:
 			cond = cond.And(pathName, criteria.Value)
 		}
@@ -632,6 +639,8 @@ func (this *Criteria) buildConditionsOr(criterias []*Criteria, condition *orm.Co
 				b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
 				b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
 				cond = cond.OrCond(b)
+			case Raw:
+				panic("raw not suported to OR condition")
 			default:
 				if criteria.ForceAnd {
 					cond = cond.And(pathName, criteria.Value)
@@ -675,6 +684,8 @@ func (this *Criteria) buildConditionsAnd(criterias []*Criteria, condition *orm.C
 			case Between:
 				cond = cond.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
 				cond = cond.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
+			case Raw:
+				cond = cond.Raw(pathName, criteria.Value.(string))
 			default:
 				cond = cond.And(pathName, criteria.Value)
 			}
@@ -713,6 +724,8 @@ func (this *Criteria) buildConditionsAndOr(criterias []*Criteria, condition *orm
 				b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
 				b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
 				cond = cond.OrCond(b)
+			case Raw:
+				panic("raw not suported to OR condition")
 			default:
 				if criteria.ForceAnd {
 					cond = cond.And(pathName, criteria.Value)
@@ -767,6 +780,8 @@ func (this *Criteria) buildConditionsAndOrAnd(criterias []*CriteriaSet, conditio
 						b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
 						b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
 						other = other.AndCond(b)
+					case Raw:
+						cond = cond.Raw(pathName, criteria.Value.(string))
 					default:
 						other = other.And(pathName, criteria.Value)
 					}
@@ -811,6 +826,8 @@ func (this *Criteria) buildConditionsOrAnd(criterias []*Criteria, condition *orm
 				b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
 				b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
 				cond = cond.AndCond(b)
+			case Raw:
+				cond = cond.Raw(pathName, criteria.Value.(string))
 			default:
 				cond = cond.And(pathName, criteria.Value)
 			}
@@ -944,6 +961,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria {
 		query = query.Distinct()
 	}
 
+	
 	switch resultType {
 
 	case CriteriaAggregateOne:
