@@ -16,6 +16,7 @@ import (
 	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-utils/v2/lists"
 	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtec/go-io/result"
 )
 
 const (
@@ -197,6 +198,14 @@ func CacheKey(args ...interface{}) string {
 	return fmt.Sprintf("key_%v", strings.Join(replacements, "_"))
 }
 
+func MemoizeResult[T any](srv *CacheService, key string, value interface{}, cacheable func() *result.Result[T]) *result.Result[T] {
+	return result.Try(func() (T, error) {
+		return Memoize(srv, key, value, func() (T, error) {
+			res := cacheable()
+			return res.OrNil(), res.ErrorOrNil()
+		})
+	})
+}
 func Memoize[T any](srv *CacheService, key string, value interface{}, cacheable func() (T, error)) (T, error) {
 	r, err := srv.Memoize(key, value, func() interface{} {
 		v, err := cacheable()

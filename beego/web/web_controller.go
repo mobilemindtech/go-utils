@@ -32,6 +32,7 @@ import (
 	"github.com/mobilemindtec/go-utils/v2/ioc"
 	"github.com/mobilemindtec/go-utils/v2/maps"
 	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtec/go-utils/v2/lists"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -1428,7 +1429,7 @@ func (this *WebController) LoadTenants() {
 		cacheKey := cache.CacheKey("tenants_user_", this.GetAuthUser().Id)
 		this.DeleteCacheOnLogout(cacheKey)
 
-		loader := func() ([]interface{}, error) {
+		loader := func() ([]*models.Tenant, error) {
 
 			tenants := []*models.Tenant{}
 			if this.Auth.IsRoot() {
@@ -1447,16 +1448,14 @@ func (this *WebController) LoadTenants() {
 					tenants = append(tenants, it.Tenant)
 				}
 			}
-			authorizeds := []interface{}{}
-			for _, it := range tenants {
-				authorizeds = append(authorizeds, it)
-			}
-			return authorizeds, nil
+
+			return tenants, nil
 		}
 
-		authorizeds, _ := cache.Memoize(this.CacheService, cacheKey, new([]interface{}), loader)
+		var authorizeds []*models.Tenant
+		cache.Memoize(this.CacheService, cacheKey, &authorizeds, loader)
 
-		this.Session.SetAuthorizedTenants(authorizeds)
+		this.Session.SetAuthorizedTenants(lists.MapToInterface(authorizeds))
 		this.Data["AvailableTenants"] = authorizeds
 	} else {
 		this.Data["AvailableTenants"] = []*models.Tenant{}

@@ -324,6 +324,15 @@ func (this *Optional[T]) Exec(f func(T) *Optional[bool]) *Optional[T] {
 	}
 	return this
 }
+func (this *Optional[T]) TryExec(f func(T) error) *Optional[T] {
+	if this.some != nil {
+		v := GetItem[T](this.some)
+		if err := f(v); err != nil {
+			return OfFail[T](err)			
+		}
+	}
+	return this
+}
 
 func (this *Optional[T]) ToResult() *result.Result[*option.Option[T]] {
 	if this.IsFail() {

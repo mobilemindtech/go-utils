@@ -250,6 +250,11 @@ func (this *Pipe) DebugOn() *Pipe {
 	return this
 }
 
+func (this *Pipe) SetDebug(b bool) *Pipe {
+	this.debug = b
+	return this
+}
+
 func (this *Pipe) GetResult() interface{} {
 	l := len(this.results)
 	if l > 0 {
@@ -491,6 +496,7 @@ func (this *Pipe) Run() *Pipe {
 			pipe.
 				ErrorHandler(this.errorHandler).
 				ExitHandler(this.exitHandler).
+				SetDebug(this.debug).
 				Run()
 
 			if pipe.State != StateSuccess {
@@ -510,6 +516,7 @@ func (this *Pipe) Run() *Pipe {
 				pipe.
 					ErrorHandler(this.errorHandler).
 					ExitHandler(this.exitHandler).
+					SetDebug(this.debug).
 					Run()
 
 				if pipe.State != StateSuccess {
@@ -538,6 +545,9 @@ func (this *Pipe) Run() *Pipe {
 			return this
 
 		case *optional.None:
+			if this.debug {
+				logs.Info("step: %v, exited", i)
+			}
 			this.exitHandler()
 			return this
 		case *Continue:

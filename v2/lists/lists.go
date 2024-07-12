@@ -2,8 +2,8 @@ package lists
 
 import (
 	_ "fmt"
-	"reflect"
 	"github.com/mobilemindtec/go-io/option"
+	"reflect"
 )
 
 // Index returns the first index of the target interface{} `t`, or
@@ -371,4 +371,15 @@ func NewCrudList[T any](currentList []T, newList []T, comparator func(T, T) bool
 	crud.RemoveList = FindAll(currentList, notInNewList)
 
 	return crud
+}
+
+func Flatten[T any](vs [][]T) []T {
+	var vsf []T
+
+	for _, items := range vs {
+		for _, it := range items {
+			vsf = append(vsf, it)
+		}
+	}
+	return  vsf
 }
