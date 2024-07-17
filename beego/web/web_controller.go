@@ -1452,8 +1452,7 @@ func (this *WebController) LoadTenants() {
 			return tenants, nil
 		}
 
-		var authorizeds []*models.Tenant
-		cache.Memoize(this.CacheService, cacheKey, &authorizeds, loader)
+		authorizeds, _ := cache.Memoize(this.CacheService, cacheKey, new([]*models.Tenant), loader)
 
 		this.Session.SetAuthorizedTenants(lists.MapToInterface(authorizeds))
 		this.Data["AvailableTenants"] = authorizeds
