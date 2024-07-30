@@ -80,6 +80,13 @@ func Just[T any](val T) *Optional[T] {
 	return New[T](val)
 }
 
+func OfResult[T any](res *result.Result[T]) *Optional[T] {
+	if res.IsError() {
+		return OfFail[T](res.GetError())
+	}
+	return Just(res.Get())
+}
+
 func New[T any](val interface{}) *Optional[T] {
 
 	opt := Optional[T]{}
@@ -699,6 +706,13 @@ func FailIf(val bool, msg string, args ...interface{}) interface{} {
 func FailIfOrElseDefault(val bool, msg string, def interface{}) interface{} {
 	if val {
 		return NewFailStr(msg)
+	}
+	return def
+}
+
+func FailIfErrorOrElseDefault(err error, def interface{}) interface{} {
+	if err != nil {
+		return NewFail(err)
 	}
 	return def
 }

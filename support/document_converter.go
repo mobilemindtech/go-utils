@@ -52,14 +52,18 @@ func (this *DocumentConverter) SaveBase64Gzip(content string, path string) error
 
 func (this *DocumentConverter) GetExtension(documentName string) (string, error){
 
-  splited := strings.Split(documentName, ".")
+  return GetFileExt(documentName)
+	
+}
+
+func GetFileExt(filename string) (string, error) {
+  splited := strings.Split(filename, ".")
 
   if len(splited) == 0 {
-    return "", errors.New(fmt.Sprintf("file extension not found: %v", documentName))
+    return "", errors.New(fmt.Sprintf("file extension not found: %v", filename))
   }
 
   ext := splited[len(splited)-1]
 
   return ext, nil
-	
 }
