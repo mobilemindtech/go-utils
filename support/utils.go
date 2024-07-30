@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+	"fmt"
 	"github.com/beego/beego/v2/server/web/context"
 	"github.com/leekchan/accounting"
 	"github.com/mobilemindtec/go-utils/v2/maps"
@@ -194,6 +194,10 @@ func StrToInt(s string) int {
 
 func StrToInt64(s string) int64 {
 	return int64(StrToInt(s))
+}
+
+func ToStr[T any](s T) string {
+	return fmt.Sprintf("%v", s)
 }
 
 func AnyToInt(s interface{}) int {
