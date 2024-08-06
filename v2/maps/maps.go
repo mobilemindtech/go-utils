@@ -84,3 +84,14 @@ func ToUrlQuery(m map[string]interface{}, replacers ...func(string, interface{})
 	}
 	return strings.Join(values, "&")
 }
+
+func Merge(map1 map[string]interface{}, map2 map[string]interface{}) map[string]interface{} {
+	vs := map[string]interface{}{}
+	for k, v := range map1 {
+		vs[k] = v;
+	}
+	for k, v := range map2 {
+		vs[k] = v;
+	}
+	return vs
+}
