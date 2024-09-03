@@ -30,6 +30,12 @@ type Continue struct{}
 func NewContinue() *Continue {
 	return &Continue{}
 }
+func FailOrContinue(err error) interface{} {
+	if	err != nil {
+		return optional.NewFail(err)
+	}
+	return NewContinue()
+}
 
 
 type PipeStep struct {

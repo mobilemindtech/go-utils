@@ -35,6 +35,9 @@ func Empty[T any](vs []T, f func(T) bool) bool {
 	return !Any[T](vs, f)
 }
 
+func AnyNot[T any](vs []T, f func(T) bool) bool {
+	return !Any(vs, f)
+}
 func Any[T any](vs []T, f func(T) bool) bool {
 	for _, it := range vs {
 		if f(it) {

@@ -637,6 +637,11 @@ func (this *Criteria[T]) Or(criteria *db.Criteria) *Criteria[T] {
 	return this
 }
 
+func (this *Criteria[T]) Raw(path string, query string) *Criteria[T] {
+	this.Criteria.Raw(path, query)
+	return this
+}
+
 func (this *Criteria[T]) AndOr(criteria *db.Criteria) *Criteria[T] {
 	this.Criteria.AndOr(criteria)
 	return this
