@@ -161,14 +161,9 @@ func (this *Session) RunWithTenant(tenant interface{}, runner func()) {
 }
 
 func RunWithTenant[T any](s *Session, tenant interface{}, runner func() T) T {
-
 	tmp := s.Tenant
 	s.Tenant = tenant
-
-	defer func() {
-		s.Tenant = tmp
-	}()
-
+	defer func() { s.Tenant = tmp }()
 	return runner()
 }
 
@@ -1489,6 +1484,13 @@ func (this *Session) HasFilterTenant(reply interface{}) bool {
 	}
 	//logs.Debug("## filter tenant")
 	return false
+}
+
+func RunWithIgnoreTenantFilter[T any](s *Session, f func(s *Session) T) T {
+	ignore := s.IgnoreTenantFilter
+	defer func() { s.IgnoreTenantFilter = ignore }()
+	s.IgnoreTenantFilter = true
+	return f(s)
 }
 
 func IsPersisted(entity Model) bool {

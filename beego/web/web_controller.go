@@ -20,6 +20,8 @@ import (
 	"github.com/beego/beego/v2/core/validation"
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/beego/i18n"
+	"github.com/mobilemindtec/go-io/option"
+	"github.com/mobilemindtec/go-io/result"
 	"github.com/mobilemindtec/go-utils/app/models"
 	"github.com/mobilemindtec/go-utils/app/route"
 	"github.com/mobilemindtec/go-utils/app/services"
@@ -30,9 +32,10 @@ import (
 	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-utils/v2/criteria"
 	"github.com/mobilemindtec/go-utils/v2/ioc"
+	"github.com/mobilemindtec/go-utils/v2/lists"
 	"github.com/mobilemindtec/go-utils/v2/maps"
 	"github.com/mobilemindtec/go-utils/v2/optional"
-	"github.com/mobilemindtec/go-utils/v2/lists"
+
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -82,14 +85,15 @@ type WebController struct {
 	userinfo *models.User
 	tenant   *models.Tenant
 
-	IsLoggedIn bool
-
-	IsTokenLoggedIn bool
+	IsWebLoggedIn       bool
+	IsTokenLoggedIn     bool
+	IsCustomAppLoggedIn bool
 
 	Auth *services.AuthService
 
 	UseJsonPackage         bool
 	JsonPackageAsCamelCase bool
+	ExitWithHttpCode       bool
 
 	CustonJsonEncoder func(interface{}) ([]byte, error)
 
@@ -101,6 +105,8 @@ type WebController struct {
 	Character               *support.Character  `inject:""`
 	CacheKeysDeleteOnLogOut []string
 	UploadPathDestination   string
+
+	CustomAppAuthenticator func(*models.App) (*models.User, error)
 
 	Container *ioc.Container
 }
@@ -191,6 +197,43 @@ func (this *WebController) WebControllerCreateSession() *db.Session {
 	return this.CreateSession()
 }
 
+func (this *WebController) tryAppAutheticate(token string) (*models.User, error) {
+
+	if this.CustomAppAuthenticator == nil {
+		return nil, nil
+	}
+
+	first := db.RunWithIgnoreTenantFilter(
+		this.Session,
+		func(s *db.Session) *result.Result[*option.Option[*models.App]] {
+			return criteria.
+				New[models.App](s).
+				Eq("Token", token).
+				Eager("Tenant").
+				GetFirst()
+		})
+
+	if first.IsError() {
+		return nil, first.Failure()
+	}
+
+	if first.Get().IsSome() {
+		app := first.Get().Get()
+		user, err := this.CustomAppAuthenticator(app)
+
+		if err != nil || user == nil || !user.IsPersisted() {
+			return nil, err
+		}
+
+		this.SetAuthTenant(app.Tenant)
+		this.SetCustomAppLogin(user)
+		this.SetCustomAppName(fmt.Sprintf("%v - %v", app.Id, app.Name))
+		return user, nil
+	}
+
+	return nil, nil
+}
+
 func (this *WebController) CreateSession() *db.Session {
 
 	session := db.NewSession()
@@ -209,11 +252,13 @@ func (this *WebController) AuthPrepare() {
 	this.AppAuth()
 	this.SetParams()
 
-	this.IsLoggedIn = this.GetSession("userinfo") != nil
+	this.IsWebLoggedIn = this.GetSession("userinfo") != nil
 	this.IsTokenLoggedIn = this.GetSession("appuserinfo") != nil
+	this.IsCustomAppLoggedIn = this.GetSession("customappuserinfo") != nil
 
 	var tenant *models.Tenant
-	tenantUuid := this.GetHeaderByNames("tenant", "X-Auth-Tenant")
+
+	tenantUuid := this.GetHeaderTenant()
 
 	if len(tenantUuid) > 0 {
 		loader := func() (*models.Tenant, error) {
@@ -224,15 +269,20 @@ func (this *WebController) AuthPrepare() {
 		this.SetAuthTenant(tenant)
 	}
 
-	if this.IsLoggedIn || this.IsTokenLoggedIn {
+	if this.IsLoggedIn() {
 
-		if this.IsLoggedIn {
+		if this.IsWebLoggedIn {
+			// web login
 			this.SetAuthUser(this.GetLogin())
-		} else {
+		} else if this.IsTokenLoggedIn {
+			// token login
 			this.SetAuthUser(this.GetTokenLogin())
+		} else if this.IsCustomAppLoggedIn {
+			// custom app login
+			this.SetAuthUser(this.GetCustomAppLogin())
 		}
 
-		if !this.IsTokenLoggedIn {
+		if this.IsWebLoggedIn {
 			tenant = this.GetAuthTenantSession()
 			if tenant == nil {
 				tenant, _ = this.ModelTenantUser.GetFirstTenant(this.GetAuthUser())
@@ -249,7 +299,7 @@ func (this *WebController) AuthPrepare() {
 			logs.Error("ERROR: user does not have active tenant")
 
 			if this.IsTokenLoggedIn || this.IsJson() {
-				this.OnJsonError("set header tenant")
+				this.renderJsonValidationError("tenant not configured")
 			} else {
 				this.OnErrorAny("/", "user does not has active tenant")
 			}
@@ -260,27 +310,24 @@ func (this *WebController) AuthPrepare() {
 			logs.Error("ERROR: tenant ", tenant.Id, " - ", tenant.Name, " is disabled")
 
 			if this.IsTokenLoggedIn || this.IsJson() {
-				this.OnJsonError("operation not permitted to tenant")
+				this.renderJsonForbidenError("operation not permitted", false)
 			} else {
 				this.LogOut()
-				this.OnErrorAny("/", "operation not permitted to tenant")
+				this.OnErrorAny("/", "operation not permitted")
 			}
 			return
 		}
 
 		this.SetAuthTenant(tenant)
 
-		logs.Trace(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
-		logs.Trace(":: Tenant Id = %v", this.GetAuthTenant().Id)
-		logs.Trace(":: Tenant Name = %v", this.GetAuthTenant().Name)
-		logs.Trace(":: User Id = %v", this.GetAuthUser().Id)
-		logs.Trace(":: User Name = %v", this.GetAuthUser().Name)
-		logs.Trace(":: User Authority = %v", this.GetAuthUser().Role.Authority)
-		logs.Trace(":: User Roles = %v", this.GetAuthUser().GetAuthorities())
-		logs.Trace(":: User IsLoggedIn = %v", this.IsLoggedIn)
-		logs.Trace(":: User IsTokenLoggedIn = %v", this.IsTokenLoggedIn)
-		logs.Trace(":: User Auth Token = %v", this.GetToken())
-		logs.Trace(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
+		logs.Trace("::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
+		logs.Trace(":: Tenant = %v - %v", this.GetAuthTenant().Id, this.GetAuthTenant().Name)
+		logs.Trace(":: Custom App = %v", this.GetCustomAppName())
+		logs.Trace(":: User = %v - %v", this.GetAuthUser().Id, this.GetAuthUser().Name)
+		logs.Trace(":: User Authority = %v,  Roles = %v", this.GetAuthUser().Role.Authority, this.GetAuthUser().GetAuthorities())
+		logs.Trace(":: Login web = %v, token = %v, custom app = %v", this.IsWebLoggedIn, this.IsTokenLoggedIn, this.IsCustomAppLoggedIn)
+		logs.Trace(":: Auth Token = %v", this.GetHeaderToken())
+		logs.Trace("::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
 
 		this.Data["UserInfo"] = this.GetAuthUser()
 		this.Data["Tenant"] = this.GetAuthTenant()
@@ -289,14 +336,22 @@ func (this *WebController) AuthPrepare() {
 		this.Auth = services.NewAuthService(this.GetAuthUser())
 	}
 
-	this.Data["IsLoggedIn"] = this.IsLoggedIn || this.IsTokenLoggedIn
+	this.Data["IsLoggedIn"] = this.IsLoggedIn()
 
-	if this.IsLoggedIn || this.IsTokenLoggedIn {
+	if this.IsLoggedIn() {
 		this.Data["IsAdmin"] = this.Auth.IsAdmin()
 		this.Data["IsRoot"] = this.Auth.IsRoot()
 	}
 
 	this.UpSecurityAuth()
+}
+
+func (this *WebController) IsLoggedIn() bool {
+	return this.IsWebLoggedIn || this.IsTokenLoggedIn || this.IsCustomAppLoggedIn
+}
+
+func (this *WebController) IsWebOrTokenLoggerIn() bool {
+	return this.IsWebLoggedIn || this.IsTokenLoggedIn
 }
 
 func (this *WebController) DisableXSRF(pathList []string) {
@@ -767,6 +822,12 @@ func (this *WebController) OnJsonResultsError(results interface{}, format string
 	this.ServeJSON()
 }
 
+func (this *WebController) RenderJsonWithStatusCode(status int, data maps.JsonData) {
+	this.Data["json"] = data
+	this.Ctx.Output.SetStatus(status)
+	this.ServeJSON()
+}
+
 func (this *WebController) OnJson(json *response.JsonResult) {
 	this.Data["json"] = json
 	this.ServeJSON()
@@ -956,7 +1017,7 @@ func (this *WebController) OnPureTemplate(templateName string) {
 
 func (this *WebController) OnRedirect(action string, args ...interface{}) {
 	this.OnFlash(true)
-	if this.Ctx.Input.URL() == "action" {
+	if this.Ctx.Input.URL() == action {
 		this.Abort("500")
 	} else {
 		this.Redirect(fmt.Sprintf(action, args...), 302)
@@ -968,7 +1029,7 @@ func (this *WebController) OnRedirectError(action string, format string, v ...in
 	message := fmt.Sprintf(format, v...)
 	this.Flash.Error(message)
 	this.OnFlash(true)
-	if this.Ctx.Input.URL() == "action" {
+	if this.Ctx.Input.URL() == action {
 		this.Abort("500")
 	} else {
 		this.Redirect(action, 302)
@@ -979,7 +1040,7 @@ func (this *WebController) OnRedirectSuccess(action string, format string, v ...
 	message := fmt.Sprintf(format, v...)
 	this.Flash.Success(message)
 	this.OnFlash(true)
-	if this.Ctx.Input.URL() == "action" {
+	if this.Ctx.Input.URL() == action {
 		this.Abort("500")
 	} else {
 		this.Redirect(action, 302)
@@ -1207,8 +1268,16 @@ func (this *WebController) IsAjax() bool {
 	return this.Ctx.Input.IsAjax()
 }
 
-func (this *WebController) GetToken() string {
-	return this.GetHeaderByName("X-Auth-Token")
+func (this *WebController) GetHeaderToken() string {
+	token := this.GetHeaderByName("X-Auth-Token")
+	if len(token) == 0 {
+		token = this.GetHeaderByName("Authorization")
+	}
+	return token
+}
+
+func (this *WebController) GetHeaderTenant() string {
+	return this.GetHeaderByNames("tenant", "X-Auth-Tenant")
 }
 
 func (this *WebController) GetHeaderByName(name string) string {
@@ -1424,7 +1493,7 @@ func (this *WebController) LoadModels() {
 
 func (this *WebController) LoadTenants() {
 
-	if this.IsLoggedIn && !this.DoNotLoadTenantsOnSession {
+	if this.IsWebLoggedIn && !this.DoNotLoadTenantsOnSession {
 
 		cacheKey := cache.CacheKey("tenants_user_", this.GetAuthUser().Id)
 		this.DeleteCacheOnLogout(cacheKey)
@@ -1483,13 +1552,13 @@ func (this *WebController) GetLastUpdate() time.Time {
 
 func (this *WebController) AppAuth() {
 
-	token := this.GetToken()
+	token := this.GetHeaderToken()
 
 	if strings.TrimSpace(token) != "" {
 
 		auth := services.NewLoginService(this.Lang, this.Session)
 
-		logs.Debug("Authenticate by token %v", token)
+		logs.Debug("authenticating with token: %v", token)
 
 		loader := func() (*models.User, error) {
 			return auth.AuthenticateToken(token)
@@ -1498,9 +1567,19 @@ func (this *WebController) AppAuth() {
 		user, err := cache.Memoize(this.CacheService, token, new(models.User), loader)
 
 		if err != nil {
-			logs.Error("LOGIN ERROR: %v", err)
-			this.LogOut()
-			return
+
+			if _, ok := err.(*services.LoginErrorUserNotFound); ok {
+				user, err = this.tryAppAutheticate(token)
+				if err != nil {
+					logs.Error("CUSTOM APP LOGIN ERROR: %v", err)
+					this.LogOut()
+					return
+				}
+			} else {
+				logs.Error("LOGIN ERROR: %v", err)
+				this.LogOut()
+				return
+			}
 		}
 
 		if user == nil || !user.IsPersisted() {
@@ -1523,6 +1602,16 @@ func (this *WebController) GetTokenLogin() *models.User {
 	return this.memoizeUser(id)
 }
 
+func (this *WebController) GetCustomAppLogin() *models.User {
+	id, _ := this.GetSession("customappuserinfo").(int64)
+	return this.memoizeUser(id)
+}
+
+func (this *WebController) GetCustomAppName() string {
+	name, _ := this.GetSession("customappname").(string)
+	return name
+}
+
 func (this *WebController) SessionLogOut() {
 	this.LogOut()
 }
@@ -1531,8 +1620,14 @@ func (this *WebController) LogOut() {
 	this.CacheService.Delete(this.CacheKeysDeleteOnLogOut...)
 	this.DelSession("userinfo")
 	this.DelSession("appuserinfo")
+	this.DelSession("customappuserinfo")
 	this.DelSession("authtenantid")
+	this.DelSession("customappname")
 	this.DestroySession()
+}
+
+func (this *WebController) SetCustomAppName(appname string) {
+	this.SetSession("customappname", appname)
 }
 
 func (this *WebController) SetLogin(user *models.User) {
@@ -1541,6 +1636,11 @@ func (this *WebController) SetLogin(user *models.User) {
 
 func (this *WebController) SetTokenLogin(user *models.User) {
 	this.SetSession("appuserinfo", user.Id)
+}
+
+// set login from models.App (custom app login)
+func (this *WebController) SetCustomAppLogin(user *models.User) {
+	this.SetSession("customappuserinfo", user.Id)
 }
 
 func (this *WebController) LoginPath() string {
@@ -1566,10 +1666,13 @@ func (this *WebController) OnLoginRedirect() {
 }
 
 func (this *WebController) AuthCheck() {
-	if !this.IsLoggedIn && !this.IsTokenLoggedIn {
+	if !this.IsLoggedIn() {
 		if this.IsJson() {
-			this.OnJsonError(this.GetMessage("security.notLoggedIn"))
-			this.Abort("401")
+			msgKey := "security.notLoggedIn"
+			if this.ExitWithHttpCode {
+				msgKey = "security.unauthorized"
+			}
+			this.renderJsonUnauthorizedError(this.GetMessage(msgKey), true)
 		} else {
 			this.OnLoginRedirect()
 		}
@@ -1577,10 +1680,13 @@ func (this *WebController) AuthCheck() {
 }
 
 func (this *WebController) AuthCheckRoot() {
-	if !this.IsLoggedIn {
+	if !this.IsWebLoggedIn {
 		if this.IsJson() {
-			this.OnJsonError(this.GetMessage("security.notLoggedIn"))
-			this.Abort("401")
+			msgKey := "security.notLoggedIn"
+			if this.ExitWithHttpCode {
+				msgKey = "security.unauthorized"
+			}
+			this.renderJsonUnauthorizedError(this.GetMessage(msgKey), true)
 		} else {
 			this.OnLoginRedirect()
 		}
@@ -1588,8 +1694,7 @@ func (this *WebController) AuthCheckRoot() {
 
 	if !this.Auth.IsRoot() {
 		if this.IsJson() {
-			this.OnJsonError(this.GetMessage("security.rootRequired"))
-			this.Abort("401")
+			this.renderJsonForbidenError(this.GetMessage("security.rootRequired"), true)
 		} else {
 			this.OnRedirect("/")
 		}
@@ -1597,10 +1702,13 @@ func (this *WebController) AuthCheckRoot() {
 }
 
 func (this *WebController) AuthCheckAdmin() {
-	if !this.IsLoggedIn {
+	if !this.IsWebLoggedIn {
 		if this.IsJson() {
-			this.OnJsonError(this.GetMessage("security.notLoggedIn"))
-			this.Abort("401")
+			msgKey := "security.notLoggedIn"
+			if this.ExitWithHttpCode {
+				msgKey = "security.unauthorized"
+			}
+			this.renderJsonUnauthorizedError(this.GetMessage(msgKey), true)
 		} else {
 			this.OnLoginRedirect()
 			this.OnRedirectError("/", this.GetMessage("security.rootRequired"))
@@ -1609,8 +1717,7 @@ func (this *WebController) AuthCheckAdmin() {
 
 	if !this.Auth.IsRoot() && !this.Auth.IsAdmin() {
 		if this.IsJson() {
-			this.OnJsonError(this.GetMessage("security.rootRequired"))
-			this.Abort("401")
+			this.renderJsonForbidenError(this.GetMessage("security.rootRequired"), true)
 		} else {
 			this.OnRedirectError("/", this.GetMessage("security.rootRequired"))
 		}
@@ -1629,10 +1736,14 @@ func (this *WebController) UpSecurityAuth() bool {
 
 		logs.Warn("WARN: path %v not authorized ", this.Ctx.Input.URL())
 
-		if !this.IsLoggedIn && !this.IsTokenLoggedIn {
+		if !this.IsLoggedIn() {
 			if this.IsJson() {
-				this.OnJsonError(this.GetMessage("security.notLoggedIn"))
-				//this.Abort("401")
+				msgKey := "security.notLoggedIn"
+				if this.ExitWithHttpCode {
+					msgKey = "security.unauthorized"
+				}
+				this.renderJsonUnauthorizedError(
+					this.GetMessage(msgKey), false)
 			} else {
 				this.OnLoginRedirect()
 			}
@@ -1640,10 +1751,9 @@ func (this *WebController) UpSecurityAuth() bool {
 		}
 
 		if this.IsJson() {
-			this.OnJsonError(this.GetMessage("security.denied"))
-			//this.Abort("401")
+			this.renderJsonUnauthorizedError(this.GetMessage("security.denied"), false)
 		} else {
-			this.OnRedirect("/")
+			this.OnRedirectError("/", this.GetMessage("security.denied"))
 		}
 
 		return false
@@ -1673,7 +1783,6 @@ func (this *WebController) HasTenantAuth(tenant *models.Tenant) bool {
 }
 
 func (this *WebController) SetAuthTenantSession(tenant *models.Tenant) {
-
 	if this.HasTenantAuth(tenant) {
 		logs.Error("Set tenant session. user %v now is using tenant %v", this.GetAuthUser().Id, tenant.Id)
 		this.SetSession("authtenantid", tenant.Id)
@@ -1876,5 +1985,37 @@ func (this *WebController) RenderResponse(resp *response.Response) {
 func (this *WebController) PreRender(ret interface{}) {
 	if app, ok := this.AppController.(beego.PreRender); ok {
 		app.PreRender(ret)
+	}
+}
+
+func (this *WebController) renderJsonValidationError(message string) {
+	if this.ExitWithHttpCode {
+		this.RenderJsonWithStatusCode(400, maps.JSON("message", message))
+	} else {
+		this.OnJsonError(message)
+	}
+}
+
+// permission error
+func (this *WebController) renderJsonForbidenError(message string, abort bool) {
+	if this.ExitWithHttpCode {
+		this.RenderJsonWithStatusCode(403, maps.JSON("message", message))
+	} else {
+		this.OnJsonError(message)
+		if abort {
+			this.Abort("403")
+		}
+	}
+}
+
+// logion error
+func (this *WebController) renderJsonUnauthorizedError(message string, abort bool) {
+	if this.ExitWithHttpCode {
+		this.RenderJsonWithStatusCode(401, maps.JSON("message", message))
+	} else {
+		this.OnJsonError(message)
+		if abort {
+			this.Abort("401")
+		}
 	}
 }

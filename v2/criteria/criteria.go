@@ -305,8 +305,7 @@ func (this *Criteria[T]) GetFirstOrNil() *T {
 	}
 
 	if res.Get().IsEmpty() {
-		var x T
-		return &x
+		return nil
 	}
 	
 	return this.GetFirst().Get().Get()

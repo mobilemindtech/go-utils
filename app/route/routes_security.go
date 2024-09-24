@@ -18,7 +18,7 @@ func init() {
     configpath := fmt.Sprintf("%v/conf/routes.json", beego.WorkPath)
     file, err := ioutil.ReadFile(configpath)
     if err != nil {
-        logs.Debug("error open route config file %v: %v\n", configpath, err)
+        panic(fmt.Errorf("error open route config file %v: %v\n", configpath, err))
         return
     }
 
@@ -26,17 +26,16 @@ func init() {
     
     err = json.Unmarshal(file, &data)
     if err != nil {
-        logs.Debug("JSON error parse route config file: %v\n", err)
+        panic(fmt.Errorf("JSON error parse route config file: %v\n", err))
         return
     }
 
     routes = data["routes"].(map[string]interface{})	
 
-    logs.Debug("****************** routes ******************")
+    logs.Trace("::::> routes")
     for route, value := range routes{
-    	logs.Debug(" path: %v, role: %v", route, value)
+    	logs.Trace("::> route: %v, role: %v", route, value)
   	}
-  	logs.Debug("****************** routes ******************")
 }
 
 func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool {
@@ -45,20 +44,19 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 	var routeConfigured bool
 	requestedUrl := ctx.Input.URL()
 
-	logs.Debug(fmt.Sprintf("check route %v, roles %v", requestedUrl, currentAuthUserRoles))
+	logs.Debug("check route %v for roles %v", requestedUrl, currentAuthUserRoles)
 
 
-	for route, value := range routes{
+	for route, value := range routes {
 
 		var allow bool
-		
+
 		// verifica se é curinga
 		if strings.HasSuffix(route, "/*") {
 
-			
-			var hasUniqueRule bool 
+			var hasUniqueRule bool
 
-			// verifica se tem uma regra unida para esse path
+			// verifica se tem uma regra única para esse path
 			for _, it := range routes {
 				if requestedUrl == it {
 					hasUniqueRule = true
@@ -67,26 +65,24 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 
 			if !hasUniqueRule {
 				// como tem o curinga * verifica se a base path é a mesma
-
 				allow = checkCuringa(route, requestedUrl)
-				
 			}
 
 		}
 
-		if requestedUrl == route  || allow {
+		if requestedUrl == route || allow {
 
 			routeConfigured = true
 			roleNames := value.(string)
 
 			if roleNames == "anonymous" {
-				logs.Debug(fmt.Sprintf("route %v anonymous allowed", requestedUrl))
+				logs.Debug("route %v allowed for anonymous user", requestedUrl)
 				return true
 			}
 
 			if roleNames == "authenticated" {
 				// authService is nil, so not auth
-				logs.Debug(fmt.Sprintf("route %v authenticated user allowed", requestedUrl))
+				logs.Debug("route %v allowed for authenticated user ", requestedUrl)
 				return len(currentAuthUserRoles) > 0
 			}
 
@@ -95,23 +91,21 @@ func IsRouteAuthorized(ctx *context.Context, currentAuthUserRoles []string) bool
 			for _, roleName := range values {
 				for _, role := range currentAuthUserRoles {
 					if role == roleName {
-						logs.Debug(fmt.Sprintf("route %v authenticated user role allowed", requestedUrl))
+						logs.Debug("route %v allowed for user with role %v", requestedUrl, roleName)
 						return true
-					} else {
-            logs.Debug(fmt.Sprintf("route %v not authenticated user role allowed for role ", requestedUrl, roleName))
-          }
+					} /*else {
+						logs.Trace("route %v NOT allowed for user with role %v", requestedUrl, roleName)
+					}*/
 				}
 			}
-
 		}
-
 	}
 
 	if !routeConfigured {
-		logs.Debug(fmt.Sprintf("route %v not is configured in routes.json", requestedUrl))
+		logs.Warning("route %v not found on routes.json", requestedUrl)
 	}
 
-	logs.Debug(fmt.Sprintf("route %v not allowed", requestedUrl))
+	logs.Warning("route %v not allowed", requestedUrl)
 	return false
 }
 
@@ -121,6 +115,7 @@ func checkCuringa(route string, url string) bool {
 	requestedUrlSplited := strings.Split(url, "/")
 
 	routesSplited = routesSplited[:len(routesSplited)-1]
+
 
 	allow := false
 
