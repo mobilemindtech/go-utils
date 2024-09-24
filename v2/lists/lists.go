@@ -2,6 +2,7 @@ package lists
 
 import (
 	_ "fmt"
+	"github.com/mobilemindtec/go-io/option"
 	"reflect"
 )
 
@@ -34,6 +35,9 @@ func Empty[T any](vs []T, f func(T) bool) bool {
 	return !Any[T](vs, f)
 }
 
+func AnyNot[T any](vs []T, f func(T) bool) bool {
+	return !Any(vs, f)
+}
 func Any[T any](vs []T, f func(T) bool) bool {
 	for _, it := range vs {
 		if f(it) {
@@ -58,6 +62,15 @@ func Filter[T any](vs []T, f func(T) bool) []T {
 	}
 	return vsf
 }
+func Count[T any](vs []T, f func(T) bool) int {
+	count := 0
+	for _, it := range vs {
+		if f(it) {
+			count = count  + 1
+		}
+	}
+	return count
+}
 
 func FilterNot[T any](vs []T, f func(T) bool) []T {
 	vsf := []T{}
@@ -71,6 +84,15 @@ func FilterNot[T any](vs []T, f func(T) bool) []T {
 
 // Filter returns a new slice containing all interface{}s in the
 // slice that satisfy the predicate `f`.
+func FirstOption[T any](vs []T, f func(T) bool) *option.Option[T] {
+	return option.Of(Find(vs, f))
+}
+
+
+func First[T any](vs []T, f func(T) bool) T {
+	return Find(vs, f)
+}
+
 func Find[T any](vs []T, f func(T) bool) T {
 	var x T
 	for _, it := range vs {
@@ -87,6 +109,35 @@ func Map[T any, R any](vs []T, f func(T) R) []R {
 	vsf := []R{}
 	for _, it := range vs {
 		vsf = append(vsf, f(it))
+	}
+	return vsf
+}
+
+func MapToInterface[T any](vs []T) []interface{} {
+	vsf := []interface{}{}
+	for _, it := range vs {
+		vsf = append(vsf, it)
+	}
+	return vsf
+}
+
+func MapFilter[T any, R any](vs []T, f func(T) R, filter func(R) bool) []R {
+	vsf := []R{}
+	for _, it := range vs {
+		r := f(it)
+		if filter(r) {
+			vsf = append(vsf, r)
+		}
+	}
+	return vsf
+}
+
+func FilterMap[T any, R any](vs []T, filter func(T) bool, f func(T) R) []R {
+	vsf := []R{}
+	for _, it := range vs {
+		if filter(it) {
+			vsf = append(vsf, f(it))
+		}
 	}
 	return vsf
 }
@@ -119,6 +170,36 @@ func FoldLeft[T any, Acc any](vs []T, initial Acc, fold func(Acc, T) Acc) Acc {
 	}
 	return nextAcc
 }
+
+func Revese[T any](vs []T) []T {
+	var vsf []T
+	l := len(vs) - 1
+	for i := l; i >= 0 ; i-- {
+		vsf = append(vsf, vs[i])
+	}
+	return  vsf
+}
+
+func FoldRight[T any, Acc any](vs []T, initial Acc, fold func(Acc, T) Acc) Acc {
+	nextAcc := initial
+	l := len(vs) - 1
+	for i := l; i >= 0 ; i-- {
+		nextAcc = fold(nextAcc, vs[i])
+	}
+	return nextAcc
+}
+
+func ContainsVals[T comparable](vs1 []T, vs2 ...T) bool {
+	for _, v1 := range vs1 {
+		for _, v2 := range vs2 {
+			if v1 == v2 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 
 func Contains[T any](vs1 []T, vs2 []T, test func(T, T) bool) []T {
 	return Filter[T](vs1,
@@ -160,6 +241,51 @@ func ListParts[T any](vs []T, size int) [][]T {
 
 	return all
 
+}
+
+func FindAllNotIn[T any](l1 []T, l2 []T, f func(T, T) bool) []T {
+	var vs []T
+	for _, it1 := range l1 {
+		found := false
+		for _, it2 := range l2 {
+			if f(it1, it2) {
+				found = true
+			}
+		}
+		if !found {
+			vs = append(vs, it1)
+		}
+	}
+	return vs
+}
+
+func MergeUnique[T any](l1 []T, l2 []T, f func(T, T) bool) []T {
+	var vs []T
+	for _, it1 := range l1 {
+		found := false
+		for _, it2 := range l2 {
+			if f(it1, it2) {
+				found = true
+			}
+		}
+		if !found {
+			vs = append(vs, it1)
+		}
+	}
+
+	for _, it2 := range l2 {
+		found := false
+		for _, v := range vs {
+			if f(it2, v) {
+				found = true
+			}
+		}
+		if !found {
+			vs = append(vs, it2)
+		}
+	}
+
+	return vs
 }
 
 func UniqueValues(vs interface{}, uniqueValueResolver func(data interface{}) interface{}) []interface{} {
@@ -248,4 +374,15 @@ func NewCrudList[T any](currentList []T, newList []T, comparator func(T, T) bool
 	crud.RemoveList = FindAll(currentList, notInNewList)
 
 	return crud
+}
+
+func Flatten[T any](vs [][]T) []T {
+	var vsf []T
+
+	for _, items := range vs {
+		for _, it := range items {
+			vsf = append(vsf, it)
+		}
+	}
+	return  vsf
 }

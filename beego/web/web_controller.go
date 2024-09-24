@@ -3,6 +3,8 @@ package web
 import (
 	"errors"
 	"fmt"
+	"github.com/mobilemindtec/go-utils/app/util"
+	"github.com/mobilemindtec/go-utils/beego/web/response"
 	"html/template"
 	"mime/multipart"
 	"net/http"
@@ -30,6 +32,7 @@ import (
 	"github.com/mobilemindtec/go-utils/v2/ioc"
 	"github.com/mobilemindtec/go-utils/v2/maps"
 	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtec/go-utils/v2/lists"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -85,7 +88,7 @@ type WebController struct {
 
 	Auth *services.AuthService
 
-	UseJsonPackage bool
+	UseJsonPackage         bool
 	JsonPackageAsCamelCase bool
 
 	CustonJsonEncoder func(interface{}) ([]byte, error)
@@ -105,6 +108,7 @@ type WebController struct {
 func init() {
 	LoadIl8n()
 	LoadFuncs()
+
 }
 
 func (this *WebController) SetUseJsonPackage() *WebController {
@@ -117,7 +121,7 @@ func (this *WebController) SetJsonPackageAsCamelCase() *WebController {
 	return this
 }
 
-func (this *WebController) SetCustonJsonEncoder(f func(interface{}) ([]byte, error)) *WebController{
+func (this *WebController) SetCustonJsonEncoder(f func(interface{}) ([]byte, error)) *WebController {
 	this.CustonJsonEncoder = f
 	return this
 }
@@ -145,22 +149,6 @@ func (this *WebController) loadLang() {
 // It's used for language option check and setting.
 func (this *WebController) Prepare() {
 
-	this.Container = ioc.New()
-
-	this.Container.AddFactory(reflect.TypeOf(db.Session{}), func(env string) interface{} {
-		return this.WebControllerCreateSession()
-	})
-
-	this.Container.AddFactory(reflect.TypeOf(validator.EntityValidator{}), func(env string) interface{} {
-		return validator.NewEntityValidator(this.Lang, this.ViewPath)
-	})
-
-	this.Container.AddFactory(reflect.TypeOf(services.AuthService{}), func(env string) interface{} {
-		return services.NewAuthService(this.GetAuthUser())
-	})
-
-	//this.Container.Inject(this)
-
 	this.CacheService = cache.New()
 	this.Character = support.NewCharacter()
 	this.EntityValidator = validator.NewEntityValidator(this.Lang, this.ViewPath)
@@ -175,9 +163,9 @@ func (this *WebController) Prepare() {
 	// Set template level language option.
 	this.Data["Lang"] = this.Lang
 	this.Data["xsrfdata"] = template.HTML(this.XSRFFormHTML())
-	this.Data["dateLayout"] = dateLayout
-	this.Data["datetimeLayout"] = datetimeLayout
-	this.Data["timeLayout"] = timeLayout
+	this.Data["dateLayout"] = util.DateBrLayout
+	this.Data["datetimeLayout"] = util.DateTimeBrLayout
+	this.Data["timeLayout"] = util.TimeMinutesLayout
 	this.Data["today"] = time.Now().In(this.DefaultLocation).Format("02.01.2006")
 
 	this.Session = this.WebControllerCreateSession()
@@ -188,6 +176,10 @@ func (this *WebController) Prepare() {
 	this.Session.Tenant = this.GetAuthTenant()
 
 	this.LoadTenants()
+}
+
+func (this *WebController) SetUp() {
+
 }
 
 func (this *WebController) WebControllerCreateSession() *db.Session {
@@ -341,27 +333,21 @@ func (this *WebController) FlashRead() {
 }
 
 func (this *WebController) Finish() {
-
 	logs.Trace("Finish, Commit")
-
 	this.Session.Close()
 	this.Session = nil
 	this.CacheService.Close()
 	this.CacheService = nil
-
 	if app, ok := this.AppController.(NestFinisher); ok {
 		app.NestFinish()
 	}
 }
 
 func (this *WebController) Finally() {
-
 	logs.Trace("Finally, Rollback")
-
 	if this.Session != nil {
 		this.Session.OnError().Close()
 	}
-
 	if this.CacheService != nil {
 		this.CacheService.Close()
 	}
@@ -389,8 +375,7 @@ func (this *WebController) Rollback() {
 
 func (this *WebController) OnEntity(viewName string, entity interface{}) {
 	this.Data["entity"] = entity
-	this.OnTemplate(viewName)
-	this.OnFlash(false)
+	this.SetTemplate(viewName)
 }
 
 func (this *WebController) OnEntityFail(viewName string, entity interface{}, fail *optional.Fail) {
@@ -415,8 +400,7 @@ func (this *WebController) OnEntityFail(viewName string, entity interface{}, fai
 		this.Flash.Error(fail.ErrorString())
 	}
 
-	this.OnTemplate(viewName)
-	this.OnFlash(false)
+	this.SetTemplate(viewName)
 }
 
 func (this *WebController) OnEntityError(viewName string, entity interface{}, format string, v ...interface{}) {
@@ -424,8 +408,7 @@ func (this *WebController) OnEntityError(viewName string, entity interface{}, fo
 	this.Rollback()
 	this.Flash.Error(message)
 	this.Data["entity"] = entity
-	this.OnTemplate(viewName)
-	this.OnFlash(false)
+	this.SetTemplate(viewName)
 }
 
 func (this *WebController) OnEntities(viewName string, entities interface{}) {
@@ -437,20 +420,17 @@ func (this *WebController) OnEntities(viewName string, entities interface{}) {
 func (this *WebController) OnEntitiesWithTotalCount(viewName string, entities interface{}, totalCount int64) {
 	this.Data["entities"] = entities
 	this.Data["totalCount"] = totalCount
-	this.OnTemplate(viewName)
-	this.OnFlash(false)
+	this.SetTemplate(viewName)
 }
 
 func (this *WebController) OnResult(viewName string, result interface{}) {
 	this.Data["result"] = result
-	this.OnTemplate(viewName)
-	this.OnFlash(false)
+	this.SetTemplate(viewName)
 }
 
 func (this *WebController) OnResults(viewName string, results interface{}) {
 	this.Data["results"] = results
-	this.OnTemplate(viewName)
-	this.OnFlash(false)
+	this.SetTemplate(viewName)
 }
 
 func (this *WebController) SetViewModel(name string, data interface{}) *WebController {
@@ -477,9 +457,9 @@ func (this *WebController) SetResult(result interface{}) *WebController {
 	return this
 }
 
-func (this *WebController) SetData(values ...interface{}) *WebController{
+func (this *WebController) SetData(values ...interface{}) *WebController {
 
-	if len(values) % 2 > 0 {
+	if len(values)%2 > 0 {
 		panic("set data expect key pair values")
 	}
 
@@ -495,8 +475,7 @@ func (this *WebController) SetData(values ...interface{}) *WebController{
 func (this *WebController) OnResultsWithTotalCount(viewName string, results interface{}, totalCount int64) {
 	this.Data["results"] = results
 	this.Data["totalCount"] = totalCount
-	this.OnTemplate(viewName)
-	this.OnFlash(false)
+	this.SetTemplate(viewName)
 }
 
 func (this *WebController) RenderJsonResult(opt interface{}) {
@@ -543,12 +522,15 @@ func (this *WebController) RenderJsonResult(opt interface{}) {
 			this.OnJsonError(fmt.Sprintf("%v", err))
 		}
 		break
-	case *support.JsonResult:
-		this.OnJson(opt.(*support.JsonResult))
+	case *response.JsonResult:
+		this.OnJson(opt.(*response.JsonResult))
 		break
 	case *criteria.Page:
 		page := opt.(*criteria.Page)
 		this.OnJsonResultsWithTotalCount(page.Data, page.Count())
+		break
+	case error:
+		this.OnJsonError(fmt.Sprintf("%v", opt.(error).Error()))
 		break
 	default:
 
@@ -562,7 +544,6 @@ func (this *WebController) RenderJsonResult(opt interface{}) {
 			return
 		}
 
-
 		if optional.IsSlice(opt) {
 			logs.Debug("render as results")
 			this.OnJsonResults(opt)
@@ -570,7 +551,6 @@ func (this *WebController) RenderJsonResult(opt interface{}) {
 			logs.Debug("render as result")
 			this.OnJsonResult(opt)
 		}
-
 
 		//this.OnJsonError(fmt.Sprintf("unknow optional value: %v", opt))
 		break
@@ -598,12 +578,10 @@ func (this *WebController) RenderJson(opt interface{}) {
 			dataResult = map[string]interface{}{}
 			break
 		default:
-
 			if val, ok := criteria.TryExtractPageIfPegeOf(someVal); ok {
 				this.RenderJson(val)
 				return
 			}
-
 			dataResult = map[string]interface{}{
 				"data": someVal,
 			}
@@ -612,10 +590,7 @@ func (this *WebController) RenderJson(opt interface{}) {
 		break
 	case *optional.None:
 		statusCodeResult = 404
-		dataResult = map[string]interface{}{
-			"error":   true,
-			"message": "not found",
-		}
+		dataResult = maps.JSON("error", true, "message", "not found")
 		break
 	case *optional.Fail:
 
@@ -623,10 +598,7 @@ func (this *WebController) RenderJson(opt interface{}) {
 		err := f.Error
 		statusCode := 500
 
-		data := map[string]interface{}{
-			"error":   true,
-			"message": fmt.Sprintf("%v", err),
-		}
+		data := maps.JSON("error", true, "message", fmt.Sprintf("%v", err))
 
 		if err.Error() == "validation error" {
 			data["validation"] = f.Item
@@ -635,6 +607,10 @@ func (this *WebController) RenderJson(opt interface{}) {
 
 		dataResult = data
 		statusCodeResult = statusCode
+		break
+	case error:
+		statusCodeResult = 500
+		dataResult = maps.JSON("error", true, "message", fmt.Sprintf("%v", opt.(error).Error()))
 		break
 	default:
 
@@ -648,15 +624,13 @@ func (this *WebController) RenderJson(opt interface{}) {
 			return
 		}
 
-		dataResult = map[string]interface{}{
-			"data": opt,
-		}
+		dataResult = maps.JSON("data", opt)
 
 		/*
-		dataResult = map[string]interface{}{
-			"error":   true,
-			"message": fmt.Sprintf("unknow optional value: %v", opt),
-		}*/
+			dataResult = map[string]interface{}{
+				"error":   true,
+				"message": fmt.Sprintf("unknow optional value: %v", opt),
+			}*/
 
 		//statusCodeResult = 500
 		break
@@ -676,15 +650,22 @@ func (this *WebController) RenderJson(opt interface{}) {
 
 	this.ServeJSON()
 }
+func (this *WebController) OnJsonResultNil() {
+	this.OnJsonResult(nil)
+}
 
 func (this *WebController) OnJsonResult(result interface{}) {
-	this.Data["json"] = &support.JsonResult{Result: result, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()}
+	this.Data["json"] = &response.JsonResult{
+		Result:          result,
+		Error:           false,
+		CurrentUnixTime: this.GetCurrentTimeUnix(),
+	}
 	this.ServeJSON()
 }
 
-func (this *WebController) GetJsonResult() (*support.JsonResult, bool) {
+func (this *WebController) GetJsonResult() (*response.JsonResult, bool) {
 	if this.Data["json"] != nil {
-		if j, ok := this.Data["json"].(*support.JsonResult); ok {
+		if j, ok := this.Data["json"].(*response.JsonResult); ok {
 			return j, ok
 		}
 	}
@@ -693,56 +674,100 @@ func (this *WebController) GetJsonResult() (*support.JsonResult, bool) {
 
 func (this *WebController) OnJsonMessage(format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
-	this.Data["json"] = &support.JsonResult{Message: message, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()}
+	this.Data["json"] = &response.JsonResult{
+		Message:         message,
+		Error:           false,
+		CurrentUnixTime: this.GetCurrentTimeUnix(),
+	}
 	this.ServeJSON()
 }
 
 func (this *WebController) OnJsonResultError(result interface{}, format string, v ...interface{}) {
 	this.Rollback()
 	message := fmt.Sprintf(format, v...)
-	this.Data["json"] = &support.JsonResult{Result: result, Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()}
+	this.Data["json"] = &response.JsonResult{
+		Result:          result,
+		Message:         message,
+		Error:           true,
+		CurrentUnixTime: this.GetCurrentTimeUnix(),
+	}
 	this.ServeJSON()
 }
 
 func (this *WebController) OnJsonResultWithMessage(result interface{}, format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
-	this.Data["json"] = &support.JsonResult{Result: result, Error: false, Message: message, CurrentUnixTime: this.GetCurrentTimeUnix()}
+	this.Data["json"] = &response.JsonResult{
+		Result:          result,
+		Error:           false,
+		Message:         message,
+		CurrentUnixTime: this.GetCurrentTimeUnix(),
+	}
 	this.ServeJSON()
 }
 
 func (this *WebController) OnJsonResults(results interface{}) {
-	this.Data["json"] = &support.JsonResult{Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()}
+	this.Data["json"] = &response.JsonResult{
+		Results:         results,
+		Error:           false,
+		CurrentUnixTime: this.GetCurrentTimeUnix(),
+	}
 	this.ServeJSON()
 }
 
 func (this *WebController) OnJsonResultAndResults(result interface{}, results interface{}) {
-	this.Data["json"] = &support.JsonResult{Result: result, Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()}
+	this.Data["json"] = &response.JsonResult{
+		Result:          result,
+		Results:         results,
+		Error:           false,
+		CurrentUnixTime: this.GetCurrentTimeUnix(),
+	}
 	this.ServeJSON()
 }
 
 func (this *WebController) OnJsonResultsWithTotalCount(results interface{}, totalCount int64) {
-	this.Data["json"] = &support.JsonResult{Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix(), TotalCount: totalCount}
+	this.Data["json"] = &response.JsonResult{
+		Results:         results,
+		Error:           false,
+		CurrentUnixTime: this.GetCurrentTimeUnix(),
+		TotalCount:      totalCount,
+	}
 	this.ServeJSON()
 }
 
 func (this *WebController) OnJsonPage(page *criteria.Page) {
-	this.Data["json"] = &support.JsonResult{Results: page.Data, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix(), TotalCount: int64(page.TotalCount)}
+	this.Data["json"] = &response.JsonResult{
+		Results:         page.Data,
+		Error:           false,
+		CurrentUnixTime: this.GetCurrentTimeUnix(),
+		TotalCount:      int64(page.TotalCount),
+	}
 	this.ServeJSON()
 }
 
 func (this *WebController) OnJsonResultAndResultsWithTotalCount(result interface{}, results interface{}, totalCount int64) {
-	this.Data["json"] = &support.JsonResult{Result: result, Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix(), TotalCount: totalCount}
+	this.Data["json"] = &response.JsonResult{
+		Result:          result,
+		Results:         results,
+		Error:           false,
+		CurrentUnixTime: this.GetCurrentTimeUnix(),
+		TotalCount:      totalCount,
+	}
 	this.ServeJSON()
 }
 
 func (this *WebController) OnJsonResultsError(results interface{}, format string, v ...interface{}) {
 	this.Rollback()
 	message := fmt.Sprintf(format, v...)
-	this.Data["json"] = &support.JsonResult{Results: results, Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()}
+	this.Data["json"] = &response.JsonResult{
+		Results:         results,
+		Message:         message,
+		Error:           true,
+		CurrentUnixTime: this.GetCurrentTimeUnix(),
+	}
 	this.ServeJSON()
 }
 
-func (this *WebController) OnJson(json *support.JsonResult) {
+func (this *WebController) OnJson(json *response.JsonResult) {
 	this.Data["json"] = json
 	this.ServeJSON()
 }
@@ -755,7 +780,11 @@ func (this *WebController) OnJsonMap(jsonMap map[string]interface{}) {
 func (this *WebController) OnJsonError(format string, v ...interface{}) {
 	this.Rollback()
 	message := fmt.Sprintf(format, v...)
-	result := &support.JsonResult{Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()}
+	result := &response.JsonResult{
+		Message:         message,
+		Error:           true,
+		CurrentUnixTime: this.GetCurrentTimeUnix(),
+	}
 	this.OnJson(result)
 }
 
@@ -765,7 +794,11 @@ func (this *WebController) ServeJSON() {
 		result := this.Data["json"]
 		bdata, err := this.CustonJsonEncoder(result)
 		if err != nil {
-			this.Data["json"] = &support.JsonResult{Message: fmt.Sprintf("Error json.Encode: %v", err), Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()}
+			this.Data["json"] = &response.JsonResult{
+				Message:         fmt.Sprintf("Error json.Encode: %v", err),
+				Error:           true,
+				CurrentUnixTime: this.GetCurrentTimeUnix(),
+			}
 			this.Controller.ServeJSON()
 		} else {
 			this.Ctx.Output.Header("Content-Type", "application/json")
@@ -783,7 +816,10 @@ func (this *WebController) ServeJSON() {
 
 		bdata, err := encoder(result)
 		if err != nil {
-			this.Data["json"] = &support.JsonResult{Message: fmt.Sprintf("Error json.Encode: %v", err), Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()}
+			this.Data["json"] = &response.JsonResult{
+				Message: fmt.Sprintf("Error json.Encode: %v", err),
+				Error:   true, CurrentUnixTime: this.GetCurrentTimeUnix(),
+			}
 			this.Controller.ServeJSON()
 		} else {
 			this.Ctx.Output.Header("Content-Type", "application/json")
@@ -794,7 +830,11 @@ func (this *WebController) ServeJSON() {
 	}
 }
 
-func (this *WebController) RenderTemplate(viewName string) {
+func (this *WebController) RenderTemplate(viewName string, data ...interface{}) {
+	keyPars := maps.Of[string, interface{}](data...)
+	for k, v := range keyPars {
+		this.Data[k] = v
+	}
 	this.OnTemplate(viewName)
 }
 
@@ -810,8 +850,8 @@ func (this *WebController) OnRender(data interface{}) {
 	case map[string]interface{}:
 		this.OnJsonMap(data.(map[string]interface{}))
 		break
-	case *support.JsonResult:
-		this.OnJson(data.(*support.JsonResult))
+	case *response.JsonResult:
+		this.OnJson(data.(*response.JsonResult))
 		break
 	default:
 		panic("no render selected")
@@ -824,16 +864,16 @@ func (this *WebController) RenderJsonError(format string, v ...interface{}) {
 
 func (this *WebController) OnJsonErrorNotRollback(format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
-	this.OnJson(&support.JsonResult{Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(&response.JsonResult{Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()})
 }
 
 func (this *WebController) OnJsonOk(format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
-	this.OnJson(&support.JsonResult{Message: message, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(&response.JsonResult{Message: message, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()})
 }
 
 func (this *WebController) OnJson200() {
-	this.OnJson(&support.JsonResult{CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(&response.JsonResult{CurrentUnixTime: this.GetCurrentTimeUnix()})
 }
 
 func (this *WebController) NotFoundAsJson() {
@@ -845,7 +885,7 @@ func (this *WebController) NotFoundAsJson() {
 
 func (this *WebController) OkAsJson(format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
-	this.OnJson(&support.JsonResult{CurrentUnixTime: this.GetCurrentTimeUnix(), Message: message})
+	this.OnJson(&response.JsonResult{CurrentUnixTime: this.GetCurrentTimeUnix(), Message: message})
 }
 
 func (this *WebController) OkAsHtml(message string) {
@@ -863,42 +903,45 @@ func (this *WebController) OkAsText(message string) {
 func (this *WebController) OnJsonValidationError() {
 	this.Rollback()
 	errors := this.Data["errors"].(map[string]string)
-	this.OnJson(&support.JsonResult{Message: this.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(&response.JsonResult{Message: this.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
 }
 
 func (this *WebController) OnJsonValidationWithErrors(errors map[string]string) {
 	this.Rollback()
-	this.OnJson(&support.JsonResult{Message: this.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(&response.JsonResult{Message: this.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
 }
 
 func (this *WebController) OnJsonValidationMessageWithErrors(message string, errors map[string]string) {
 	this.Rollback()
-	this.OnJson(&support.JsonResult{Message: message, Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(&response.JsonResult{Message: message, Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
 }
 
 func (this *WebController) OnJsonValidationWithResultAndMessageAndErrors(result interface{}, message string, errors map[string]string) {
 	this.Rollback()
-	this.OnJson(&support.JsonResult{Message: message, Result: result, Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(&response.JsonResult{Message: message, Result: result, Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
 }
 
 func (this *WebController) OnJsonValidationWithResultsAndMessageAndErrors(results interface{}, message string, errors map[string]string) {
 	this.Rollback()
-	this.OnJson(&support.JsonResult{Message: message, Results: results, Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(&response.JsonResult{Message: message, Results: results, Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
 }
 
 func (this *WebController) OnTemplate(viewName string) {
+	this.SetTemplate(viewName)
+}
+
+func (this *WebController) SetTemplate(viewName string) {
 	this.TplName = fmt.Sprintf("%s/%s.tpl", this.ViewPath, viewName)
 	this.OnFlash(false)
 }
 
 func (this *WebController) OnTemplateWithData(viewName string, data map[string]interface{}) {
-	this.TplName = fmt.Sprintf("%s/%s.tpl", this.ViewPath, viewName)
-
-	for k, v := range data {
-		this.Data[k] = v
+	if data != nil {
+		for k, v := range data {
+			this.Data[k] = v
+		}
 	}
-
-	this.OnFlash(false)
+	this.SetTemplate(viewName)
 }
 
 func (this *WebController) OnFullTemplate(tplName string) {
@@ -931,7 +974,6 @@ func (this *WebController) OnRedirectError(action string, format string, v ...in
 		this.Redirect(action, 302)
 	}
 }
-
 
 func (this *WebController) OnRedirectSuccess(action string, format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
@@ -1202,6 +1244,9 @@ func (this *WebController) GetPage() *db.Page {
 	page := new(db.Page)
 
 	var defaultLimit int64 = 25
+	filter := func(i int64) bool {
+		return i > 0
+	}
 
 	if this.IsJson() {
 
@@ -1211,17 +1256,18 @@ func (this *WebController) GetPage() *db.Page {
 			if _, ok := jsonMap["limit"]; ok {
 				page.Limit = optional.
 					New[int64](this.GetJsonInt64(jsonMap, "limit")).
-					OrElse(defaultLimit)
+					Filter(filter).
+					GetOr(defaultLimit)
 
 				page.Offset = this.GetJsonInt64(jsonMap, "offset")
 
 				page.Sort = optional.
 					New[string](this.GetJsonString(jsonMap, "order_column")).
-					OrElse(this.GetJsonString(jsonMap, "sort"))
+					GetOr(this.GetJsonString(jsonMap, "sort"))
 
 				page.Order = optional.
 					New[string](this.GetJsonString(jsonMap, "order_sort")).
-					OrElse(this.GetJsonString(jsonMap, "order"))
+					GetOr(this.GetJsonString(jsonMap, "order"))
 
 				page.Order = this.GetJsonString(jsonMap, "order_sort")
 				page.Search = this.GetJsonString(jsonMap, "search")
@@ -1233,15 +1279,16 @@ func (this *WebController) GetPage() *db.Page {
 
 	page.Limit = optional.
 		New[int64](this.GetIntByKey("limit")).
-		OrElse(defaultLimit)
+		Filter(filter).
+		GetOr(defaultLimit)
 
 	page.Sort = optional.
 		New[string](this.GetStringByKey("order_column")).
-		OrElse(this.GetStringByKey("sort"))
+		GetOr(this.GetStringByKey("sort"))
 
 	page.Order = optional.
 		New[string](this.GetStringByKey("order_sort")).
-		OrElse(this.GetStringByKey("order"))
+		GetOr(this.GetStringByKey("order"))
 
 	page.Offset = this.GetIntByKey("offset")
 	page.Search = this.GetStringByKey("search")
@@ -1329,17 +1376,17 @@ func (this *WebController) ParseDateByKey(key string, layout string) (time.Time,
 
 // deprecated
 func (this *WebController) ParseDate(date string) (time.Time, error) {
-	return time.ParseInLocation(dateLayout, date, this.DefaultLocation)
+	return time.ParseInLocation(util.DateBrLayout, date, this.DefaultLocation)
 }
 
 // deprecated
 func (this *WebController) ParseDateTime(date string) (time.Time, error) {
-	return time.ParseInLocation(datetimeLayout, date, this.DefaultLocation)
+	return time.ParseInLocation(util.DateTimeBrLayout, date, this.DefaultLocation)
 }
 
 // deprecated
 func (this *WebController) ParseJsonDate(date string) (time.Time, error) {
-	return time.ParseInLocation(jsonDateLayout, date, this.DefaultLocation)
+	return time.ParseInLocation(util.DateTimeDbLayout, date, this.DefaultLocation)
 }
 
 func (this *WebController) NormalizePageSortKey(key string) string {
@@ -1382,7 +1429,7 @@ func (this *WebController) LoadTenants() {
 		cacheKey := cache.CacheKey("tenants_user_", this.GetAuthUser().Id)
 		this.DeleteCacheOnLogout(cacheKey)
 
-		loader := func() ([]interface{}, error) {
+		loader := func() ([]*models.Tenant, error) {
 
 			tenants := []*models.Tenant{}
 			if this.Auth.IsRoot() {
@@ -1401,16 +1448,13 @@ func (this *WebController) LoadTenants() {
 					tenants = append(tenants, it.Tenant)
 				}
 			}
-			authorizeds := []interface{}{}
-			for _, it := range tenants {
-				authorizeds = append(authorizeds, it)
-			}
-			return authorizeds, nil
+
+			return tenants, nil
 		}
 
-		authorizeds, _ := cache.Memoize(this.CacheService, cacheKey, new([]interface{}), loader)
+		authorizeds, _ := cache.Memoize(this.CacheService, cacheKey, new([]*models.Tenant), loader)
 
-		this.Session.SetAuthorizedTenants(authorizeds)
+		this.Session.SetAuthorizedTenants(lists.MapToInterface(authorizeds))
 		this.Data["AvailableTenants"] = authorizeds
 	} else {
 		this.Data["AvailableTenants"] = []*models.Tenant{}
@@ -1782,23 +1826,55 @@ func (this *WebController) GetFileOpt(key string) *optional.Optional[*Multipart]
 	return optional.Of[*Multipart](&Multipart{File: &file, FileHeader: fileHeader, Key: key})
 }
 
-func (this *WebController) FlashError(msg string, args ...interface{}) *WebController{
+func (this *WebController) FlashError(msg string, args ...interface{}) *WebController {
 	this.Flash.Error(msg, args...)
-	return  this
+	return this
 }
 
-func (this *WebController) FlashSuccess(msg string, args ...interface{}) *WebController{
+func (this *WebController) FlashSuccess(msg string, args ...interface{}) *WebController {
 	this.Flash.Success(msg, args...)
-	return  this
+	return this
 }
 
-func (this *WebController) FlashWarn(msg string, args ...interface{}) *WebController{
+func (this *WebController) FlashWarn(msg string, args ...interface{}) *WebController {
 	this.Flash.Warning(msg, args...)
-	return  this
+	return this
 }
 
-func (this *WebController) FlashNotice(msg string, args ...interface{}) *WebController{
+func (this *WebController) FlashNotice(msg string, args ...interface{}) *WebController {
 	this.Flash.Notice(msg, args...)
-	return  this
+	return this
 }
 
+func (this *WebController) RenderResponse(resp *response.Response) {
+
+	if resp.HasTemplate() {
+		resp.ConfigureFlash(this.Flash)
+		this.TplName = resp.GetTemplate(this.ViewPath)
+		this.Data["errors"] = resp.Errors
+		this.Data["entity"] = resp.Entity
+		this.Data["entities"] = resp.Entities
+		this.Data["result"] = resp.Result
+		this.Data["results"] = resp.Results
+		this.OnFlash(false)
+	} else {
+		// is json result
+
+		// use custom json render
+		this.UseJsonPackage = resp.JsonPackage
+		this.JsonPackageAsCamelCase = resp.JsonPackageAsCamelCase
+
+		if resp.JsonResult {
+			this.Data["json"] = resp.MkJsonResult()
+		} else if resp.HasValue() {
+			this.RenderJson(resp.Value)
+		}
+
+	}
+}
+
+func (this *WebController) PreRender(ret interface{}) {
+	if app, ok := this.AppController.(beego.PreRender); ok {
+		app.PreRender(ret)
+	}
+}

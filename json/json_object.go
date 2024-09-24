@@ -8,10 +8,13 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/core/logs"
+	"github.com/mobilemindtec/go-io/result"
 	"github.com/mobilemindtec/go-utils/app/util"
 	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-utils/v2/optional"
 	"github.com/mobilemindtec/go-utils/v2/try"
+	"github.com/mobilemindtec/go-utils/v2/lists"
+	"fmt"
 )
 
 type JsonWriter interface {
@@ -27,7 +30,8 @@ type Converter func(j *Json)
 type Parser[T any] struct {
 	converter         Converter
 	useDefaultEncoder bool
-	useCamelCase bool
+	useCamelCase      bool
+	debug             bool
 }
 
 func NewParser[T any]() *Parser[T] {
@@ -40,6 +44,11 @@ func NewParserDefault[T any]() *Parser[T] {
 
 func (this *Parser[T]) UseDefaultEncoder() *Parser[T] {
 	return this.SetUseDefaultEncoder(true)
+}
+
+func (this *Parser[T]) Debug() *Parser[T] {
+	this.debug = true
+	return this
 }
 
 func (this *Parser[T]) UseCamelCase() *Parser[T] {
@@ -60,6 +69,15 @@ func (this *Parser[T]) AddConverter(c Converter) *Parser[T] {
 func (this *Parser[T]) Parse(raw []byte) *optional.Optional[*T] {
 	var entity T
 	return this.ParseInto(raw, &entity)
+}
+
+func (this *Parser[T]) ParseFormTo(form url.Values, entity *T) *optional.Optional[*T] {
+	return this.ParseJsonInto(NewFromUrlValues(form), entity)
+}
+
+func (this *Parser[T]) ParseForm(form url.Values) *optional.Optional[*T] {
+	var entity T
+	return this.ParseJsonInto(NewFromUrlValues(form), &entity)
 }
 
 func (this *Parser[T]) ParseJson(j *Json) *optional.Optional[*T] {
@@ -85,22 +103,33 @@ func (this *Parser[T]) ParseJsonInto(j *Json, entity *T) *optional.Optional[*T] 
 
 	var err error
 
+	if this.debug {
+		logs.Debug("JSON DATA = %v", j.data)
+	}
+	
 	if this.useDefaultEncoder {
 
+
 		newJsonData, err := json.Marshal(j.data)
+
 
 		if err != nil {
 			return optional.OfFail[*T](err)
 		}
 
-		//logs.Info("=== %v", string(newJsonData))
+		if this.debug {
+			logs.Debug("JSON RAW = %v", string(newJsonData))
+		}
 
 		err = json.Unmarshal(newJsonData, entity)
 
 	} else {
+
 		jsn := NewJSON()
 		jsn.CamelCase = this.useCamelCase
 		err = jsn.DecodeFromMap(j.data, entity)
+
+
 	}
 
 	if err != nil {
@@ -151,6 +180,12 @@ func New(raw []byte) interface{} {
 
 func Of(raw []byte) *optional.Optional[*Json] {
 	return try.Of(func() (*Json, error) {
+		return NewFromBytes(raw)
+	})
+}
+
+func Try(raw []byte) *result.Result[*Json] {
+	return result.Try(func() (*Json, error) {
 		return NewFromBytes(raw)
 	})
 }
@@ -249,14 +284,42 @@ func (this *Json) GetArrayOrEmpty(key string) []interface{} {
 }
 
 func (this *Json) GetArrayOfInt(key string) []int {
-
 	if this.HasKey(key) {
+
 		opt, _ := this.data[key]
 
-		if array, ok := opt.([]int); ok {
-			return array
+		switch opt.(type) {
+		case []interface{}:
+			var arr  []int
+			for _, it := range opt.([]interface{}) {
+				switch it.(type) {
+				case int:
+					arr = append(arr, it.(int))
+					break
+				case int64:
+					arr = append(arr, int(it.(int64)))
+					break
+				case float32:
+					arr = append(arr, int(it.(float32)))
+					break
+				case float64:
+					arr = append(arr, int(it.(float64)))
+					break
+				case string:
+					arr = append(arr, support.StrToInt(it.(string)))
+					break
+				default:
+				panic(fmt.Errorf("can't parse %v item of type %v of int", key, reflect.TypeOf(it)))
+				}
+			}
+			return  arr
+		case []int:
+			return opt.([]int)
+		case []int64:
+			return lists.Map(opt.([]int64), func(i int64) int { return int(i)})
+		//default:
+		//	panic(fmt.Errorf("can't parse %v of type %v to array of int", key, reflect.TypeOf(opt)))
 		}
-
 	}
 
 	return nil
@@ -275,11 +338,26 @@ func (this *Json) GetArrayOfString(key string) []string {
 	if this.HasKey(key) {
 		opt, _ := this.data[key]
 
-		logs.Debug("opt = %v, type = %v", opt, reflect.TypeOf(opt))
-
-		if array, ok := opt.([]string); ok {
-			return array
+		switch opt.(type) {
+		case []string:
+			return opt.([]string)
+		case []interface{}:
+			var arr []string
+			for _, it := range opt.([]interface{}) {
+				switch it.(type) {
+				case string:
+					arr = append(arr, it.(string))
+					break
+				default:
+					arr = append(arr, fmt.Sprintf("%v", it))
+				}
+			}
+			return arr
+		//default:
+		//	panic(fmt.Errorf("can't parse %v of type %v to array of string", key, reflect.TypeOf(opt)))
 		}
+
+
 
 	}
 

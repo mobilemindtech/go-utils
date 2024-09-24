@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"github.com/mobilemindtec/go-utils/app/util"
 	"html/template"
 	"os"
 	"runtime/debug"
@@ -15,6 +16,7 @@ import (
 	"github.com/beego/i18n"
 	"github.com/mobilemindtec/go-utils/beego/db"
 	"github.com/mobilemindtec/go-utils/beego/validator"
+	"github.com/mobilemindtec/go-utils/beego/web/response"
 	"github.com/mobilemindtec/go-utils/cache"
 	"github.com/mobilemindtec/go-utils/json"
 	"github.com/mobilemindtec/go-utils/support"
@@ -72,9 +74,10 @@ func (this *BaseController) NestPrepareBase() {
 	// Set template level language option.
 	this.Data["Lang"] = this.Lang
 	this.Data["xsrfdata"] = template.HTML(this.XSRFFormHTML())
-	this.Data["dateLayout"] = dateLayout
-	this.Data["datetimeLayout"] = datetimeLayout
-	this.Data["timeLayout"] = timeLayout
+
+	this.Data["dateLayout"] = util.DateBrLayout
+	this.Data["datetimeLayout"] = util.DateTimeBrLayout
+	this.Data["timeLayout"] = util.TimeMinutesLayout
 
 	this.Session = db.NewSession()
 	var err error
@@ -330,57 +333,57 @@ func (this *BaseController) RenderJson(opt interface{}) {
 }
 
 func (this *BaseController) OnJsonResult(result interface{}) {
-	this.Data["json"] = support.JsonResult{Result: result, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()}
+	this.Data["json"] = response.JsonResult{Result: result, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()}
 	this.ServeJSON()
 }
 
 func (this *BaseController) OnJsonMessage(format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
-	this.Data["json"] = support.JsonResult{Message: message, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()}
+	this.Data["json"] = response.JsonResult{Message: message, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()}
 	this.ServeJSON()
 }
 
 func (this *BaseController) OnJsonResultError(result interface{}, format string, v ...interface{}) {
 	this.Rollback()
 	message := fmt.Sprintf(format, v...)
-	this.Data["json"] = support.JsonResult{Result: result, Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()}
+	this.Data["json"] = response.JsonResult{Result: result, Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()}
 	this.ServeJSON()
 }
 
 func (this *BaseController) OnJsonResultWithMessage(result interface{}, format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
-	this.Data["json"] = support.JsonResult{Result: result, Error: false, Message: message, CurrentUnixTime: this.GetCurrentTimeUnix()}
+	this.Data["json"] = response.JsonResult{Result: result, Error: false, Message: message, CurrentUnixTime: this.GetCurrentTimeUnix()}
 	this.ServeJSON()
 }
 
 func (this *BaseController) OnJsonResults(results interface{}) {
-	this.Data["json"] = support.JsonResult{Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()}
+	this.Data["json"] = response.JsonResult{Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()}
 	this.ServeJSON()
 }
 
 func (this *BaseController) OnJsonResultAndResults(result interface{}, results interface{}) {
-	this.Data["json"] = support.JsonResult{Result: result, Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()}
+	this.Data["json"] = response.JsonResult{Result: result, Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()}
 	this.ServeJSON()
 }
 
 func (this *BaseController) OnJsonResultsWithTotalCount(results interface{}, totalCount int64) {
-	this.Data["json"] = support.JsonResult{Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix(), TotalCount: totalCount}
+	this.Data["json"] = response.JsonResult{Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix(), TotalCount: totalCount}
 	this.ServeJSON()
 }
 
 func (this *BaseController) OnJsonResultAndResultsWithTotalCount(result interface{}, results interface{}, totalCount int64) {
-	this.Data["json"] = support.JsonResult{Result: result, Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix(), TotalCount: totalCount}
+	this.Data["json"] = response.JsonResult{Result: result, Results: results, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix(), TotalCount: totalCount}
 	this.ServeJSON()
 }
 
 func (this *BaseController) OnJsonResultsError(results interface{}, format string, v ...interface{}) {
 	this.Rollback()
 	message := fmt.Sprintf(format, v...)
-	this.Data["json"] = support.JsonResult{Results: results, Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()}
+	this.Data["json"] = response.JsonResult{Results: results, Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()}
 	this.ServeJSON()
 }
 
-func (this *BaseController) OnJson(json support.JsonResult) {
+func (this *BaseController) OnJson(json response.JsonResult) {
 	this.Data["json"] = json
 	this.ServeJSON()
 }
@@ -393,26 +396,26 @@ func (this *BaseController) OnJsonMap(jsonMap map[string]interface{}) {
 func (this *BaseController) OnJsonError(format string, v ...interface{}) {
 	this.Rollback()
 	message := fmt.Sprintf(format, v...)
-	this.OnJson(support.JsonResult{Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(response.JsonResult{Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()})
 }
 
 func (this *BaseController) OnJsonErrorNotRollback(format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
-	this.OnJson(support.JsonResult{Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(response.JsonResult{Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()})
 }
 
 func (this *BaseController) OnJsonOk(format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
-	this.OnJson(support.JsonResult{Message: message, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(response.JsonResult{Message: message, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()})
 }
 
 func (this *BaseController) OnJson200() {
-	this.OnJson(support.JsonResult{CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(response.JsonResult{CurrentUnixTime: this.GetCurrentTimeUnix()})
 }
 
 func (this *BaseController) OkAsJson(format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
-	this.OnJson(support.JsonResult{CurrentUnixTime: this.GetCurrentTimeUnix(), Message: message})
+	this.OnJson(response.JsonResult{CurrentUnixTime: this.GetCurrentTimeUnix(), Message: message})
 }
 
 func (this *BaseController) OkAsHtml(message string) {
@@ -430,22 +433,22 @@ func (this *BaseController) Ok() {
 func (this *BaseController) OnJsonValidationError() {
 	this.Rollback()
 	errors := this.Data["errors"].(map[string]string)
-	this.OnJson(support.JsonResult{Message: this.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(response.JsonResult{Message: this.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
 }
 
 func (this *BaseController) OnJsonValidationWithErrors(errors map[string]string) {
 	this.Rollback()
-	this.OnJson(support.JsonResult{Message: this.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(response.JsonResult{Message: this.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
 }
 
 func (this *BaseController) OnJsonValidationWithResultAndMessageAndErrors(result interface{}, message string, errors map[string]string) {
 	this.Rollback()
-	this.OnJson(support.JsonResult{Message: message, Result: result, Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(response.JsonResult{Message: message, Result: result, Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
 }
 
 func (this *BaseController) OnJsonValidationWithResultsAndMessageAndErrors(results interface{}, message string, errors map[string]string) {
 	this.Rollback()
-	this.OnJson(support.JsonResult{Message: message, Results: results, Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(response.JsonResult{Message: message, Results: results, Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
 }
 
 func (this *BaseController) OnTemplate(viewName string) {
@@ -717,17 +720,17 @@ func (this *BaseController) GetPageWithDefaultLimit(defaultLimit int64) *db.Page
 			if _, ok := jsonMap["limit"]; ok {
 				page.Limit = optional.
 					New[int64](this.GetJsonInt64(jsonMap, "limit")).
-					OrElse(defaultLimit)
+					GetOr(defaultLimit)
 
 				page.Offset = this.GetJsonInt64(jsonMap, "offset")
 
 				page.Sort = optional.
 					New[string](this.GetJsonString(jsonMap, "order_column")).
-					OrElse(this.GetJsonString(jsonMap, "sort"))
+					GetOr(this.GetJsonString(jsonMap, "sort"))
 
 				page.Order = optional.
 					New[string](this.GetJsonString(jsonMap, "order_sort")).
-					OrElse(this.GetJsonString(jsonMap, "order"))
+					GetOr(this.GetJsonString(jsonMap, "order"))
 
 				page.Order = this.GetJsonString(jsonMap, "order_sort")
 				page.Search = this.GetJsonString(jsonMap, "search")
@@ -739,15 +742,15 @@ func (this *BaseController) GetPageWithDefaultLimit(defaultLimit int64) *db.Page
 
 	page.Limit = optional.
 		New[int64](this.GetIntByKey("limit")).
-		OrElse(defaultLimit)
+		GetOr(defaultLimit)
 
 	page.Sort = optional.
 		New[string](this.GetStringByKey("order_column")).
-		OrElse(this.GetStringByKey("sort"))
+		GetOr(this.GetStringByKey("sort"))
 
 	page.Order = optional.
 		New[string](this.GetStringByKey("order_sort")).
-		OrElse(this.GetStringByKey("order"))
+		GetOr(this.GetStringByKey("order"))
 
 	page.Offset = this.GetIntByKey("offset")
 	page.Search = this.GetStringByKey("search")
@@ -835,17 +838,17 @@ func (this *BaseController) ParseDateByKey(key string, layout string) (time.Time
 
 // deprecated
 func (this *BaseController) ParseDate(date string) (time.Time, error) {
-	return time.ParseInLocation(dateLayout, date, this.DefaultLocation)
+	return time.ParseInLocation(util.DateBrLayout, date, this.DefaultLocation)
 }
 
 // deprecated
 func (this *BaseController) ParseDateTime(date string) (time.Time, error) {
-	return time.ParseInLocation(datetimeLayout, date, this.DefaultLocation)
+	return time.ParseInLocation(util.DateTimeBrLayout, date, this.DefaultLocation)
 }
 
 // deprecated
 func (this *BaseController) ParseJsonDate(date string) (time.Time, error) {
-	return time.ParseInLocation(jsonDateLayout, date, this.DefaultLocation)
+	return time.ParseInLocation(util.DateTimeDbLayout, date, this.DefaultLocation)
 }
 
 func (this *BaseController) RawBody() []byte {

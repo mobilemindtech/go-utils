@@ -5,10 +5,19 @@ import (
 	"strings"
 )
 
-type Map = map[string]interface{}
-type ListOfMap = []Map
+type TMap = map[string]interface{}
+type ListOfMap = []TMap
+type JsonData = TMap
 
-func JSON(args ...interface{}) map[string]interface{}{
+func Map[F any, T any](data map[string]F, f func(F) T) map[string]T {
+	var m map[string]T
+	for k, v := range data {
+		m[k] = f(v)
+	} 
+	return m
+}
+
+func JSON(args ...interface{}) JsonData{
 	return Of[string, interface{}](args...)
 }
 
@@ -74,4 +83,15 @@ func ToUrlQuery(m map[string]interface{}, replacers ...func(string, interface{})
 		values = append(values,fmt.Sprintf("%v=%v", k, value))
 	}
 	return strings.Join(values, "&")
+}
+
+func Merge(map1 map[string]interface{}, map2 map[string]interface{}) map[string]interface{} {
+	vs := map[string]interface{}{}
+	for k, v := range map1 {
+		vs[k] = v;
+	}
+	for k, v := range map2 {
+		vs[k] = v;
+	}
+	return vs
 }

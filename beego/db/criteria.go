@@ -33,6 +33,7 @@ const (
 	AndOr
 	OrAnd
 	AndOrAnd
+	Raw
 )
 
 const (
@@ -113,6 +114,8 @@ type Criteria struct {
 	UpdateParams map[string]interface{}
 
 	Page *Page
+	searchPaths []string
+	searchValue string
 
 	Error error
 
@@ -148,7 +151,19 @@ type Criteria struct {
 }
 
 func NewCriteria(session *Session, entity interface{}, entities interface{}) *Criteria {
-	return &Criteria{criterias: []*Criteria{}, criteriasOr: []*Criteria{}, criteriasAnd: []*Criteria{}, criteriasAndOr: []*Criteria{}, criteriasAndOrAnd: []*CriteriaSet{}, criteriasOrAnd: []*Criteria{}, Session: session, Result: entity, Results: entities, RelatedSelList: []string{}}
+	return &Criteria{
+		criterias: []*Criteria{},
+		criteriasOr: []*Criteria{},
+		criteriasAnd: []*Criteria{},
+		criteriasAndOr: []*Criteria{},
+		criteriasAndOrAnd: []*CriteriaSet{},
+		criteriasOrAnd: []*Criteria{},
+		Session: session,
+		Result: entity,
+		Results: entities,
+		RelatedSelList: []string{},
+		searchPaths: []string{},
+	}
 }
 
 func NewCondition() *Criteria {
@@ -286,8 +301,24 @@ func (this *Criteria) SetDistinct() *Criteria {
 	return this
 }
 
+func (this *Criteria) SearchVal(value string) *Criteria {
+	this.searchValue = value
+	return this
+}
+
+func (this *Criteria) SearchCols(paths ...string) *Criteria {
+	for _, path := range paths {
+		this.searchPaths = append(this.searchPaths, path)
+	}
+	return this
+}
+
 func (this *Criteria) Eq(path string, value interface{}) *Criteria {
 	return this.add(path, value, Eq, false, false)
+}
+
+func (this *Criteria) Raw(path string, query string) *Criteria {
+	return this.add(path, query, Raw, false, false)
 }
 
 func (this *Criteria) EqAnd(path string, value interface{}) *Criteria {
@@ -384,13 +415,17 @@ func (this *Criteria) NotIn(path string, values ...interface{}) *Criteria {
 	return this
 }
 
-func (this *Criteria) OrderAsc(path string) *Criteria {
-	this.orderBy = append(this.orderBy, &CriteriaOrder{Path: path})
+func (this *Criteria) OrderAsc(paths ...string) *Criteria {
+	for _, path := range paths {
+		this.orderBy = append(this.orderBy, &CriteriaOrder{Path: path})
+	}
 	return this
 }
 
-func (this *Criteria) OrderDesc(path string) *Criteria {
-	this.orderBy = append(this.orderBy, &CriteriaOrder{Path: path, Desc: true})
+func (this *Criteria) OrderDesc(paths ...string) *Criteria {
+	for _, path := range paths {
+		this.orderBy = append(this.orderBy, &CriteriaOrder{Path: path, Desc: true})
+	}
 	return this
 }
 
@@ -470,6 +505,24 @@ func (this *Criteria) SetDebug(debug bool) *Criteria {
 	return this
 }
 
+func (this *Criteria) buildSearchPaths(paths []string, val string) {
+
+	if len(paths) > 0 && len(val) > 0 {
+		if len(paths) == 1 {
+			for _, path := range paths {
+				this.LikeMatch(path, val, IAnywhare)
+			}
+		} else {
+			cond := NewCondition()
+			for _, path := range paths {
+				cond.LikeMatch(path, val, IAnywhare)
+			}
+			this.AndOr(cond)
+		}
+
+	}
+}
+
 func (this *Criteria) buildPage() {
 
 	if this.Page != nil {
@@ -483,7 +536,7 @@ func (this *Criteria) buildPage() {
 			}
 		}
 
-		if this.Page.FilterColumns != nil && len(this.Page.FilterColumns) > 0 {
+		if this.Page.FilterColumns != nil && len(this.Page.FilterColumns) > 0{
 
 			if len(this.Page.FilterColumns) == 1 {
 
@@ -543,6 +596,8 @@ func (this *Criteria) buildCriterias(criterias []*Criteria) *orm.Condition {
 			b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
 			b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
 			cond = cond.AndCond(b)
+		case Raw:
+			cond = cond.Raw(pathName, criteria.Value.(string))
 		default:
 			cond = cond.And(pathName, criteria.Value)
 		}
@@ -584,6 +639,8 @@ func (this *Criteria) buildConditionsOr(criterias []*Criteria, condition *orm.Co
 				b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
 				b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
 				cond = cond.OrCond(b)
+			case Raw:
+				panic("raw not suported to OR condition")
 			default:
 				if criteria.ForceAnd {
 					cond = cond.And(pathName, criteria.Value)
@@ -627,6 +684,8 @@ func (this *Criteria) buildConditionsAnd(criterias []*Criteria, condition *orm.C
 			case Between:
 				cond = cond.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
 				cond = cond.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
+			case Raw:
+				cond = cond.Raw(pathName, criteria.Value.(string))
 			default:
 				cond = cond.And(pathName, criteria.Value)
 			}
@@ -665,6 +724,8 @@ func (this *Criteria) buildConditionsAndOr(criterias []*Criteria, condition *orm
 				b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
 				b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
 				cond = cond.OrCond(b)
+			case Raw:
+				panic("raw not suported to OR condition")
 			default:
 				if criteria.ForceAnd {
 					cond = cond.And(pathName, criteria.Value)
@@ -719,6 +780,8 @@ func (this *Criteria) buildConditionsAndOrAnd(criterias []*CriteriaSet, conditio
 						b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
 						b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
 						other = other.AndCond(b)
+					case Raw:
+						cond = cond.Raw(pathName, criteria.Value.(string))
 					default:
 						other = other.And(pathName, criteria.Value)
 					}
@@ -763,6 +826,8 @@ func (this *Criteria) buildConditionsOrAnd(criterias []*Criteria, condition *orm
 				b = b.And(fmt.Sprintf("%v__gte", criteria.Path), criteria.Value)
 				b = b.And(fmt.Sprintf("%v__lte", criteria.Path), criteria.Value2)
 				cond = cond.AndCond(b)
+			case Raw:
+				cond = cond.Raw(pathName, criteria.Value.(string))
 			default:
 				cond = cond.And(pathName, criteria.Value)
 			}
@@ -888,6 +953,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria {
 		this.Eq("Tenant", this.Session.Tenant)
 	}
 
+	this.buildSearchPaths(this.searchPaths, this.searchValue)
 	this.buildPage()
 	query = this.build(query)
 
@@ -895,6 +961,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria {
 		query = query.Distinct()
 	}
 
+	
 	switch resultType {
 
 	case CriteriaAggregateOne:
