@@ -209,6 +209,14 @@ func (this *Optional[T]) GetOr(v T) T {
 	return v
 }
 
+func (this *Optional[T]) OrNil() interface{} {
+	if this.IsSome() {
+		return this.some.Item
+	}
+	return nil
+}
+
+
 func (this *Optional[T]) OrElse(opt *Optional[T]) *Optional[T] {
 	if this.IsSome() || this.IsFail() {
 		return this
@@ -606,6 +614,19 @@ func (this *Optional[T]) MapOpt(fn func(T) interface{}) *Optional[T] {
 		return Of[T](r)
 	}
 	return OfNone[T]()
+}
+
+func (this *Optional[T]) MapToInterface(fn func(T) interface{}) *Optional[interface{}] {
+
+	if this.IsFail() {
+		return OfFail[interface{}](this.fail)
+	}
+
+	if this.IsSome() {
+		r := fn(this.some.Item.(T))
+		return Just(r)
+	}
+	return OfNone[interface{}]()
 }
 
 func (this *Optional[T]) OrElseOpt(v interface{}) *Optional[T] {

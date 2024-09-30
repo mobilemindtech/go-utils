@@ -305,8 +305,7 @@ func (this *Criteria[T]) GetFirstOrNil() *T {
 	}
 
 	if res.Get().IsEmpty() {
-		var x T
-		return &x
+		return nil
 	}
 	
 	return this.GetFirst().Get().Get()
@@ -662,9 +661,17 @@ func (this *Criteria[T]) SetPage(page *db.Page) *Criteria[T] {
 	return this
 }
 
+func (this *Criteria[T]) Limit(limit int) *Criteria[T] {
+	return this.SetLimit(int64(limit))
+}
+
 func (this *Criteria[T]) SetLimit(limit int64) *Criteria[T] {
 	this.Criteria.SetLimit(limit)
 	return this
+}
+
+func (this *Criteria[T]) Offset(offset int) *Criteria[T] {
+	return this.SetOffset(int64(offset))
 }
 
 func (this *Criteria[T]) SetOffset(offset int64) *Criteria[T] {

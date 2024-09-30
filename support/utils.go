@@ -206,7 +206,11 @@ func AnyToInt(s interface{}) int {
 		return i
 	}
 
-	return StrToInt(s.(string))
+	if str, ok := s.(string); ok {
+		return StrToInt(str)
+	}
+
+	return StrToInt(fmt.Sprintf("%v", s))
 }
 
 func AnyToInt64(s interface{}) int64 {
@@ -228,8 +232,11 @@ func AnyToFloat(s interface{}) float32 {
 	if i, ok := s.(float32); ok {
 		return i
 	}
+	if str, ok := s.(string); ok {
+		return StrToFloat(str)
+	}
 
-	return StrToFloat(s.(string))
+	return StrToFloat(fmt.Sprintf("%v", s))
 }
 
 func AnyToFloat64(s interface{}) float64 {
