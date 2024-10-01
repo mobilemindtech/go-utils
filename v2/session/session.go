@@ -6,6 +6,7 @@ import (
 	"github.com/mobilemindtec/go-io/option"
 	"github.com/mobilemindtec/go-io/result"
 	"github.com/mobilemindtec/go-io/types"
+	"github.com/mobilemindtec/go-io/types/unit"
 
 	"github.com/mobilemindtec/go-utils/v2/criteria"
 
@@ -427,6 +428,17 @@ func (this *RxSession[T]) PersistWithBatch(entity T, entities ...interface{}) *r
 	return result.OfValue(option.Some(entity))
 }
 
+func (this *RxSession[T]) PersistBatch(entities ...interface{}) *result.Result[*unit.Unit] {
+
+	for _, it := range entities {
+		if err := this.session.SaveOrUpdateCascade(it); err != nil {
+			return result.OfError[*unit.Unit](err)
+		}
+	}
+
+	return result.OfValue(unit.OfUnit())
+}
+
 func (this *RxSession[T]) PersistIO(entity T) *types.IO[T] {
 	return io.IO[T](
 		io.AttemptOfResultOption(
@@ -449,4 +461,42 @@ func (this *RxSession[T]) SaveWhere(entity T, c *criteria.Reactive) *optional.Op
 	}
 
 	return r
+}
+
+func (this *RxSession[T]) RowsF(query string, args ...interface{}) func(func(map[string]interface{}) T) ([]T, error) {
+		return func(f func(map[string]interface{}) T) ([]T, error) {
+			vals, err := this.session.Rows(query, args...)
+			if err != nil {
+				return nil, err
+			}
+			var items []T
+			for _, it := range vals {
+				items = append(items, f(it))
+			}
+			return items, nil
+		}
+}
+
+func (this *RxSession[T]) FirstRowResultF(query string, args ...interface{}) func(func(map[string]interface{}) T) *result.Result[*option.Option[T]] {
+	return func(f func(map[string]interface{}) T) *result.Result[*option.Option[T]] {
+		val, err := this.FirstRowF(query, args...)(f)
+		if err != nil {
+			return result.OfError[*option.Option[T]](err)
+		}
+
+		return result.OfValue(option.Of(val))
+	}
+}
+func (this *RxSession[T]) FirstRowF(query string, args ...interface{}) func(func(map[string]interface{}) T) (T, error) {
+	return func(f func(map[string]interface{}) T) (T, error) {
+		val, err := this.session.FirstRow(query, args...)
+		var x T
+		if err != nil {
+			return x, err
+		}
+		if val != nil {
+			return f(val), nil
+		}
+		return x, nil
+	}
 }

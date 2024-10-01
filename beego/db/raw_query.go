@@ -8,6 +8,9 @@ import (
 	"time"
 )
 
+type DbResult = map[string]interface{}
+type DbResultSet = []DbResult
+
 type RawQuery struct {
 	Query string
 	Args  []interface{}
@@ -142,6 +145,32 @@ func (this *RawQuery) GetValuesList() [][]interface{} {
 
 	return results
 }
+
+func (this *RawQuery) ExecAsSlice() ([]interface{}, error) {
+	this.ValuesFlat()
+	if this.HasError() {
+		return nil, this.Error
+	}
+	return this.GetValuesFlat(), nil
+}
+
+func (this *RawQuery) Exec() (DbResultSet, error) {
+	this.Values()
+	if this.HasError() {
+		return nil, this.Error
+	}
+	return this.GetValues(), nil
+}
+
+func (this *RawQuery) ExecAsSliceOSlice() ([][]interface{}, error) {
+	this.ValuesList()
+	if this.HasError() {
+		return nil, this.Error
+	}
+	return this.GetValuesList(), nil
+}
+
+
 
 func ValueToInt(val interface{}) int {
 	switch val.(type) {

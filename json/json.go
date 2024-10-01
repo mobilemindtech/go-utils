@@ -13,6 +13,8 @@ import (
 	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-utils/v2/optional"
 	"github.com/mobilemindtec/go-utils/v2/try"
+	"github.com/mobilemindtec/go-io/result"
+	ioutil "github.com/mobilemindtec/go-io/util"
 )
 
 const (
@@ -949,6 +951,13 @@ func DecodeOpt[T any](b []byte) *optional.Optional[*T] {
 	return try.Of(func()(*T, error){
 		var t T
 		return &t, NewJSON().Decode(b, &t)
+	})
+}
+
+func DecodeResult[T any](b []byte) *result.Result[T] {
+	return result.Try(func()(T, error){
+		t := ioutil.NewOf[T]()
+		return t, NewJSON().Decode(b, t)
 	})
 }
 

@@ -11,6 +11,9 @@ import (
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtec/go-utils/v2/lists"
+	"github.com/mobilemindtec/go-io/result"
+	"github.com/mobilemindtec/go-io/option"
 )
 
 type SessionState int
@@ -536,6 +539,21 @@ func (this *Session) HasById(entity interface{}, id int64) (bool, error) {
 	return false, errors.New("entity does not implements of Model")
 }
 
+func (this *Session) FindByIdOrNil(entity interface{}, id int64) (interface{}, error) {
+	val, err := this.FindById(entity, id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	model := entity.(Model)
+	if !model.IsPersisted() {
+		return nil, nil
+	}
+
+	return val, nil
+}
+
 func (this *Session) FindById(entity interface{}, id int64) (interface{}, error) {
 
 	if model, ok := entity.(Model); ok {
@@ -801,6 +819,70 @@ func (this *Session) ExecuteUpdate(querySeter orm.QuerySeter, args map[string]in
 	}
 
 	return count, err
+}
+
+func (this *Session) RawExecBatch(queries ...string) error {
+	for _, query := range queries {
+		if _, err := this.RawExec(query); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (this *Session) RawExec(query string, args ...interface{}) (int64, error) {
+	res, err := this.GetDb().Raw(query, args...).Exec()
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+func (this *Session) RawQuery(query string, args ...interface{}) (sql.Result, error) {
+	return this.GetDb().Raw(query, args...).Exec()
+}
+
+func (this *Session) Rows(query string, args ...interface{}) ([]map[string]interface{}, error) {
+	var params []orm.Params
+	_, err := this.GetDb().Raw(query, args...).Values(&params)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return lists.Map(
+		params,
+		func(param orm.Params) map[string]interface{} {
+		return param
+	}), nil
+}
+
+func (this *Session) FirstRowResult(query string, args ...interface{}) *result.Result[*option.Option[map[string]interface{}]] {
+	row, err := this.FirstRow(query, args...)
+	if err != nil {
+		return result.OfError[*option.Option[map[string]interface{}]](err)
+	}
+	return result.OfValue(option.Of(row))
+}
+func (this *Session) FirstRow(query string, args ...interface{}) (map[string]interface{}, error) {
+	var params []orm.Params
+	_, err := this.GetDb().Raw(query, args...).Values(&params)
+
+	if err != nil {
+		return nil, err
+	}
+
+	results := lists.Map(
+		params,
+		func(param orm.Params) map[string]interface{} {
+			return param
+		})
+
+	if len(results) > 0 {
+		return results[0], nil
+	}
+
+	return nil, nil
 }
 
 func (this *Session) Eager(reply interface{}) error {
