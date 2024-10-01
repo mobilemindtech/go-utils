@@ -35,7 +35,6 @@ import (
 	"github.com/mobilemindtec/go-utils/v2/lists"
 	"github.com/mobilemindtec/go-utils/v2/maps"
 	"github.com/mobilemindtec/go-utils/v2/optional"
-
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -228,6 +227,7 @@ func (this *WebController) tryAppAutheticate(token string) (*models.User, error)
 		this.SetAuthTenant(app.Tenant)
 		this.SetCustomAppLogin(user)
 		this.SetCustomAppName(fmt.Sprintf("%v - %v", app.Id, app.Name))
+		this.SetCustomAppId(app.Id)
 		return user, nil
 	}
 
@@ -1612,6 +1612,16 @@ func (this *WebController) GetCustomAppName() string {
 	return name
 }
 
+func (this *WebController) GetCustomAppId() int64 {
+	id, _ := this.GetSession("customappid").(int64)
+	return id
+}
+
+func (this *WebController) GetCustomApp() (*models.App, error) {
+	id := this.GetCustomAppId()
+	return criteria.New[models.App](this.Session).FindById(id)
+}
+
 func (this *WebController) SessionLogOut() {
 	this.LogOut()
 }
@@ -1623,11 +1633,16 @@ func (this *WebController) LogOut() {
 	this.DelSession("customappuserinfo")
 	this.DelSession("authtenantid")
 	this.DelSession("customappname")
+	this.DelSession("customappid")
 	this.DestroySession()
 }
 
 func (this *WebController) SetCustomAppName(appname string) {
 	this.SetSession("customappname", appname)
+}
+
+func (this *WebController) SetCustomAppId(id int64) {
+	this.SetSession("customappid", id)
 }
 
 func (this *WebController) SetLogin(user *models.User) {

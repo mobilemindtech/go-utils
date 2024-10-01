@@ -311,6 +311,7 @@ func (this *Criteria[T]) GetFirstOrNil() *T {
 	return this.GetFirst().Get().Get()
 }
 
+
 func (this *Criteria[T]) GetFirst() *result.Result[*option.Option[*T]] {
 	this.One()
 
