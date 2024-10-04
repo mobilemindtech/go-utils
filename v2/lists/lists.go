@@ -386,3 +386,33 @@ func Flatten[T any](vs [][]T) []T {
 	}
 	return  vsf
 }
+
+func GroupBy[A any, B comparable](vs []A, f func(A) B) map[B][]A {
+	var data map[B][]A
+
+	for _, it := range vs {
+		k := f(it)
+
+		if data[k] == nil {
+			data[k] = []A{}
+		}
+
+		data[k] = append(data[k], it)
+	}
+
+	return  data
+}
+
+func DistinctBy[A any, B comparable](vs []A, f func(A) B) []A {
+	var a []A
+	data := GroupBy(vs, f)
+	for _, items := range data {
+		a = append(a, items[0])
+	}
+	return  a
+}
+
+func DistinctByMap[A any, B comparable, C any](vs []A, f func(A) B, fmap func(A) C) []C {
+	data := DistinctBy(vs, f)
+	return  Map(data, fmap)
+}

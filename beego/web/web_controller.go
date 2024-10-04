@@ -691,7 +691,10 @@ func (this *WebController) RenderJson(opt interface{}) {
 		break
 	}
 
+
 	j, err := json.Encode(dataResult)
+
+	logs.Debug("JSON = %v", string(j))
 
 	if err != nil {
 		logs.Error("ERROR JSON ENCODE: %v", err)
@@ -703,7 +706,7 @@ func (this *WebController) RenderJson(opt interface{}) {
 		this.Ctx.Output.Body(j)
 	}
 
-	this.ServeJSON()
+	//this.ServeJSON()
 }
 func (this *WebController) OnJsonResultNil() {
 	this.OnJsonResult(nil)

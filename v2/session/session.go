@@ -463,8 +463,8 @@ func (this *RxSession[T]) SaveWhere(entity T, c *criteria.Reactive) *optional.Op
 	return r
 }
 
-func (this *RxSession[T]) RowsF(query string, args ...interface{}) func(func(map[string]interface{}) T) ([]T, error) {
-		return func(f func(map[string]interface{}) T) ([]T, error) {
+func (this *RxSession[T]) RowsF(query string, args ...interface{}) func(func(*db.Row) T) ([]T, error) {
+		return func(f func(*db.Row) T) ([]T, error) {
 			vals, err := this.session.Rows(query, args...)
 			if err != nil {
 				return nil, err
@@ -477,8 +477,8 @@ func (this *RxSession[T]) RowsF(query string, args ...interface{}) func(func(map
 		}
 }
 
-func (this *RxSession[T]) FirstRowResultF(query string, args ...interface{}) func(func(map[string]interface{}) T) *result.Result[*option.Option[T]] {
-	return func(f func(map[string]interface{}) T) *result.Result[*option.Option[T]] {
+func (this *RxSession[T]) FirstRowResultF(query string, args ...interface{}) func(func(*db.Row) T) *result.Result[*option.Option[T]] {
+	return func(f func(*db.Row) T) *result.Result[*option.Option[T]] {
 		val, err := this.FirstRowF(query, args...)(f)
 		if err != nil {
 			return result.OfError[*option.Option[T]](err)
@@ -487,8 +487,8 @@ func (this *RxSession[T]) FirstRowResultF(query string, args ...interface{}) fun
 		return result.OfValue(option.Of(val))
 	}
 }
-func (this *RxSession[T]) FirstRowF(query string, args ...interface{}) func(func(map[string]interface{}) T) (T, error) {
-	return func(f func(map[string]interface{}) T) (T, error) {
+func (this *RxSession[T]) FirstRowF(query string, args ...interface{}) func(func(*db.Row) T) (T, error) {
+	return func(f func(*db.Row) T) (T, error) {
 		val, err := this.session.FirstRow(query, args...)
 		var x T
 		if err != nil {

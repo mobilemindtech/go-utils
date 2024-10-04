@@ -243,6 +243,20 @@ func AnyToFloat64(s interface{}) float64 {
 	return float64(AnyToInt(s))
 }
 
+func AnyToBool(s interface{}) bool {
+	switch s.(type) {
+	case bool:
+		return s.(bool)
+	case string:
+		return s.(string) == "true"
+	case int:
+		return s.(int) == 1
+	case int64:
+		return s.(int64) == 1
+	default:
+		return false
+	}
+}
 
 func RemoveAllNonAlphaNumeric(s string) string {
 

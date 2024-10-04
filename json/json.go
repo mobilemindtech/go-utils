@@ -98,7 +98,7 @@ func (this *JSON) Encode(obj interface{}) ([]byte, error) {
 		return nil, err
 	}
 
-	result, err := json.MarshalIndent(data, "", " ")
+	result, err := json.Marshal(data)
 
 	if this.DebugFormat {
 		logs.Debug("JSON = ", string(result))

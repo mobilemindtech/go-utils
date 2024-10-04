@@ -178,6 +178,16 @@ func New[T any](session *db.Session) *Criteria[T] {
 	return criteria
 }
 
+func (this *Criteria[T]) WithResult(r *T) *Criteria[T] {
+	this.Result = r
+	return  this
+}
+
+func (this *Criteria[T]) WithResults(r []*T) *Criteria[T] {
+	this.Results = r
+	return  this
+}
+
 func (this *Criteria[T]) Id(id int64) *Criteria[T] {
 	this.Criteria.Eq("Id", id)
 	return this
@@ -322,6 +332,18 @@ func (this *Criteria[T]) GetFirst() *result.Result[*option.Option[*T]] {
 		return result.OfValue(option.None[*T]())
 	}
 	return result.OfValue(option.Some(this.Result.(*T)))
+}
+
+func (this *Criteria[T]) First() (*T, error) {
+	this.One()
+
+	if this.Criteria.HasError {
+		return nil, this.Criteria.Error
+	}
+	if !this.Any {
+		return nil, nil
+	}
+	return this.Result.(*T), nil
 }
 
 func (this *Criteria[T]) GetAllIO() *types.IO[[]*T] {
