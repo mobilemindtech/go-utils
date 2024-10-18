@@ -52,6 +52,35 @@ func GetTodayWithTime(newTime time.Time) time.Time {
 	return time.Date(now.Year(), now.Month(), now.Day(), newTime.Hour(), newTime.Minute(), newTime.Second(), newTime.Nanosecond(), GetDefaultLocation())
 }
 
+func ChangeDateWithTimeParts(date time.Time, hour int, minute int, second int) time.Time {
+	return time.Date(date.Year(), date.Month(), date.Day(), hour, minute, second, date.Nanosecond(), GetDefaultLocation())
+}
+
+func ChangeDateWithTime(d1 time.Time, t1 time.Time) time.Time {
+	return time.Date(d1.Year(), d1.Month(), d1.Day(), t1.Hour(), t1.Minute(), t1.Second(), d1.Nanosecond(), GetDefaultLocation())
+}
+
+func ChangeDateWithDate(d1 time.Time, d2 time.Time) time.Time {
+	return time.Date(d2.Year(), d2.Month(), d2.Day(), d1.Hour(), d1.Minute(), d1.Second(), d1.Nanosecond(), GetDefaultLocation())
+}
+
+func ChangeDateWithDateParts(d1 time.Time, day int, month int, year int) time.Time {
+	return time.Date(year, time.Month(month), day, d1.Hour(), d1.Minute(), d1.Second(), d1.Nanosecond(), GetDefaultLocation())
+}
+
+
+func ChangeDateWithHour(date time.Time, hour int) time.Time {
+	return time.Date(date.Year(), date.Month(), date.Day(), hour, date.Minute(), date.Second(), date.Nanosecond(), GetDefaultLocation())
+}
+
+func ChangeDateWithMinute(date time.Time, minute int) time.Time {
+	return time.Date(date.Year(), date.Month(), date.Day(), date.Hour(), minute, date.Second(), date.Nanosecond(), GetDefaultLocation())
+}
+
+func ChangeDateWithSecond(date time.Time, second int) time.Time {
+	return time.Date(date.Year(), date.Month(), date.Day(), date.Hour(), date.Minute(), second, date.Nanosecond(), GetDefaultLocation())
+}
+
 func ChangeDateWithDay(date time.Time, day int) time.Time {
 	return time.Date(date.Year(), date.Month(), day, date.Hour(), date.Minute(), date.Second(), date.Nanosecond(), GetDefaultLocation())
 }
@@ -125,6 +154,14 @@ func IsSameDateTime(date1 time.Time, date2 time.Time) bool {
 
 func ContainsWithSame(begin time.Time, end time.Time, date time.Time) bool {
 	return IsSameDateTime(begin, date) || IsSameDateTime(end, date) || (date.After(begin) && date.Before(end))
+}
+
+func AfterOrEqual(t1 time.Time , t2 time.Time) bool {
+	return t1.After(t2) || IsSameDateTime(t1, t2)
+}
+
+func BeforeOrEqual(t1 time.Time , t2 time.Time) bool {
+	return t1.Before(t2) || IsSameDateTime(t1, t2)
 }
 
 func Contains(begin time.Time, end time.Time, date time.Time) bool {

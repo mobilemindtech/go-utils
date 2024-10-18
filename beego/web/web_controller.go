@@ -1146,9 +1146,15 @@ func (this *WebController) GetMessage(key string, args ...interface{}) string {
 	return i18n.Tr(this.Lang, key, args)
 }
 
-func (this *WebController) OnValidate(entity interface{}, custonValidation func(validator *validation.Validation)) bool {
+func (this *WebController) Validate(entity interface{}, f ...func(validator *validation.Validation)) bool {
 
-	result, _ := this.EntityValidator.IsValid(entity, custonValidation)
+	var fn func(validator *validation.Validation) = nil
+
+	if len(f) > 0 {
+		fn = f[0]
+	}
+
+	result, _ := this.EntityValidator.IsValid(entity, fn)
 
 	if result.HasError {
 		this.Flash.Error(this.GetMessage("cadastros.validacao"))
@@ -1156,6 +1162,12 @@ func (this *WebController) OnValidate(entity interface{}, custonValidation func(
 	}
 
 	return result.HasError == false
+
+}
+
+// Deprecated: use Validate
+func (this *WebController) OnValidate(entity interface{}, f func(validator *validation.Validation)) bool {
+	return this.Validate(entity)
 }
 
 func (this *WebController) OnParseForm(entity interface{}) {

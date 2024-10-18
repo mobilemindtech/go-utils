@@ -334,6 +334,11 @@ func (this *Criteria[T]) GetFirst() *result.Result[*option.Option[*T]] {
 	return result.OfValue(option.Some(this.Result.(*T)))
 }
 
+func (this *Criteria[T]) GetFirstById(id int64) *result.Result[*option.Option[*T]] {
+	this.Eq("Id", id)
+	return this.GetFirst()
+}
+
 func (this *Criteria[T]) First() (*T, error) {
 	this.One()
 
@@ -447,6 +452,11 @@ func (this *Criteria[T]) SetRelatedSel(related ...string) *Criteria[T] {
 
 func (this *Criteria[T]) All() ([]*T, error) {
 	return this.List()
+}
+
+func (this *Criteria[T]) AllOrNil() []*T {
+	lst, _ := this.List()
+	return lst
 }
 
 func (this *Criteria[T]) Each(each func(*T)) error {

@@ -36,6 +36,20 @@ func (this Either[L, R]) IsLeft() bool {
 	return !optional.IsNilFixed(this.left)
 }
 
+func (this Either[L, R]) IfRight(f func(R)) Either[L, R] {
+	if this.IsRight() {
+		f(this.right)
+	}
+	return this
+}
+
+func (this Either[L, R]) IfLeft(f func(L)) Either[L, R] {
+	if this.IsLeft() {
+		f(this.left)
+	}
+	return this
+}
+
 func (this Either[L, R]) IsRight() bool {
 	return !optional.IsNilFixed(this.right)
 }

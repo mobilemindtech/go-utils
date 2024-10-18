@@ -11,6 +11,7 @@ import (
 	"github.com/beego/beego/v2/server/web/context"
 	"github.com/leekchan/accounting"
 	"github.com/mobilemindtec/go-utils/v2/maps"
+	"github.com/mobilemindtec/go-io/util"
 )
 
 func FilterNumber(text string) string {
@@ -272,4 +273,11 @@ func RemoveAllNonAlphaNumeric(s string) string {
 	}
 	return result.String()
 
+}
+
+func IsNotNil[T any](v T) bool {
+	return util.IsNotNil(v)
+}
+func IsNil[T any](v T) bool {
+	return util.IsNil(v)
 }

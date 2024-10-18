@@ -81,6 +81,13 @@ func LoadFuncs() {
 		return ""
 	}
 
+	formatTime := func(date time.Time) string {
+		if !time.Time.IsZero(date) {
+			return date.Format("15:04")
+		}
+		return ""
+	}
+
 	formatDateTime := func(date time.Time) string {
 		if !time.Time.IsZero(date) {
 			return date.Format("02/01/2006 15:04")
@@ -185,6 +192,7 @@ func LoadFuncs() {
 	beego.InsertFilter("*", beego.BeforeRouter, filters.FilterMethod) // enable put
 	beego.AddFuncMap("format_boolean", formatBoolean)
 	beego.AddFuncMap("format_date", formatDate)
+	beego.AddFuncMap("format_time", formatTime)
 	beego.AddFuncMap("date_format", dateFormat)
 	beego.AddFuncMap("get_now", getNow)
 	beego.AddFuncMap("get_year", getYear)
