@@ -7,16 +7,59 @@ import (
 	"reflect"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/mobilemindtec/go-utils/v2/optional"
 	"github.com/mobilemindtec/go-utils/v2/lists"
+	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-io/result"
 	"github.com/mobilemindtec/go-io/option"
 )
 
 type SessionState int
+
+type Row struct {
+	data map[string]interface{}
+}
+
+func NewRow(data map[string]interface{}) *Row {
+	return &Row{data: data}
+}
+
+func (r *Row) Get(colName string) interface{} {
+	return r.data[colName]
+}
+
+func (r *Row) GetAsString(colName string) string {
+	return r.data[colName].(string)
+}
+
+func (r *Row) GetAsInt(colName string) int {
+	return support.AnyToInt(r.Get(colName))
+}
+
+func (r *Row) GetAsInt64(colName string) int64 {
+	return support.AnyToInt64(r.Get(colName))
+}
+
+
+func (r *Row) GetAsFloat(colName string) float32 {
+	return support.AnyToFloat(r.Get(colName))
+}
+
+func (r *Row) GetAsFloat64(colName string) float64 {
+	return support.AnyToFloat64(r.Get(colName))
+}
+
+func (r *Row) GetAsBool(colName string) bool {
+	return support.AnyToBool(r.Get(colName))
+}
+
+func (r *Row) GetAsTime(colName string, layout string) (time.Time, error) {
+	return ValueToTimeWithPattern(r.GetAsString(colName), layout)
+}
 
 const (
 	SessionStateOk SessionState = iota + 1
@@ -842,7 +885,7 @@ func (this *Session) RawQuery(query string, args ...interface{}) (sql.Result, er
 	return this.GetDb().Raw(query, args...).Exec()
 }
 
-func (this *Session) Rows(query string, args ...interface{}) ([]map[string]interface{}, error) {
+func (this *Session) Rows(query string, args ...interface{}) ([]*Row, error) {
 	var params []orm.Params
 	_, err := this.GetDb().Raw(query, args...).Values(&params)
 
@@ -852,19 +895,19 @@ func (this *Session) Rows(query string, args ...interface{}) ([]map[string]inter
 
 	return lists.Map(
 		params,
-		func(param orm.Params) map[string]interface{} {
-		return param
+		func(param orm.Params) *Row {
+		return NewRow(param)
 	}), nil
 }
 
-func (this *Session) FirstRowResult(query string, args ...interface{}) *result.Result[*option.Option[map[string]interface{}]] {
+func (this *Session) FirstRowResult(query string, args ...interface{}) *result.Result[*option.Option[*Row]] {
 	row, err := this.FirstRow(query, args...)
 	if err != nil {
-		return result.OfError[*option.Option[map[string]interface{}]](err)
+		return result.OfError[*option.Option[*Row]](err)
 	}
 	return result.OfValue(option.Of(row))
 }
-func (this *Session) FirstRow(query string, args ...interface{}) (map[string]interface{}, error) {
+func (this *Session) FirstRow(query string, args ...interface{}) (*Row, error) {
 	var params []orm.Params
 	_, err := this.GetDb().Raw(query, args...).Values(&params)
 
@@ -874,8 +917,8 @@ func (this *Session) FirstRow(query string, args ...interface{}) (map[string]int
 
 	results := lists.Map(
 		params,
-		func(param orm.Params) map[string]interface{} {
-			return param
+		func(param orm.Params) *Row {
+			return NewRow(param)
 		})
 
 	if len(results) > 0 {
@@ -1580,4 +1623,26 @@ func IsPersisted(entity Model) bool {
 		return false
 	}
 	return entity.IsPersisted()
+}
+
+func RunWithNewTransaction[T any](f func(session *Session) (T, error)) (T, error) {
+
+	var t T
+	session := NewSession()
+
+	if err := session.OpenTx(); err != nil {
+		return t, fmt.Errorf("error open transaction: %v", err)
+	}
+
+	defer session.Close()
+
+	t, err := f(session)
+
+	if  err != nil {
+		session.Rollback()
+		return t, err
+	} else {
+		session.Commit()
+		return t, err
+	}
 }

@@ -691,7 +691,10 @@ func (this *WebController) RenderJson(opt interface{}) {
 		break
 	}
 
+
 	j, err := json.Encode(dataResult)
+
+	logs.Debug("JSON = %v", string(j))
 
 	if err != nil {
 		logs.Error("ERROR JSON ENCODE: %v", err)
@@ -703,7 +706,7 @@ func (this *WebController) RenderJson(opt interface{}) {
 		this.Ctx.Output.Body(j)
 	}
 
-	this.ServeJSON()
+	//this.ServeJSON()
 }
 func (this *WebController) OnJsonResultNil() {
 	this.OnJsonResult(nil)
@@ -1143,9 +1146,15 @@ func (this *WebController) GetMessage(key string, args ...interface{}) string {
 	return i18n.Tr(this.Lang, key, args)
 }
 
-func (this *WebController) OnValidate(entity interface{}, custonValidation func(validator *validation.Validation)) bool {
+func (this *WebController) Validate(entity interface{}, f ...func(validator *validation.Validation)) bool {
 
-	result, _ := this.EntityValidator.IsValid(entity, custonValidation)
+	var fn func(validator *validation.Validation) = nil
+
+	if len(f) > 0 {
+		fn = f[0]
+	}
+
+	result, _ := this.EntityValidator.IsValid(entity, fn)
 
 	if result.HasError {
 		this.Flash.Error(this.GetMessage("cadastros.validacao"))
@@ -1153,6 +1162,12 @@ func (this *WebController) OnValidate(entity interface{}, custonValidation func(
 	}
 
 	return result.HasError == false
+
+}
+
+// Deprecated: use Validate
+func (this *WebController) OnValidate(entity interface{}, f func(validator *validation.Validation)) bool {
+	return this.Validate(entity)
 }
 
 func (this *WebController) OnParseForm(entity interface{}) {
