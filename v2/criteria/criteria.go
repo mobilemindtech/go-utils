@@ -660,7 +660,7 @@ func (this *Criteria[T]) In(path string, values ...interface{}) *Criteria[T] {
 }
 
 func (this *Criteria[T]) NotIn(path string, values ...interface{}) *Criteria[T] {
-	this.Criteria.In(path, values)
+	this.Criteria.NotIn(path, values)
 	return this
 }
 
