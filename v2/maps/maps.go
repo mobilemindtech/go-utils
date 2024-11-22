@@ -105,7 +105,7 @@ func ToString(errors map[string]string) string {
 }
 
 func SliceFlatten(errors []map[string]string) map[string]string {
-	var values map[string]string
+	values := make(map[string]string)
 	for _, l := range errors {
 		for k, v := range l {
 			values[k] = v
