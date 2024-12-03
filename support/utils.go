@@ -24,6 +24,9 @@ func FilterNumber(text string) string {
 
 	return number
 }
+func IsNotEmpty(text string) bool {
+	return !IsEmpty(text)
+}
 
 func IsEmpty(text string) bool {
 	return len(strings.TrimSpace(text)) == 0

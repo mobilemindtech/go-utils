@@ -248,7 +248,9 @@ func (this *JsonParser) UrlValuesToMapWithConfigs(data url.Values, configsMap ma
 		default:
 
 			if strings.Contains(val, "date:") {
-				configs = append(configs, NewFormJsonConfig(key, FormatTypeDate).SetLayout(strings.Split(val, ":")[1]))
+				layout := strings.Replace(val, "date:", "", -1)
+
+				configs = append(configs, NewFormJsonConfig(key, FormatTypeDate).SetLayout(layout))
 			} else {
 				logs.Error("Invalid format: %v. use [float | int | bool | date:DD/MM/YYYY]", val)
 			}

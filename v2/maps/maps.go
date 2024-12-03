@@ -95,3 +95,21 @@ func Merge(map1 map[string]interface{}, map2 map[string]interface{}) map[string]
 	}
 	return vs
 }
+
+func ToString(errors map[string]string) string {
+	var values []string
+	for k, v := range errors {
+		values = append(values, fmt.Sprintf("%v = %v", k, v))
+	}
+	return strings.Join(values, ", ")
+}
+
+func SliceFlatten(errors []map[string]string) map[string]string {
+	values := make(map[string]string)
+	for _, l := range errors {
+		for k, v := range l {
+			values[k] = v
+		}
+	}
+	return values
+}

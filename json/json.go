@@ -171,7 +171,7 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
 	fullValue := refValue
 	fullType := fullValue.Type()
 
-	//logs.Debug("1 fullType ", fullType, " fullValue ", fullValue)
+	logs.Debug("1 fullType ", fullType, " fullValue ", fullValue)
 
 	if reflect.TypeOf(obj).Kind() == reflect.Ptr {
 		//logs.Debug("IS PTR")

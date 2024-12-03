@@ -8,7 +8,7 @@ import (
 	"github.com/mobilemindtec/go-io/types"
 	"reflect"
 	"strings"
-
+	"errors"
 	"github.com/mobilemindtec/go-utils/v2/lists"
 
 	"github.com/mobilemindtec/go-utils/beego/db"
@@ -339,6 +339,17 @@ func (this *Criteria[T]) GetFirstById(id int64) *result.Result[*option.Option[*T
 	return this.GetFirst()
 }
 
+func (this *Criteria[T]) FirstOrError() (*T, error) {
+	e, err := this.First()
+	if err != nil {
+		return nil, err
+	}
+	if e == nil {
+		return nil, errors.New("entity not found")
+	}
+	return  e, nil
+}
+
 func (this *Criteria[T]) First() (*T, error) {
 	this.One()
 
@@ -660,7 +671,7 @@ func (this *Criteria[T]) In(path string, values ...interface{}) *Criteria[T] {
 }
 
 func (this *Criteria[T]) NotIn(path string, values ...interface{}) *Criteria[T] {
-	this.Criteria.In(path, values)
+	this.Criteria.NotIn(path, values)
 	return this
 }
 
