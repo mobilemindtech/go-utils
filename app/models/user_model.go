@@ -32,7 +32,7 @@ type User struct {
 	ExpirationDate time.Time `orm:"type(datetime);null" form:"-" json:"-"`
 	Token          string    `orm:"type(text);null"  valid:"" form:"-" json:"-"`
 
-	Uuid string `orm:"size(100);unique"  valid:"MaxSize(100)" form:"-" json:"-"`
+	Uuid string `orm:"size(100);unique"  valid:"MaxSize(100)" form:"-" json:""`
 
 	ChangePwdExpirationDate time.Time `orm:"type(datetime);null" form:"-" json:"-"`
 	ChangePwdToken          string    `orm:"type(text);null"  valid:"MaxSize(256)" form:"-" json:"-"`
