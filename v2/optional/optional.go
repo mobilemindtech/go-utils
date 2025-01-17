@@ -300,11 +300,11 @@ func (this *Optional[T]) IfNonEmpty(cb func(T)) *Optional[T] {
 	return this
 }
 
-func (this *Optional[T]) IfNonEmptyOrElse(cb func(T), f func()) *Optional[T] {
+func (this *Optional[T]) IfNonEmptyOrElse(cb func(T), emptyCb func()) *Optional[T] {
 	if this.IsSome() {
 		cb(GetItem[T](this.some))
 	} else {
-		f()
+		emptyCb()
 	}
 	return this
 }
