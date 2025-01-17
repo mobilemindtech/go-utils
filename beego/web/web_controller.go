@@ -96,6 +96,8 @@ type WebController struct {
 
 	CustonJsonEncoder func(interface{}) ([]byte, error)
 
+	NewJSON func() *json.JSON
+
 	InheritedController interface{}
 
 	DoNotLoadTenantsOnSession bool
@@ -655,10 +657,21 @@ func (this *WebController) RenderJson(opt interface{}) {
 
 		data := maps.JSON("error", true, "message", fmt.Sprintf("%v", err))
 
-		if err.Error() == "validation error" {
-			data["validation"] = f.Item
+		switch err.(type) {
+		case *validator.ValidationError:
+			data["validation"] = err.(*validator.ValidationError).Map
+			data["validations"] = err.(*validator.ValidationError).List
 			statusCode = 400
+			break
+		default:
+			if err.Error() == "validation error" {
+				data["validation"] = f.Item
+				statusCode = 400
+			}
+			break
 		}
+		
+
 
 		dataResult = data
 		statusCodeResult = statusCode
@@ -692,9 +705,16 @@ func (this *WebController) RenderJson(opt interface{}) {
 	}
 
 
-	j, err := json.Encode(dataResult)
+	var je *json.JSON
+	if this.NewJSON != nil {
+		je = this.NewJSON()
+	} else {
+		je = json.NewJSON()
+	}
 
-	logs.Debug("JSON = %v", string(j))
+	j, err := je.Encode(dataResult)
+
+	//logs.Debug("JSON = %v", string(j))
 
 	if err != nil {
 		logs.Error("ERROR JSON ENCODE: %v", err)
@@ -1336,6 +1356,7 @@ func (this *WebController) GetPage() *db.Page {
 
 		if this.Ctx.Input.IsPost() {
 			jsonMap, _ := this.JsonToMap(this.Ctx)
+			
 
 			if _, ok := jsonMap["limit"]; ok {
 				page.Limit = optional.

@@ -27,42 +27,88 @@ type JsonReader interface {
 
 type Converter func(j *Json)
 
+type ParserConfig struct {
+	Converter         Converter
+	UseDefaultEncoder bool
+	UseCamelCase      bool
+	Debug             bool
+	TagNames []string
+}
+
+// NewParserConfig parser config with default config using tagNames = [jsonp] and NewJSON encode/decoder
+func NewParserConfig() *ParserConfig {
+	return &ParserConfig{ TagNames: []string{}}
+}
+
+// NewParserConfigWithDefaultJsonTagName parser config with default config using tagNames = [json, jsonp] and NewJSON encode/decoder
+func NewParserConfigWithDefaultJsonTagName() *ParserConfig {
+	return &ParserConfig{ TagNames: []string{"json"}}
+}
+
+func (this *ParserConfig) GetTagNames() []string {
+	if len(this.TagNames) == 0 {
+		this.TagNames = []string{}
+	}
+	return this.TagNames
+}
+
+func (this *ParserConfig) AddTagNames(tag string) *ParserConfig {
+	if len(this.TagNames) == 0 {
+		this.TagNames = []string{}
+	}
+	this.TagNames = append(this.TagNames, tag)
+	return this
+}
+
 type Parser[T any] struct {
-	converter         Converter
-	useDefaultEncoder bool
-	useCamelCase      bool
-	debug             bool
+	cfg *ParserConfig
 }
 
-func NewParser[T any]() *Parser[T] {
-	return &Parser[T]{}
+// NewParser new parse with empty configs. Use NewJSON api to encode/decode
+func NewParser[T any](cfgs ...*ParserConfig) *Parser[T] {
+
+	cfg := &ParserConfig{}
+	if len(cfgs) > 0 {
+		cfg = cfgs[0]
+	}
+
+	return &Parser[T]{cfg}
 }
 
+// NewParserDefault new parse with empty configs. Use golang json.Marshal to encode/decode
 func NewParserDefault[T any]() *Parser[T] {
-	return &Parser[T]{useDefaultEncoder: true}
+	return NewParser[T](&ParserConfig{UseDefaultEncoder: true})
 }
 
+func (this *Parser[T]) ConfigureTagName(name string) *Parser[T] {
+	this.cfg.AddTagNames(name)
+	return this
+}
+
+// UseDefaultEncoder Set to use golang json.Marshal to encode/decode
 func (this *Parser[T]) UseDefaultEncoder() *Parser[T] {
 	return this.SetUseDefaultEncoder(true)
 }
 
 func (this *Parser[T]) Debug() *Parser[T] {
-	this.debug = true
+	this.cfg.Debug = true
 	return this
 }
 
+// UseCamelCase set to usse calmelcase json field names to NewJSON encoder. Default is snackcase.
 func (this *Parser[T]) UseCamelCase() *Parser[T] {
-	this.useCamelCase = true
+	this.cfg.UseCamelCase = true
 	return this
 }
 
+// UseDefaultEncoder Set to use golang json.Marshal to encode/decode
 func (this *Parser[T]) SetUseDefaultEncoder(b bool) *Parser[T] {
-	this.useDefaultEncoder = b
+	this.cfg.UseDefaultEncoder = true
 	return this
 }
 
 func (this *Parser[T]) AddConverter(c Converter) *Parser[T] {
-	this.converter = c
+	this.cfg.Converter = c
 	return this
 }
 
@@ -97,17 +143,17 @@ func (this *Parser[T]) ParseInto(raw []byte, entity *T) *optional.Optional[*T] {
 
 func (this *Parser[T]) ParseJsonInto(j *Json, entity *T) *optional.Optional[*T] {
 
-	if this.converter != nil {
-		this.converter(j)
+	if this.cfg.Converter != nil {
+		this.cfg.Converter(j)
 	}
 
 	var err error
 
-	if this.debug {
+	if this.cfg.Debug {
 		logs.Debug("JSON DATA = %v", j.data)
 	}
 	
-	if this.useDefaultEncoder {
+	if this.cfg.UseDefaultEncoder {
 
 
 		newJsonData, err := json.Marshal(j.data)
@@ -117,7 +163,7 @@ func (this *Parser[T]) ParseJsonInto(j *Json, entity *T) *optional.Optional[*T] 
 			return optional.OfFail[*T](err)
 		}
 
-		if this.debug {
+		if this.cfg.Debug {
 			logs.Debug("JSON RAW = %v", string(newJsonData))
 		}
 
@@ -126,7 +172,10 @@ func (this *Parser[T]) ParseJsonInto(j *Json, entity *T) *optional.Optional[*T] 
 	} else {
 
 		jsn := NewJSON()
-		jsn.CamelCase = this.useCamelCase
+		jsn.CamelCase = this.cfg.UseCamelCase
+		for _, tagName := range this.cfg.GetTagNames() {
+			jsn.ConfigureTagName(tagName)
+		}
 		err = jsn.DecodeFromMap(j.data, entity)
 
 

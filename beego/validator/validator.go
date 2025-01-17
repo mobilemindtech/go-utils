@@ -3,6 +3,7 @@ package validator
 import (
   "github.com/mobilemindtec/go-utils/validator/cnpj"
   "github.com/mobilemindtec/go-utils/validator/cpf"
+  "github.com/mobilemindtec/go-utils/support"
   "github.com/mobilemindtec/go-utils/beego/db"
   "github.com/beego/beego/v2/core/validation"
   "strings"
@@ -104,7 +105,7 @@ func AddRelationValidator() {
 
     isSatisfied := true
 
-    if obj == nil {
+    if support.IsNil(obj) {
       isSatisfied = false
     } else {
       if model, ok := obj.(db.Model); ok {

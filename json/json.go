@@ -20,11 +20,12 @@ import (
 const (
 	TimestampLayout  string = "2006-01-02T15:04:05-07:00"
 	TimestampLayout2        = "2006-01-02T15:04:05.000'Z'"
+	TimestampLayout3        = "2006-01-02T15:04:05.000Z"
 	DateLayout              = "2006-02-01"
 	DateTimeLayout          = "2006-02-01 15:04:05"
 	TimeLayout              = "10:25:05"
 	timeStringKind          = "time.Time"
-	tagName                 = "jsonp"
+	TagName                 = "jsonp"
 )
 
 type JSON struct {
@@ -33,23 +34,55 @@ type JSON struct {
 	DateFormat      string
 	DateTimeFormat  string
 	TimeFormat      string
-	TimestampFormat string
+	//TimestampFormat string
 
 	DebugParse  bool
 	DebugFormat bool
 	DateLayouts []string
 
+	DefaultDateTimeFormat string
+
 	CamelCase bool
+	TagNames []string
 }
 
+// NewJSONWithCamelCase new parser with camelcase and tagname = [jsonp]. default is snakecase
+func NewJSONWithCamelCase() *JSON {
+	j := NewJSON()
+	j.CamelCase = true
+	return j
+}
+
+// NewJSONWithDefaultTagNameJson new parser with snackcase and tagname = [json, jsonp]
+func NewJSONWithDefaultTagNameJson() *JSON {
+	return NewJSON().ConfigureTagName("json")
+}
+
+// NewJSON new parser with snackcase and tagname = [jsonp]
 func NewJSON() *JSON {
 	return &JSON{
 		DateFormat:      DateLayout,
 		DateTimeFormat:  DateTimeLayout,
 		TimeFormat:      TimeLayout,
-		TimestampFormat: TimestampLayout,
-		DateLayouts:     []string{TimestampLayout, TimestampLayout2, DateTimeLayout, DateTimeLayout, TimeLayout},
+		//TimestampFormat: TimestampLayout,
+		DefaultDateTimeFormat: TimestampLayout,
+		DateLayouts:     []string{TimestampLayout, TimestampLayout2, TimestampLayout3, DateTimeLayout, DateTimeLayout, TimeLayout},
+		TagNames:        []string{TagName},
 	}
+}
+
+func (this *JSON) ConfigureDefaultDateTimeFormat(def string) *JSON {
+	this.DefaultDateTimeFormat = def
+	return this
+}
+
+func (this *JSON) ConfigureTagName(name string) *JSON {
+	tags := []string{name}
+	for _, tag := range this.TagNames {
+		tags = append(tags, tag)
+	}
+	this.TagNames = tags
+	return this
 }
 
 func (this *JSON) EncodeAsString(obj interface{}) (string, error) {
@@ -171,7 +204,9 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
 	fullValue := refValue
 	fullType := fullValue.Type()
 
-	logs.Debug("1 fullType ", fullType, " fullValue ", fullValue)
+	if this.Debug {
+		logs.Debug("1 fullType ", fullType, " fullValue ", fullValue)
+	}
 
 	if reflect.TypeOf(obj).Kind() == reflect.Ptr {
 		//logs.Debug("IS PTR")
@@ -194,26 +229,27 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
 
 	//logs.Debug("3 fullType ", fullType, " fullValue ", fullValue )
 
-	tagName := "jsonp"
+
 	jsonResult := make(map[string]interface{})
 
 	for i := 0; i < fullType.NumField(); i++ {
 		field := fullType.Field(i)
-		exists, tags := this.getTagsByTagName(field, tagName)
+		exists, tags := this.getTagsByTagByNames(field, this.TagNames)
 
 		attr := ""
 
-		if !exists {
-			continue
-		}
+		if !exists {continue}
 
 		if len(tags) > 0 {
 			attr = tags[0]
 		}
 
+		if attr == "-" { continue }
+
 		if len(strings.TrimSpace(attr)) == 0 {
 				attr = Underscore(field.Name)
 		}
+
 
 		if this.CamelCase {
 			attr = field.Name
@@ -510,17 +546,15 @@ func (this *JSON) DecodeFromMap(jsonData map[string]interface{}, obj interface{}
 
 	for i := 0; i < fullType.NumField(); i++ {
 		field := fullType.Field(i)
-		exists, tags := this.getTagsByTagName(field, tagName)
+		exists, tags := this.getTagsByTagByNames(field, this.TagNames)
 		attr := ""
 
 		//logs.Debug("get value ", field.Name)
-		if !exists {
-			continue
-		}
+		if !exists {continue}
 
-		if len(tags) > 0 {
-			attr = tags[0]
-		}
+		if len(tags) > 0 {attr = tags[0]}
+
+		if attr == "-" { continue }
 
 		if len(strings.TrimSpace(attr)) == 0 {
 			attr = Underscore(field.Name)
@@ -746,11 +780,16 @@ func (this *JSON) parseTime(ptr bool, s string, tags []string) (interface{}, err
 			value, err = util.DateParse(format, s)
 			expectedFormat = format
 		} else {
-			for _, layout := range this.DateLayouts {
-				if len(layout) == len(s) {
-					value, err = util.DateParse(this.TimestampFormat, s)
 
-					if err != nil {
+			value, err = util.DateParse(this.DefaultDateTimeFormat, s)
+
+			if err != nil {
+
+				for _, layout := range this.DateLayouts {
+					//logs.Debug("try parse %s with %v", s, layout)
+					value, err = util.DateParse(layout, s)
+
+					if err == nil {
 						break
 					}
 				}
@@ -803,8 +842,11 @@ func (this *JSON) formatTime(fieldValue interface{}, ptr bool, tags []string) (s
 			expectedFormat = format
 		} else {
 			// "timestamp" is default
-			value = date.Format(this.TimestampFormat)
-			expectedFormat = this.TimestampFormat
+
+
+
+			value = date.Format(this.DefaultDateTimeFormat)
+			expectedFormat = this.DefaultDateTimeFormat
 		}
 	}
 
@@ -926,18 +968,25 @@ func (this *JSON) hasFormatTag(tags []string) (string, bool) {
 	return "", false
 }
 
-func (this *JSON) getTagsByTagName(field reflect.StructField, tagName string) (bool, []string) {
 
-	tag, exists := field.Tag.Lookup(tagName)
+func (this *JSON) getTagsByTagByNames(field reflect.StructField, tagNames []string) (bool, []string) {
+
 	var tags []string
+	var exists = false
 
-	if len(strings.TrimSpace(tag)) > 0 {
-		if strings.Contains(tag,";") {
-			tags = strings.Split(tag, ";")
-		}else{
-			tags = strings.Split(tag, ",")
+	for _, tagName := range tagNames {
+		tag, found := field.Tag.Lookup(tagName)
+
+		if found { exists = true }
+
+		if len(strings.TrimSpace(tag)) > 0 {
+			if strings.Contains(tag, ";") {
+				tags = strings.Split(tag, ";")
+			} else {
+				tags = strings.Split(tag, ",")
+			}
+			//return true, tags
 		}
-		return true, tags
 	}
 
 	return exists, tags

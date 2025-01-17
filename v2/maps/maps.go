@@ -21,6 +21,20 @@ func JSON(args ...interface{}) JsonData{
 	return Of[string, interface{}](args...)
 }
 
+func ToSlice[K comparable, V any](m map[K]V, f func (K, V) string) []string{
+	var l []string
+	for k, v := range m {
+		l = append(l, f(k, v))
+	}
+	return l
+}
+
+func ToSliceKV[K comparable, V any](m map[K]V) []string{
+	return ToSlice(m, func(k K, v V) string {
+		return fmt.Sprintf("%v: %v", k, v)
+	})
+}
+
 func Of[K comparable, V any](args ...interface{}) map[K]V {
 
 	if len(args)%2 != 0 {

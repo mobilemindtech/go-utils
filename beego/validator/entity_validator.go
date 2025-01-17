@@ -4,19 +4,30 @@ import (
 	"fmt"
 	"reflect"
 
-	"errors"
-
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/core/validation"
 	"github.com/beego/i18n"
 	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtec/go-utils/v2/maps"
 	"github.com/mobilemindtec/go-io/result"
 	iov "github.com/mobilemindtec/go-io/validation"
 	"strings"
 )
 
+type ValidationError struct {
+	Message string
+	List []string
+	Map map[string]string
+}
 
+func NewValidationError() *ValidationError {
+	return new(ValidationError)
+}
+
+func (this *ValidationError) Error() string {
+	return this.Message
+}
 
 type EntityValidatorResult struct {
 	Errors       map[string]string
@@ -120,7 +131,11 @@ func (this *EntityValidator) Validate(entities ...interface{}) interface{} {
 
 	if result.HasError {
 		results := this.GetValidationErrors(result)
-		return optional.NewFailWithItem(errors.New("validation error"), results)
+		err := NewValidationError()
+		err.Message = "validation error"
+		err.Map = results
+		err.List = maps.ToSliceKV(results)
+		return optional.NewFail(err)
 	}
 
 	return optional.SomeOk()
@@ -171,7 +186,7 @@ func (this *EntityValidator) ValidMult(entities []interface{}, action func(valid
 			ev, err := this.IsValid(it, action)
 
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("ValidMult(0) error validating %v: %v", it, err)
 			}
 			result.Merge(ev)
 
@@ -181,7 +196,7 @@ func (this *EntityValidator) ValidMult(entities []interface{}, action func(valid
 					ac(it, v)
 				})
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("ValidMult(1) error validating %v: %v", it, err)
 				}
 				result.Merge(ev)
 			}
@@ -192,7 +207,7 @@ func (this *EntityValidator) ValidMult(entities []interface{}, action func(valid
 						ac.Fn(it, v)
 					})
 					if err != nil {
-						return nil, err
+						return nil, fmt.Errorf("ValidMult(2) error validating %v: %v", it, err)
 					}
 					result.Merge(ev)
 				}
@@ -233,7 +248,7 @@ func (this *EntityValidator) Valid(entity interface{}, action CustomAction) (*En
 		ok, err := localValid.Valid(entity)
 
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Valid(0) error validating: %v", err)
 		}
 
 		if !ok {
