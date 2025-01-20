@@ -1187,7 +1187,7 @@ func (this *WebController) Validate(entity interface{}, f ...func(validator *val
 
 // Deprecated: use Validate
 func (this *WebController) OnValidate(entity interface{}, f func(validator *validation.Validation)) bool {
-	return this.Validate(entity)
+	return this.Validate(entity, f)
 }
 
 func (this *WebController) OnParseForm(entity interface{}) {
