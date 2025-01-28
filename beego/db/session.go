@@ -194,6 +194,7 @@ func (this *Session) SetError() *Session {
 	return this
 }
 
+// should be a *models.Tenant
 func (this *Session) RunWithTenant(tenant interface{}, runner func()) {
 
 	tmp := this.Tenant
@@ -1414,14 +1415,6 @@ func (this *Session) HasTenant() bool {
 }
 
 func (this *Session) isTenantNil() bool {
-
-	/*isNil := true
-
-	if this.Tenant != nil {
-		value := reflect.ValueOf(this.Tenant)
-		isNil = value.IsNil()
-	}*/
-
 	return this.IsNil(this.Tenant)
 }
 

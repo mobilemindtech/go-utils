@@ -1,9 +1,11 @@
 package foreach
 
 import (
-	"fmt"
+
 	"github.com/mobilemindtec/go-utils/v2/optional"
 	"github.com/mobilemindtec/go-utils/v2/fn"
+	"github.com/beego/beego/v2/core/logs"
+	"runtime/debug"
 	"reflect"
 )
 
@@ -132,7 +134,7 @@ func (this *Foreach[T]) Do() *Foreach[T] {
 	defer func() {
 
 		if r := recover(); r != nil {
-			fmt.Println("Foreach recover: ", r)
+			logs.Error("Foreach recover. StackTrae: %v", r, string(debug.Stack()))
 			this.processError(r)
 		}
 
@@ -182,9 +184,16 @@ func (this *Foreach[T]) Do() *Foreach[T] {
 		if useFor {
 			r := this._for(counter)
 
+			if r.IsFail() {
+				this.processError(r.GetFail())
+				return this
+			}
+
 			if !r.Any() {
 				break
 			}
+
+
 			this.data = r.Get()
 		}
 
