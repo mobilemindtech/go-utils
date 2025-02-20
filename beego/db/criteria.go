@@ -9,6 +9,7 @@ import (
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/beego/beego/v2/client/orm/clauses/order_clause"
 )
 
 type CriteriaExpression int
@@ -62,6 +63,7 @@ const (
 type CriteriaOrder struct {
 	Path string
 	Desc bool
+	IsRaw bool
 }
 
 type CriteriaSet struct {
@@ -435,6 +437,20 @@ func (this *Criteria) OrderAsc(paths ...string) *Criteria {
 func (this *Criteria) OrderDesc(paths ...string) *Criteria {
 	for _, path := range paths {
 		this.orderBy = append(this.orderBy, &CriteriaOrder{Path: path, Desc: true})
+	}
+	return this
+}
+
+func (this *Criteria) OrderAscRaw(paths ...string) *Criteria {
+	for _, path := range paths {
+		this.orderBy = append(this.orderBy, &CriteriaOrder{Path: path, IsRaw: true})
+	}
+	return this
+}
+
+func (this *Criteria) OrderDescRaw(paths ...string) *Criteria {
+	for _, path := range paths {
+		this.orderBy = append(this.orderBy, &CriteriaOrder{Path: path, IsRaw: true, Desc: true})
 	}
 	return this
 }
@@ -1017,10 +1033,27 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria {
 
 		orders := []string{}
 		for _, order := range this.orderBy {
-			if order.Desc {
-				orders = append(orders, fmt.Sprintf("-%v", order.Path))
+			if order.IsRaw {
+
+				fnSort := order_clause.SortAscending()
+
+				if order.Desc {
+					fnSort = order_clause.SortDescending()
+				}
+
+				query = query.OrderClauses(
+					order_clause.Clause(
+						order_clause.Column(order.Path),
+						order_clause.Raw(),
+						fnSort,
+					))
+
 			} else {
-				orders = append(orders, fmt.Sprintf(order.Path))
+				if order.Desc {
+					orders = append(orders, fmt.Sprintf("-%v", order.Path))
+				} else {
+					orders = append(orders, order.Path)
+				}
 			}
 		}
 
@@ -1028,9 +1061,11 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria {
 			query = query.OrderBy(orders...)
 		}
 
+		
+
 		if len(this.RelatedSelList) > 0 {
 			if len(this.RelatedSelList) == 1 && this.RelatedSelList[0] == "all" {
-				query = query.RelatedSel()
+				query = query.RelatedSel()				
 			} else {
 				for _, it := range this.RelatedSelList {
 					query = query.RelatedSel(it)
@@ -1058,11 +1093,28 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria {
 
 		orders := []string{}
 		for _, order := range this.orderBy {
-			if order.Desc {
-				orders = append(orders, fmt.Sprintf("-%v", order.Path))
+			if order.IsRaw {
+
+				fnSort := order_clause.SortAscending()
+
+				if order.Desc {
+					fnSort = order_clause.SortDescending()
+				}
+
+				query = query.OrderClauses(
+					order_clause.Clause(
+						order_clause.Column(order.Path),
+						order_clause.Raw(),
+						fnSort,
+					))
+
 			} else {
-				orders = append(orders, fmt.Sprintf(order.Path))
-			}
+				if order.Desc {
+					orders = append(orders, fmt.Sprintf("-%v", order.Path))
+				} else {
+					orders = append(orders, order.Path)
+				}
+			}			
 		}
 
 		if len(orders) > 0 {
