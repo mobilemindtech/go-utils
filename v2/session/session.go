@@ -290,6 +290,7 @@ func (this *RxSession[T]) AddRemoveCascadeOf(items ...T) *RxSession[T] {
 	return this
 }
 
+
 func (this *RxSession[T]) Exec() *optional.Optional[bool] {
 	r := this.Run()
 	switch r.Val().(type) {
@@ -414,18 +415,36 @@ func (this *RxSession[T]) PersistResult(entity T) *result.Result[*option.Option[
 	return result.OfValue(option.Some(entity))
 }
 
-func (this *RxSession[T]) PersistWithBatch(entity T, entities ...interface{}) *result.Result[*option.Option[T]] {
+// Persiste all and return entity. Persists entity last
+func (this *RxSession[T]) PersistLastWithBatch(entity T, entities ...interface{}) *result.Result[T] {
 
 	for _, it := range entities {
 		if err := this.session.SaveOrUpdateCascade(it); err != nil {
-			return result.OfError[*option.Option[T]](err)
+			return result.OfError[T](err)
 		}
 	}
 
 	if err := this.session.SaveOrUpdateCascade(entity); err != nil {
-		return result.OfError[*option.Option[T]](err)
+		return result.OfError[T](err)
 	}
-	return result.OfValue(option.Some(entity))
+	return result.OfValue(entity)
+}
+
+// Persiste all and return entity. Persists entity first
+func (this *RxSession[T]) PersistFirstWithBatch(entity T, entities ...interface{}) *result.Result[T] {
+
+	if err := this.session.SaveOrUpdateCascade(entity); err != nil {
+		return result.OfError[T](err)
+	}
+
+	for _, it := range entities {
+		if err := this.session.SaveOrUpdateCascade(it); err != nil {
+			return result.OfError[T](err)
+		}
+	}
+
+
+	return result.OfValue(entity)
 }
 
 func (this *RxSession[T]) PersistBatch(entities ...interface{}) *result.Result[*unit.Unit] {

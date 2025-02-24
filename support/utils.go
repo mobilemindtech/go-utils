@@ -1,17 +1,17 @@
 package support
 
 import (
+	"fmt"
+	"github.com/beego/beego/v2/server/web/context"
+	"github.com/leekchan/accounting"
+	"github.com/mobilemindtec/go-io/util"
+	"github.com/mobilemindtec/go-utils/v2/maps"
 	"math"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-	"fmt"
-	"github.com/beego/beego/v2/server/web/context"
-	"github.com/leekchan/accounting"
-	"github.com/mobilemindtec/go-utils/v2/maps"
-	"github.com/mobilemindtec/go-io/util"
 )
 
 func FilterNumber(text string) string {
@@ -210,6 +210,14 @@ func AnyToInt(s interface{}) int {
 		return i
 	}
 
+	if i, ok := s.(float32); ok {
+		return int(i)
+	}
+
+	if i, ok := s.(float64); ok {
+		return int(i)
+	}
+
 	if str, ok := s.(string); ok {
 		return StrToInt(str)
 	}
@@ -235,6 +243,15 @@ func AnyToFloat(s interface{}) float32 {
 
 	if i, ok := s.(float32); ok {
 		return i
+	}
+	if i, ok := s.(float64); ok {
+		return float32(i)
+	}
+	if i, ok := s.(int); ok {
+		return float32(i)
+	}
+	if i, ok := s.(int64); ok {
+		return float32(i)
 	}
 	if str, ok := s.(string); ok {
 		return StrToFloat(str)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/mobilemindtec/go-io/result"
+	ioutil "github.com/mobilemindtec/go-io/util"
 	"github.com/mobilemindtec/go-utils/app/util"
 	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-utils/v2/optional"
@@ -647,4 +648,29 @@ func (this *Json) LogData() {
 func (this *Json) LogAll() {
 	this.LogRaw()
 	this.LogData()
+}
+
+
+func Marshal(v interface{}) ([]byte, error) {
+	return json.Marshal(v)
+}
+
+func MarshalResult(v interface{}) *result.Result[[]byte] {
+	return result.Try[[]byte](func() ([]byte, error) {
+		return json.Marshal(v)
+	})
+}
+
+func MarshalIndent(v interface{}, prefix, indent string) ([]byte, error) {
+	return json.MarshalIndent(v, prefix, indent)
+}
+
+func Unmarshal(data []byte, m interface{}) error {
+	return json.Unmarshal(data, m)
+}
+
+func UnmarshalResult[T any](data []byte) *result.Result[T] {
+	val := ioutil.NewOf[T]()
+	err := json.Unmarshal(data, val)
+	return result.OfErrorOrValue(err, val)
 }

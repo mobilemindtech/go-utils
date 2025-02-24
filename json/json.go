@@ -25,7 +25,7 @@ const (
 	DateTimeLayout          = "2006-02-01 15:04:05"
 	TimeLayout              = "10:25:05"
 	timeStringKind          = "time.Time"
-	TagName                 = "jsonp"
+	//TagName                 = "jsonp"
 )
 
 type JSON struct {
@@ -61,13 +61,12 @@ func NewJSONWithDefaultTagNameJson() *JSON {
 // NewJSON new parser with snackcase and tagname = [jsonp]
 func NewJSON() *JSON {
 	return &JSON{
-		DateFormat:      DateLayout,
-		DateTimeFormat:  DateTimeLayout,
-		TimeFormat:      TimeLayout,
-		//TimestampFormat: TimestampLayout,
+		DateFormat:     DateLayout,
+		DateTimeFormat: DateTimeLayout,
+		TimeFormat:     TimeLayout,
 		DefaultDateTimeFormat: TimestampLayout,
-		DateLayouts:     []string{TimestampLayout, TimestampLayout2, TimestampLayout3, DateTimeLayout, DateTimeLayout, TimeLayout},
-		TagNames:        []string{TagName},
+		DateLayouts:           []string{TimestampLayout, TimestampLayout2, TimestampLayout3, DateTimeLayout, DateTimeLayout, TimeLayout},
+		TagNames:              []string{"jsonp", "json"},
 	}
 }
 
@@ -552,7 +551,12 @@ func (this *JSON) DecodeFromMap(jsonData map[string]interface{}, obj interface{}
 		//logs.Debug("get value ", field.Name)
 		if !exists {continue}
 
-		if len(tags) > 0 {attr = tags[0]}
+		for _, tag := range tags {
+			if len(tag) > 0 {
+				attr = tags[0]
+				break
+			}
+		}
 
 		if attr == "-" { continue }
 

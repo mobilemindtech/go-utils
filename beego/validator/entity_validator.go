@@ -11,6 +11,7 @@ import (
 	"github.com/mobilemindtec/go-utils/v2/optional"
 	"github.com/mobilemindtec/go-utils/v2/maps"
 	"github.com/mobilemindtec/go-io/result"
+	"github.com/mobilemindtec/go-io/types/unit"
 	iov "github.com/mobilemindtec/go-io/validation"
 	"strings"
 )
@@ -65,10 +66,11 @@ func (this *EntityValidatorResult) Merge(result *EntityValidatorResult) {
 
 type Validation = validation.Validation
 type CustomAction func(validator *Validation)
-type CustomValidation func(entity interface{}, validator *Validation)
+type FuncValidation func(validator *Validation)
+type ValidationForType func(entity interface{}, validator *Validation)
 
 type ValidatorForType struct {
-	Fn  CustomValidation
+	Fn  ValidationForType
 	Typ reflect.Type
 }
 
@@ -79,7 +81,7 @@ func NewEntityValidatorResult() *EntityValidatorResult {
 type EntityValidator struct {
 	Lang              string
 	ViewPath          string
-	valActions        []CustomValidation
+	valActionsFuncs        []FuncValidation
 	valActionsForType []*ValidatorForType
 	values            []interface{}
 }
@@ -87,25 +89,41 @@ type EntityValidator struct {
 func NewEntityValidator(lang string, viewPath string) *EntityValidator {
 	return &EntityValidator{Lang: lang, ViewPath: viewPath}
 }
+
+// New Create new validator with default lang pt-BR
 func New() *EntityValidator {
-	return &EntityValidator{values: []interface{}{}, valActions: []CustomValidation{}}
+	return &EntityValidator{
+		Lang: "pt-BR",
+		values: []interface{}{}}
+		//valActions: []CustomValidation{}}
 }
 
-func (this *EntityValidator) AddValidation(acs ...CustomValidation) *EntityValidator {
+// WithPath Configure path to find message, eg.:
+// path = tenant and error on field Name
+// so search by message tenant.Name
+func (this *EntityValidator) WithPath(path string) *EntityValidator {
+	this.ViewPath = path
+	return this
+}
+
+
+func (this *EntityValidator) AddFuncValidation(acs ...FuncValidation) *EntityValidator {
 	for _, ac := range acs {
-		this.valActions = append(this.valActions, ac)
+		this.valActionsFuncs = append(this.valActionsFuncs, ac)
 	}
 	return this
 }
 
-func (this *EntityValidator) AddValidationForType(t reflect.Type, ac CustomValidation) *EntityValidator {
+func (this *EntityValidator) AddValidationForType(t reflect.Type, ac ValidationForType) *EntityValidator {
 	this.valActionsForType = append(this.valActionsForType, &ValidatorForType{ac, t})
 	return this
 }
 
 func (this *EntityValidator) AddEntities(vs ...interface{}) *EntityValidator {
 	for _, it := range vs {
-		this.values = append(this.values, it)
+		if it != nil {
+			this.values = append(this.values, it)
+		}
 	}
 	return this
 }
@@ -154,7 +172,10 @@ func (this *EntityValidator) ValidateResultWith(entity interface{}, f func(valid
 		return iov.NewSuccess(), nil
 	})
 }
-func (this *EntityValidator) ValidatetResult(entities ...interface{}) *result.Result[iov.Validation] {
+
+// ValidateResult Return a Result error if the error occurred, or return sucess. Success is a validation
+// result, and has a IsFailure func to validation error sinalize
+func (this *EntityValidator) ValidateResult(entities ...interface{}) *result.Result[iov.Validation] {
 	return result.Try(func() (iov.Validation, error) {
 		val, err := this.ValidMult(entities, nil)
 		if err != nil {
@@ -167,59 +188,86 @@ func (this *EntityValidator) ValidatetResult(entities ...interface{}) *result.Re
 	})
 }
 
+// ValidateOrError retorn a Result error if validation not pass or a error occurried. 
+func (this *EntityValidator) ValidateOrError(entities ...interface{}) *result.Result[*unit.Unit] {
+	return result.Try(func() (*unit.Unit, error) {
+		val, err := this.ValidMult(entities, nil)
+		if err != nil {
+			return nil, err
+		}
+		if val.HasError {
+			return nil, &ValidationError{
+				Message: val.Error(),
+				Map: val.Errors,
+				List: maps.ToSliceKV(val.Errors),
+			}
+		}
+		return unit.OfUnit(), nil
+	})
+}
+
+
 func (this *EntityValidator) ValidMult(entities []interface{}, action func(validator *Validation)) (*EntityValidatorResult, error) {
 
 	this.AddEntities(entities...)
 
 	result := NewEntityValidatorResult()
 
-	customApplyDone := false
+	//customApplyDone := false
 
-	for _, it := range this.values {
+	for i, it := range this.values {
 
 		if it == nil {
+			logs.Warning("skip validation for nil value")
 			continue
 		}
 
-		if !customApplyDone {
+		//if !customApplyDone {
 
-			ev, err := this.IsValid(it, action)
+		var ev *EntityValidatorResult
+		var err error
 
-			if err != nil {
-				return nil, fmt.Errorf("ValidMult(0) error validating %v: %v", it, err)
-			}
-			result.Merge(ev)
+		if i == 0 { // execute action only one time
+			ev, err = this.IsValid(it, action)
+		} else {
+			ev, err = this.IsValid(it, nil)
+		}
 
-			for _, ac := range this.valActions {
+		if err != nil {
+			return nil, fmt.Errorf("ValidMult(0) error validating %v: %v", it, err)
+		}
+		result.Merge(ev)
 
+		for _, ac := range this.valActionsForType {
+			if ac.Typ == reflect.TypeOf(it) {
 				ev, err := this.IsValid(it, func(v *Validation) {
-					ac(it, v)
+					ac.Fn(it, v)
 				})
 				if err != nil {
 					return nil, fmt.Errorf("ValidMult(1) error validating %v: %v", it, err)
 				}
 				result.Merge(ev)
 			}
-
-			for _, ac := range this.valActionsForType {
-				if ac.Typ == reflect.TypeOf(it) {
-					ev, err := this.IsValid(it, func(v *Validation) {
-						ac.Fn(it, v)
-					})
-					if err != nil {
-						return nil, fmt.Errorf("ValidMult(2) error validating %v: %v", it, err)
-					}
-					result.Merge(ev)
-				}
-			}
-			customApplyDone = true
 		}
+		//customApplyDone = true
+		//}
 
 	}
 
-	return result, nil
+	for _, ac := range this.valActionsFuncs {
 
+		ev, err := this.IsValid(nil, func(v *Validation) {
+			ac(v)
+		})
+		if err != nil {
+			return nil, fmt.Errorf("ValidMult(2) error validating: %v", err)
+		}
+		result.Merge(ev)
+	}
+
+	return result, nil
 }
+
 func (this *EntityValidator) IsValid(entity interface{}, action CustomAction) (*EntityValidatorResult, error) {
 	return this.Valid(entity, action)
 }
@@ -269,9 +317,7 @@ func (this *EntityValidator) Valid(entity interface{}, action CustomAction) (*En
 
 				result.ErrorsFields[err.Field] = err.Message
 
-				//logs.Debug("## ViewPath %v", this.ViewPath)
-				//logs.Debug("## lebel %v", label)
-				logs.Debug(fmt.Sprintf("* validator error field %v.%v error %v", typeName, err.Field, err))
+				//logs.Error("Validatiuon error for %v.%v: %v", typeName, err.Field, err)
 			}
 
 			result.HasError = true

@@ -1,17 +1,17 @@
 module github.com/mobilemindtec/go-utils
 
-go 1.22.3
+go 1.24.0
 
 require (
-	github.com/beego/beego/v2 v2.2.2-0.20240526062536-05f624fe098b
+	github.com/beego/beego/v2 v2.3.4
 	github.com/beego/i18n v0.0.0-20161101132742-e9308947f407
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-redis/redis/v7 v7.4.1
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/leekchan/accounting v1.0.0
-	github.com/mobilemindtec/go-io v0.0.0-20240530013303-7c555a67548b
+	github.com/mobilemindtec/go-io v0.0.0-20241018190539-11fe1345c51e
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirsean/go-pool v0.0.0-20170808185629-2b94e61c3882
-	golang.org/x/text v0.15.0
+	golang.org/x/text v0.22.0
 )
 
 require (
@@ -30,9 +30,9 @@ require (
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
 	github.com/smartystreets/goconvey v1.8.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	golang.org/x/crypto v0.23.0 // indirect
+	golang.org/x/crypto v0.24.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
-	google.golang.org/protobuf v1.34.1 // indirect
+	golang.org/x/sys v0.21.0 // indirect
+	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -36,6 +36,11 @@ func (this *Role) List() (*[]*Role, error) {
 	return &results, err
 }
 
+func (this *Role) FindByAuthorityOrNil(authority string) *Role {
+	role, _ := this.FindByAuthority(authority)
+	return  role
+}
+
 func (this *Role) FindByAuthority(authority string) (role *Role, err error) {
 	result := new(Role)
 

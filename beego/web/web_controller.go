@@ -14,8 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"reflect"
-
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/core/validation"
 	beego "github.com/beego/beego/v2/server/web"
@@ -178,6 +176,8 @@ func (this *WebController) Prepare() {
 	this.Session = this.WebControllerCreateSession()
 	this.WebControllerLoadModels()
 
+	this.Auth = services.NewAuthService(this.Session)
+
 	this.AuthPrepare()
 
 	this.Session.Tenant = this.GetAuthTenant()
@@ -251,7 +251,9 @@ func (this *WebController) CreateSession() *db.Session {
 
 func (this *WebController) AuthPrepare() {
 	// login
+
 	this.AppAuth()
+
 	this.SetParams()
 
 	this.IsWebLoggedIn = this.GetSession("userinfo") != nil
@@ -335,7 +337,7 @@ func (this *WebController) AuthPrepare() {
 		this.Data["Tenant"] = this.GetAuthTenant()
 
 		//ioc.Get[services.AuthService](this.Container)
-		this.Auth = services.NewAuthService(this.GetAuthUser())
+		this.Auth.SetUserInfo(this.GetAuthUser())
 	}
 
 	this.Data["IsLoggedIn"] = this.IsLoggedIn()
@@ -537,7 +539,7 @@ func (this *WebController) OnResultsWithTotalCount(viewName string, results inte
 
 func (this *WebController) RenderJsonResult(opt interface{}) {
 
-	logs.Debug("RenderJsonResult = %v type of %v", opt, reflect.TypeOf(opt).Kind())
+	//logs.Debug("RenderJsonResult = %v type of %v", opt, reflect.TypeOf(opt).Kind())
 
 	switch opt.(type) {
 	case *optional.Some:
@@ -589,6 +591,7 @@ func (this *WebController) RenderJsonResult(opt interface{}) {
 	case error:
 		this.OnJsonError(fmt.Sprintf("%v", opt.(error).Error()))
 		break
+
 	default:
 
 		if val, ok := optional.TryExtractValIfOptional(opt); ok {
@@ -613,6 +616,10 @@ func (this *WebController) RenderJsonResult(opt interface{}) {
 		break
 	}
 
+}
+
+func (this *WebController) NewRawJson(value interface{}) *response.RawJson {
+	return &response.RawJson{value}
 }
 
 func (this *WebController) RenderJson(opt interface{}) {
@@ -649,6 +656,9 @@ func (this *WebController) RenderJson(opt interface{}) {
 		statusCodeResult = 404
 		dataResult = maps.JSON("error", true, "message", "not found")
 		break
+	case *response.RawJson:
+		dataResult = opt.(*response.RawJson).Valuue
+		break
 	case *optional.Fail:
 
 		f := opt.(*optional.Fail)
@@ -670,11 +680,15 @@ func (this *WebController) RenderJson(opt interface{}) {
 			}
 			break
 		}
-		
-
-
 		dataResult = data
 		statusCodeResult = statusCode
+		break
+	case *validator.ValidationError:
+		data := maps.JSON("error", true, "message", fmt.Sprintf("%v", opt))
+		data["validation"] = opt.(*validator.ValidationError).Map
+		data["validations"] = opt.(*validator.ValidationError).List
+		dataResult = data
+		statusCodeResult = 400
 		break
 	case error:
 		statusCodeResult = 500
@@ -693,17 +707,8 @@ func (this *WebController) RenderJson(opt interface{}) {
 		}
 
 		dataResult = maps.JSON("data", opt)
-
-		/*
-			dataResult = map[string]interface{}{
-				"error":   true,
-				"message": fmt.Sprintf("unknow optional value: %v", opt),
-			}*/
-
-		//statusCodeResult = 500
 		break
 	}
-
 
 	var je *json.JSON
 	if this.NewJSON != nil {
@@ -1311,6 +1316,10 @@ func (this *WebController) GetHeaderToken() string {
 	return token
 }
 
+func (this *WebController) IsBearerToken() bool {
+	return this.Auth.IsBearerToken(this.GetHeaderToken())
+}
+
 func (this *WebController) GetHeaderTenant() string {
 	return this.GetHeaderByNames("tenant", "X-Auth-Tenant")
 }
@@ -1356,7 +1365,6 @@ func (this *WebController) GetPage() *db.Page {
 
 		if this.Ctx.Input.IsPost() {
 			jsonMap, _ := this.JsonToMap(this.Ctx)
-			
 
 			if _, ok := jsonMap["limit"]; ok {
 				page.Limit = optional.
@@ -1594,37 +1602,66 @@ func (this *WebController) AppAuth() {
 
 		auth := services.NewLoginService(this.Lang, this.Session)
 
-		logs.Debug("authenticating with token: %v", token)
+		//logs.Debug("authenticating with token: %v", token)
 
-		loader := func() (*models.User, error) {
-			return auth.AuthenticateToken(token)
-		}
+		if this.Auth.IsBearerToken(token) {
 
-		user, err := cache.Memoize(this.CacheService, token, new(models.User), loader)
+			user, err := this.Auth.CheckBearerToken(token)
 
-		if err != nil {
-
-			if _, ok := err.(*services.LoginErrorUserNotFound); ok {
-				user, err = this.tryAppAutheticate(token)
-				if err != nil {
-					logs.Error("CUSTOM APP LOGIN ERROR: %v", err)
-					this.LogOut()
-					return
-				}
-			} else {
-				logs.Error("LOGIN ERROR: %v", err)
+			if err != nil {
+				logs.Error("bearer token login error: %v", err)
 				this.LogOut()
 				return
 			}
-		}
 
-		if user == nil || !user.IsPersisted() {
-			logs.Error("LOGIN ERROR: user not found!")
-			this.LogOut()
+			if user == nil {
+				logs.Error("bearer token login error: user not found")
+				this.LogOut()
+				return
+			}
+
+			if !user.Enabled {
+				logs.Error("bearer token login error: user disabled")
+				this.LogOut()
+				return
+			}
+
+			this.SetTokenLogin(user)
+			return
+
+		} else {
+
+			loader := func() (*models.User, error) {
+				return auth.AuthenticateToken(token)
+			}
+
+			user, err := cache.Memoize(this.CacheService, token, new(models.User), loader)
+
+			if err != nil {
+
+				if _, ok := err.(*services.LoginErrorUserNotFound); ok {
+					user, err = this.tryAppAutheticate(token)
+					if err != nil {
+						logs.Error("CUSTOM APP LOGIN ERROR: %v", err)
+						this.LogOut()
+						return
+					}
+				} else {
+					logs.Error("LOGIN ERROR: %v", err)
+					this.LogOut()
+					return
+				}
+			}
+
+			if user == nil || !user.IsPersisted() {
+				logs.Error("LOGIN ERROR: user not found!")
+				this.LogOut()
+				return
+			}
+
+			this.SetTokenLogin(user)
 			return
 		}
-
-		this.SetTokenLogin(user)
 	}
 }
 
@@ -1779,7 +1816,7 @@ func (this *WebController) UpSecurityAuth() bool {
 
 	roles := []string{}
 
-	if this.Auth != nil {
+	if this.Auth.IsAuthenticated() {
 		roles = this.Auth.GetUserRoles()
 	}
 
@@ -1788,23 +1825,36 @@ func (this *WebController) UpSecurityAuth() bool {
 		logs.Warn("WARN: path %v not authorized ", this.Ctx.Input.URL())
 
 		if !this.IsLoggedIn() {
-			if this.IsJson() {
-				msgKey := "security.notLoggedIn"
-				if this.ExitWithHttpCode {
-					msgKey = "security.unauthorized"
-				}
-				this.renderJsonUnauthorizedError(
-					this.GetMessage(msgKey), false)
+
+			if this.IsBearerToken() {
+				this.RenderJsonWithStatusCode(401,
+					maps.JSON(
+						"message", "unauthorized"))
 			} else {
-				this.OnLoginRedirect()
+				if this.IsJson() {
+					msgKey := "security.notLoggedIn"
+					if this.ExitWithHttpCode {
+						msgKey = "security.unauthorized"
+					}
+					this.renderJsonUnauthorizedError(
+						this.GetMessage(msgKey), false)
+				} else {
+					this.OnLoginRedirect()
+				}
 			}
 			return false
 		}
 
-		if this.IsJson() {
-			this.renderJsonUnauthorizedError(this.GetMessage("security.denied"), false)
+		if this.IsBearerToken() {
+			this.RenderJsonWithStatusCode(403,
+				maps.JSON(
+					"message", "forbidden"))
 		} else {
-			this.OnRedirectError("/", this.GetMessage("security.denied"))
+			if this.IsJson() {
+				this.renderJsonUnauthorizedError(this.GetMessage("security.denied"), false)
+			} else {
+				this.OnRedirectError("/", this.GetMessage("security.denied"))
+			}
 		}
 
 		return false

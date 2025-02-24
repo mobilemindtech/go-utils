@@ -41,16 +41,16 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 
 	} else if user == nil || user.Id < 1 {
 
-		logs.Debug("### user not found %v", user)
+		logs.Error("### user not found %v", user)
 		return user, LoginUserNotFound(this.GetMessage("login.invalid"))
 
 	} else if !user.Enabled {
 
-		logs.Debug("### user not enabled ")
+		logs.Error("### user not enabled ")
 		return user, LoginUserInactive(this.GetMessage("login.inactiveMsg"))
 
 	} else if !byToken && !user.IsSamePassword(password) {
-		logs.Debug("### password not match ")
+		logs.Error("### password not match ")
 		// No matched password
 		return user, LoginWrongPassword(this.GetMessage("login.invalid"))
 
@@ -59,12 +59,12 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 		tenant, err := this.ModelTenantUser.GetFirstTenant(user)
 
 		if err != nil {
-			logs.Debug("### error on get user tenant %v", err)
+			logs.Error("### error on get user tenant %v", err)
 			return user, errors.New(this.GetMessage("login.error", err.Error()))
 		}
 
 		if tenant == nil {
-			logs.Debug("### error does not have tenant")
+			logs.Error("### error does not have tenant")
 			return user, LoginTenantNotFound(this.GetMessage("login.tenantNotFound"))
 		}
 
