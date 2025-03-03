@@ -1,15 +1,16 @@
 package criteria
 
 import (
+	"errors"
 	_ "fmt"
 	"github.com/mobilemindtec/go-io/io"
 	"github.com/mobilemindtec/go-io/option"
 	"github.com/mobilemindtec/go-io/result"
 	"github.com/mobilemindtec/go-io/types"
+	"github.com/mobilemindtec/go-io/util"
+	"github.com/mobilemindtec/go-utils/v2/lists"
 	"reflect"
 	"strings"
-	"errors"
-	"github.com/mobilemindtec/go-utils/v2/lists"
 
 	"github.com/mobilemindtec/go-utils/beego/db"
 	"github.com/mobilemindtec/go-utils/v2/optional"
@@ -151,7 +152,7 @@ func (this *Reactive) Page() *Reactive {
 	return this
 }
 
-type Criteria[T any] struct {
+type Criteria[T interface{}] struct {
 	db.Criteria
 }
 
@@ -167,25 +168,23 @@ func Read[T any]() *Criteria[T] {
 	return New[T](s)
 }
 
-func New[T any](session *db.Session) *Criteria[T] {
-	var entity T
-	entities := []*T{}
+func New[T interface{}](session *db.Session) *Criteria[T] {
 	criteria := &Criteria[T]{}
 	criteria.SetDefaults()
 	criteria.Session = session
-	criteria.Result = &entity
-	criteria.Results = &entities
+	criteria.Result = util.NewOf[T]()
+	criteria.Results = &[]T{}
 	return criteria
 }
 
-func (this *Criteria[T]) WithResult(r *T) *Criteria[T] {
+func (this *Criteria[T]) WithResult(r T) *Criteria[T] {
 	this.Result = r
-	return  this
+	return this
 }
 
-func (this *Criteria[T]) WithResults(r []*T) *Criteria[T] {
+func (this *Criteria[T]) WithResults(r []T) *Criteria[T] {
 	this.Results = r
-	return  this
+	return this
 }
 
 func (this *Criteria[T]) Id(id int64) *Criteria[T] {
@@ -206,22 +205,16 @@ func (this *Criteria[T]) Rx() *Reactive {
 
 	return empty lias as optional.Empty
 */
-func (this *Criteria[T]) OptAll() *optional.Optional[[]*T] {
+func (this *Criteria[T]) OptAll() *optional.Optional[[]T] {
 	this.List()
 
 	if this.Criteria.HasError {
-		return optional.OfFail[[]*T](this.Error)
+		return optional.OfFail[[]T](this.Error)
 	}
 
-	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]*T)
+	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]T)
 
-	/*
-		if !this.Any {
-			//logs.Debug("no data")
-			return optional.OfOk[[]*T]()
-		}*/
-
-	return optional.OfSome[[]*T](all)
+	return optional.OfSome[[]T](all)
 }
 
 /*
@@ -229,34 +222,34 @@ func (this *Criteria[T]) OptAll() *optional.Optional[[]*T] {
 
 	return empty lias as optional.Some with a empty list
 */
-func (this *Criteria[T]) OptList() *optional.Optional[[]*T] {
+func (this *Criteria[T]) OptList() *optional.Optional[[]T] {
 	this.List()
 
 	if this.Criteria.HasError {
-		return optional.OfFail[[]*T](this.Error)
+		return optional.OfFail[[]T](this.Error)
 	}
 
-	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]*T)
+	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]T)
 
-	return optional.OfSome[[]*T](all)
+	return optional.OfSome[[]T](all)
 }
 
-func (this *Criteria[T]) OptOne() *optional.Optional[*T] {
+func (this *Criteria[T]) OptOne() *optional.Optional[T] {
 	return this.OptFirst()
 }
 
-func (this *Criteria[T]) OptFirst() *optional.Optional[*T] {
+func (this *Criteria[T]) OptFirst() *optional.Optional[T] {
 	this.One()
 
 	if this.Criteria.HasError {
-		return optional.OfFail[*T](this.Error)
+		return optional.OfFail[T](this.Error)
 	}
 
 	if !this.Any {
-		return optional.OfNone[*T]()
+		return optional.OfNone[T]()
 	}
 
-	return optional.OfSome[*T](this.Result.(*T))
+	return optional.OfSome[T](this.Result.(T))
 }
 
 func (this *Criteria[T]) OptCount() *optional.Optional[int] {
@@ -277,15 +270,15 @@ func (this *Criteria[T]) OptAny() *optional.Optional[bool] {
 	return optional.OfSome[bool](this.Any)
 }
 
-func (this *Criteria[T]) OptPage() *optional.Optional[*PageOf[*T]] {
+func (this *Criteria[T]) OptPage() *optional.Optional[*PageOf[T]] {
 	this.ListAndCount()
 
 	if this.Criteria.HasError {
-		return optional.OfFail[*PageOf[*T]](this.Error)
+		return optional.OfFail[*PageOf[T]](this.Error)
 	}
 
-	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]*T)
-	return optional.OfSome[*PageOf[*T]](&PageOf[*T]{
+	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]T)
+	return optional.OfSome[*PageOf[T]](&PageOf[T]{
 		TotalCount: this.Criteria.Count32,
 		Data:       all})
 }
@@ -299,14 +292,14 @@ func (this *Criteria[T]) OptDelete() *optional.Optional[int] {
 	return optional.OfSome[int](this.Count32)
 }
 
-func (this *Criteria[T]) GetFirstIO() *types.IO[*T] {
-	return io.IO[*T](
-		io.AttemptOfResultOption(func() *result.Result[*option.Option[*T]] {
+func (this *Criteria[T]) GetFirstIO() *types.IO[T] {
+	return io.IO[T](
+		io.AttemptOfResultOption(func() *result.Result[*option.Option[T]] {
 			return this.GetFirst()
 		}))
 }
 
-func (this *Criteria[T]) GetFirstOrNil() *T {
+func (this *Criteria[T]) GetFirstOrNil() T {
 
 	res := this.GetFirst()
 
@@ -315,66 +308,67 @@ func (this *Criteria[T]) GetFirstOrNil() *T {
 	}
 
 	if res.Get().IsEmpty() {
-		return nil
+		var n T
+		return n
 	}
-	
+
 	return this.GetFirst().Get().Get()
 }
 
-
-func (this *Criteria[T]) GetFirst() *result.Result[*option.Option[*T]] {
+func (this *Criteria[T]) GetFirst() *result.Result[*option.Option[T]] {
 	this.One()
 
 	if this.Criteria.HasError {
-		return result.OfError[*option.Option[*T]](this.Error)
+		return result.OfError[*option.Option[T]](this.Error)
 	}
 	if !this.Any {
-		return result.OfValue(option.None[*T]())
+		return result.OfValue(option.None[T]())
 	}
-	return result.OfValue(option.Some(this.Result.(*T)))
+	return result.OfValue(option.Some(this.Result.(T)))
 }
 
-func (this *Criteria[T]) GetFirstById(id int64) *result.Result[*option.Option[*T]] {
+func (this *Criteria[T]) GetFirstById(id int64) *result.Result[*option.Option[T]] {
 	this.Eq("Id", id)
 	return this.GetFirst()
 }
 
-func (this *Criteria[T]) FirstOrError() (*T, error) {
+func (this *Criteria[T]) FirstOrError() (T, error) {
+	var n T
 	e, err := this.First()
 	if err != nil {
-		return nil, err
-	}
-	if e == nil {
-		return nil, errors.New("entity not found")
-	}
-	return  e, nil
-}
-
-func (this *Criteria[T]) First() (*T, error) {
-	this.One()
-
-	if this.Criteria.HasError {
-		return nil, this.Criteria.Error
+		return n, err
 	}
 	if !this.Any {
-		return nil, nil
+		return n, errors.New("entity not found")
 	}
-	return this.Result.(*T), nil
+	return e, nil
 }
 
-func (this *Criteria[T]) GetAllIO() *types.IO[[]*T] {
-	return io.IO[[]*T](
-		io.Attempt(func() *result.Result[[]*T] {
+func (this *Criteria[T]) First() (T, error) {
+	this.One()
+	var n T
+	if this.Criteria.HasError {
+		return n, this.Criteria.Error
+	}
+	if !this.Any {
+		return n, nil
+	}
+	return this.Result.(T), nil
+}
+
+func (this *Criteria[T]) GetAllIO() *types.IO[[]T] {
+	return io.IO[[]T](
+		io.Attempt(func() *result.Result[[]T] {
 			return this.GetAll()
 		}))
 }
 
-func (this *Criteria[T]) GetAll() *result.Result[[]*T] {
+func (this *Criteria[T]) GetAll() *result.Result[[]T] {
 	this.List()
 	if this.Criteria.HasError {
-		return result.OfError[[]*T](this.Error)
+		return result.OfError[[]T](this.Error)
 	}
-	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]*T)
+	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]T)
 	return result.OfValue(all)
 }
 
@@ -409,21 +403,21 @@ func (this *Criteria[T]) GetAny() *result.Result[bool] {
 	return result.OfValue(this.Any)
 }
 
-func (this *Criteria[T]) GetPageIO() *types.IO[*PageOf[*T]] {
-	return io.IO[*PageOf[*T]](
-		io.Attempt(func() *result.Result[*PageOf[*T]] {
+func (this *Criteria[T]) GetPageIO() *types.IO[*PageOf[T]] {
+	return io.IO[*PageOf[T]](
+		io.Attempt(func() *result.Result[*PageOf[T]] {
 			return this.GetPage()
 		}))
 }
-func (this *Criteria[T]) GetPage() *result.Result[*PageOf[*T]] {
+func (this *Criteria[T]) GetPage() *result.Result[*PageOf[T]] {
 	this.ListAndCount()
 
 	if this.Criteria.HasError {
-		return result.OfError[*PageOf[*T]](this.Error)
+		return result.OfError[*PageOf[T]](this.Error)
 	}
 
-	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]*T)
-	page := &PageOf[*T]{this.Criteria.Count32, all}
+	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]T)
+	page := &PageOf[T]{this.Criteria.Count32, all}
 	return result.OfValue(page)
 
 }
@@ -433,18 +427,17 @@ func (this *Criteria[T]) Eager(related ...string) *Criteria[T] {
 	return this
 }
 
-func (this *Criteria[T]) Builder(f func (c *Criteria[T])) *Criteria[T] {
+func (this *Criteria[T]) Builder(f func(c *Criteria[T])) *Criteria[T] {
 	f(this)
 	return this
 }
 
-func (this *Criteria[T]) BuilderIf(cond bool, f func (c *Criteria[T])) *Criteria[T] {
+func (this *Criteria[T]) BuilderIf(cond bool, f func(c *Criteria[T])) *Criteria[T] {
 	if cond {
 		f(this)
 	}
 	return this
 }
-
 
 func (this *Criteria[T]) SearchVal(val string) *Criteria[T] {
 	this.Criteria.SearchVal(val)
@@ -461,16 +454,16 @@ func (this *Criteria[T]) SetRelatedSel(related ...string) *Criteria[T] {
 	return this
 }
 
-func (this *Criteria[T]) All() ([]*T, error) {
+func (this *Criteria[T]) All() ([]T, error) {
 	return this.List()
 }
 
-func (this *Criteria[T]) AllOrNil() []*T {
+func (this *Criteria[T]) AllOrNil() []T {
 	lst, _ := this.List()
 	return lst
 }
 
-func (this *Criteria[T]) Each(each func(*T)) error {
+func (this *Criteria[T]) Each(each func(T)) error {
 
 	all, err := this.List()
 
@@ -485,7 +478,7 @@ func (this *Criteria[T]) Each(each func(*T)) error {
 	return nil
 }
 
-func (this *Criteria[T]) List() ([]*T, error) {
+func (this *Criteria[T]) List() ([]T, error) {
 	this.Criteria.List()
 	return this.GetResults()
 }
@@ -495,55 +488,57 @@ func (this *Criteria[T]) Exists() (bool, error) {
 	return this.Any, this.Error
 }
 
-func (this *Criteria[T]) Page() (*PageOf[*T], error) {
+func (this *Criteria[T]) Page() (*PageOf[T], error) {
 	this.Criteria.ListAndCount()
 	r, err := this.GetResults()
-	return &PageOf[*T]{Data: r, TotalCount: this.Count32}, err
+	return &PageOf[T]{Data: r, TotalCount: this.Count32}, err
 }
 
-func (this *Criteria[T]) GetResult() (*T, error) {
+func (this *Criteria[T]) GetResult() (T, error) {
 	if this.Any {
-		c, _ := this.Result.(*T)
+		c, _ := this.Result.(T)
 		return c, this.Error
 	}
-	return nil, this.Error
+	var n T
+	return n, this.Error
 }
 
-func (this *Criteria[T]) GetResults() ([]*T, error) {
-	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]*T)
+func (this *Criteria[T]) GetResults() ([]T, error) {
+	all := reflect.ValueOf(this.Criteria.Results).Elem().Interface().([]T)
 	return all, this.Error
 }
 
-func (this *Criteria[T]) FindById(id int64) (*T, error) {
-	var entity T
-	r, err := this.Session.FindById(&entity, id)
+func (this *Criteria[T]) FindById(id int64) (T, error) {
+	entity := util.NewOf[T]()
+	var n T
+	r, err := this.Session.FindById(entity, id)
 	if err != nil {
-		return nil, err
+		return n, err
 	}
 
 	m, _ := r.(db.Model)
 
 	if m.IsPersisted() {
-		return &entity, nil
+		return entity, nil
 	}
 
-	return nil, nil
+	return n, nil
 }
 
-func (this *Criteria[T]) Get(id int64) *optional.Optional[*T] {
-	var entity T
-	r, err := this.Session.FindById(&entity, id)
+func (this *Criteria[T]) Get(id int64) *optional.Optional[T] {
+	entity := util.NewOf[T]()
+	r, err := this.Session.FindById(entity, id)
 	if err != nil {
-		return optional.OfFail[*T](err)
+		return optional.OfFail[T](err)
 	}
 
 	m, _ := r.(db.Model)
 
 	if m.IsPersisted() {
-		return optional.Of[*T](&entity)
+		return optional.Of[T](entity)
 	}
 
-	return optional.OfNone[*T]()
+	return optional.OfNone[T]()
 }
 
 func (this *Criteria[T]) OrderAsc(paths ...string) *Criteria[T] {

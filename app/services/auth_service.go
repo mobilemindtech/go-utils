@@ -149,13 +149,25 @@ func (this *AuthService) CheckBearerToken(bearerToken string) (*models.User, err
 		return nil, errors.New("token expired")
 	}
 
-	return criteria.New[models.User](this.Session).
+	return criteria.New[*models.User](this.Session).
 		Eq("Uuid", uuid).
 		First()
 }
 
+func (this *AuthService) AuthAdmin(body []byte) *rio.IO[*AuthResult] {
+	return this.Auth(body, []string{"ROLE_ADMIN"})
+}
+
+func (this *AuthService) AuthRoot(body []byte) *rio.IO[*AuthResult] {
+	return this.Auth(body, []string{"ROLE_ROOT"})
+}
+
+func (this *AuthService) AuthRootOrAdmin(body []byte) *rio.IO[*AuthResult] {
+	return this.Auth(body, []string{"ROLE_ROOT", "ROLE_ADMIN"})
+}
+
 // Auth by bearer token
-func (this *AuthService) Auth(body []byte) *rio.IO[*AuthResult] {
+func (this *AuthService) Auth(body []byte, allowedRoles []string) *rio.IO[*AuthResult] {
 
 	jsonParser := rio.Attempt(func() *result.Result[*AuthData] {
 		return json.UnmarshalResult[*AuthData](body)
@@ -172,7 +184,7 @@ func (this *AuthService) Auth(body []byte) *rio.IO[*AuthResult] {
 
 		encoded := support.TextToSha1(auth.Password)
 
-		user := criteria.New[models.User](this.Session).
+		user := criteria.New[*models.User](this.Session).
 			Eq("UserName", auth.UserName).
 			Eq("Password", encoded).
 			Eq("Enabled", true).
@@ -192,7 +204,7 @@ func (this *AuthService) Auth(body []byte) *rio.IO[*AuthResult] {
 	})
 
 	return rio.AttemptThen(
-		rio.AttemptThenOfIO(login, this.checkPermissions),
+		rio.AttemptThenOfIO(login, this.checkPermissions(allowedRoles)),
 		func(auth *AuthUser) *result.Result[*AuthResult] {
 			secret, _ := beego.AppConfig.String("jwt_token_secret")
 			expiresAt := util.DateNow().Add(time.Hour * 3).Unix()
@@ -207,34 +219,42 @@ func (this *AuthService) Auth(body []byte) *rio.IO[*AuthResult] {
 		})
 }
 
-func (this *AuthService) checkPermissions(auth *AuthUser) *rio.IO[*AuthUser] {
-	tenantChecker := rio.Attempt(func() *result.Result[bool] {
-		return criteria.New[models.TenantUser](this.Session).
-			Eq("User", auth.User).
-			Eq("Uuid", auth.Data.TenantUUID).
-			Eq("Admin", true).
-			GetAny()
-	}).AttemptThen(func(b bool) *result.Result[bool] {
-		if !b {
-			return result.OfError[bool](fmt.Errorf("user not authorized for tenant"))
-		}
-		return result.OfValue(true)
-	})
+func (this *AuthService) checkPermissions(allowedRoles []string) func(*AuthUser) *rio.IO[*AuthUser] {
+	return func(auth *AuthUser) *rio.IO[*AuthUser] {
+		tenantChecker := rio.Attempt(func() *result.Result[bool] {
+			return criteria.New[*models.TenantUser](this.Session).
+				Eq("User", auth.User).
+				Eq("Uuid", auth.Data.TenantUUID).
+				Eq("Admin", true).
+				GetAny()
+		}).AttemptThen(func(b bool) *result.Result[bool] {
+			if !b {
+				return result.OfError[bool](fmt.Errorf("user not authorized for tenant"))
+			}
+			return result.OfValue(true)
+		})
 
-	roleChecker := rio.Attempt(func() *result.Result[bool] {
-		return criteria.New[models.UserRole](this.Session).
-			Eq("User", auth.User).
-			Eq("Role__Authority", "ROLE_ADMIN").
-			GetAny()
-	}).AttemptThen(func(b bool) *result.Result[bool] {
-		if !b {
-			return result.OfError[bool](fmt.Errorf("user not authorized"))
-		}
-		return result.OfValue(true)
-	})
+		roleChecker := rio.Attempt(func() *result.Result[bool] {
+			c := criteria.New[*models.UserRole](this.Session).
+				Eq("User", auth.User)
 
-	if len(auth.Data.TenantUUID) > 0 {
-		return rio.MapToValue(roleChecker.AndThen(tenantChecker), auth)
+			cond := db.NewCondition()
+			for _, role := range allowedRoles {
+				cond.Eq("Role__Authority", role)
+			}
+			c.AndOr(cond)
+
+			return c.GetAny()
+		}).AttemptThen(func(b bool) *result.Result[bool] {
+			if !b {
+				return result.OfError[bool](fmt.Errorf("user not authorized"))
+			}
+			return result.OfValue(true)
+		})
+
+		if len(auth.Data.TenantUUID) > 0 {
+			return rio.MapToValue(roleChecker.AndThen(tenantChecker), auth)
+		}
+		return rio.MapToValue(roleChecker, auth)
 	}
-	return rio.MapToValue(roleChecker, auth)
 }

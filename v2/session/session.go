@@ -408,11 +408,11 @@ func (this *RxSession[T]) Persist(entity T) *optional.Optional[T] {
 	return optional.OfSome[T](entity)
 }
 
-func (this *RxSession[T]) PersistResult(entity T) *result.Result[*option.Option[T]] {
+func (this *RxSession[T]) PersistResult(entity T) *result.Result[T] {
 	if err := this.session.SaveOrUpdateCascade(entity); err != nil {
-		return result.OfError[*option.Option[T]](err)
+		return result.OfError[T](err)
 	}
-	return result.OfValue(option.Some(entity))
+	return result.OfValue(entity)
 }
 
 // Persiste all and return entity. Persists entity last
@@ -460,8 +460,8 @@ func (this *RxSession[T]) PersistBatch(entities ...interface{}) *result.Result[*
 
 func (this *RxSession[T]) PersistIO(entity T) *types.IO[T] {
 	return io.IO[T](
-		io.AttemptOfResultOption(
-			func() *result.Result[*option.Option[T]] {
+		io.Attempt(
+			func() *result.Result[T] {
 				return this.PersistResult(entity)
 			}))
 }

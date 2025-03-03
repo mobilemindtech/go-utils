@@ -208,7 +208,7 @@ func (this *WebController) tryAppAutheticate(token string) (*models.User, error)
 		this.Session,
 		func(s *db.Session) *result.Result[*option.Option[*models.App]] {
 			return criteria.
-				New[models.App](s).
+				New[*models.App](s).
 				Eq("Token", token).
 				Eager("Tenant").
 				GetFirst()
@@ -1046,7 +1046,8 @@ func (this *WebController) OnPureTemplate(templateName string) {
 func (this *WebController) OnRedirect(action string, args ...interface{}) {
 	this.OnFlash(true)
 	if this.Ctx.Input.URL() == action {
-		this.Abort("500")
+		logs.Error("redirect to same URL")
+		this.CustomAbort(500, "redirect to same URL")
 	} else {
 		this.Redirect(fmt.Sprintf(action, args...), 302)
 	}
@@ -1301,7 +1302,7 @@ func (this *WebController) HasPath(paths ...string) bool {
 }
 
 func (this *WebController) IsJson() bool {
-	return this.Ctx.Input.AcceptsJSON()
+	return this.Ctx.Input.AcceptsJSON() || this.Ctx.Input.Header("Content-Type") == "application/json"
 }
 
 func (this *WebController) IsAjax() bool {
@@ -1311,6 +1312,7 @@ func (this *WebController) IsAjax() bool {
 func (this *WebController) GetHeaderToken() string {
 	token := this.GetHeaderByName("X-Auth-Token")
 	if len(token) == 0 {
+		token = this.GetHeaderByName("Authorization")
 		token = this.GetHeaderByName("Authorization")
 	}
 	return token
@@ -1692,7 +1694,7 @@ func (this *WebController) GetCustomAppId() int64 {
 
 func (this *WebController) GetCustomApp() (*models.App, error) {
 	id := this.GetCustomAppId()
-	return criteria.New[models.App](this.Session).FindById(id)
+	return criteria.New[*models.App](this.Session).FindById(id)
 }
 
 func (this *WebController) SessionLogOut() {

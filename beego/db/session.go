@@ -493,9 +493,19 @@ func (this *Session) TryLoadBatch(entities ...interface{}) error {
 func (this *Session) LoadBatch(entities ...interface{}) error {
 
 	for _, it := range entities {
-		if _, err := this.Load(it); err != nil {
-			return err
+
+		switch it.(type) {
+		case func() interface{}: // lazymode
+			if _, err := this.Load(it.(func() interface{})()); err != nil {
+				return err
+			}
+		default:
+			if _, err := this.Load(it); err != nil {
+				return err
+			}
 		}
+
+
 	}
 
 	return nil
@@ -1531,7 +1541,9 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
 							}
 
 							if !authorized {
-								logs.Warn("unautorized tenant ", currentTenant.GetId(), "to entity tenant = ", entityTenant.GetId(), " for type ", fullType, " content = ", reply, ", action = ", action)
+								logs.Error(
+									"unautorized! try call [%v] using tenant [%v], but model [%v] is owned by the tenant [%v]",
+										action, currentTenant.GetId(), fullType, entityTenant.GetId())
 							}
 
 							return authorized
