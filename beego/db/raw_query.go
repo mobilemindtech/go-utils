@@ -90,14 +90,37 @@ func (this *RawQuery) Values() *RawQuery {
 	return this
 }
 
+func (this *RawQuery) ExecAsValuesMap() ([]map[string]interface{}, error) {
+	this.Values()
+	if  this.HasError() {
+		return nil, this.Error
+	}
+	return this.GetValues(), nil
+}
+
 func (this *RawQuery) ValuesList() *RawQuery {
 	this.RowsAffected, this.Error = this.Session.GetDb().Raw(this.Query, this.Args...).ValuesList(&this.valuesList)
 	return this
 }
 
+func (this *RawQuery) ExecAsValuesList() ([][]interface{}, error) {
+	this.ValuesList()
+	if  this.HasError() {
+		return nil, this.Error
+	}
+	return this.GetValuesList(), nil
+}
+
 func (this *RawQuery) ValuesFlat() *RawQuery {
 	this.RowsAffected, this.Error = this.Session.GetDb().Raw(this.Query, this.Args...).ValuesFlat(&this.valuesFlat)
 	return this
+}
+func (this *RawQuery) ExecAsValuesFlat() ([]interface{}, error) {
+	this.ValuesFlat()
+	if  this.HasError() {
+		return nil, this.Error
+	}
+	return this.GetValuesFlat(), nil
 }
 
 func (this *RawQuery) GetValuesFlat() []interface{} {

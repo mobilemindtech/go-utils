@@ -3,6 +3,7 @@ package lists
 import (
 	_ "fmt"
 	"github.com/mobilemindtec/go-io/option"
+	"github.com/mobilemindtec/go-io/util"
 	"reflect"
 )
 
@@ -53,6 +54,12 @@ func FindAll[T any](vs []T, f func(T) bool) []T {
 	return Filter[T](vs, f)
 }
 
+func FilterNotNil[T any](vs []T) []T {
+	return Filter(vs, func(t T) bool {
+		return util.IsNotNil(t)
+	})
+}
+
 func Filter[T any](vs []T, f func(T) bool) []T {
 	vsf := []T{}
 	for _, it := range vs {
@@ -66,7 +73,7 @@ func Count[T any](vs []T, f func(T) bool) int {
 	count := 0
 	for _, it := range vs {
 		if f(it) {
-			count = count  + 1
+			count = count + 1
 		}
 	}
 	return count
@@ -87,7 +94,6 @@ func FilterNot[T any](vs []T, f func(T) bool) []T {
 func FirstOption[T any](vs []T, f func(T) bool) *option.Option[T] {
 	return option.Of(Find(vs, f))
 }
-
 
 func First[T any](vs []T, f func(T) bool) T {
 	return Find(vs, f)
@@ -174,16 +180,16 @@ func FoldLeft[T any, Acc any](vs []T, initial Acc, fold func(Acc, T) Acc) Acc {
 func Revese[T any](vs []T) []T {
 	var vsf []T
 	l := len(vs) - 1
-	for i := l; i >= 0 ; i-- {
+	for i := l; i >= 0; i-- {
 		vsf = append(vsf, vs[i])
 	}
-	return  vsf
+	return vsf
 }
 
 func FoldRight[T any, Acc any](vs []T, initial Acc, fold func(Acc, T) Acc) Acc {
 	nextAcc := initial
 	l := len(vs) - 1
-	for i := l; i >= 0 ; i-- {
+	for i := l; i >= 0; i-- {
 		nextAcc = fold(nextAcc, vs[i])
 	}
 	return nextAcc
@@ -199,7 +205,6 @@ func ContainsVals[T comparable](vs1 []T, vs2 ...T) bool {
 	}
 	return false
 }
-
 
 func Contains[T any](vs1 []T, vs2 []T, test func(T, T) bool) []T {
 	return Filter[T](vs1,
@@ -384,7 +389,7 @@ func Flatten[T any](vs [][]T) []T {
 			vsf = append(vsf, it)
 		}
 	}
-	return  vsf
+	return vsf
 }
 
 func GroupBy[A any, B comparable](vs []A, f func(A) B) map[B][]A {
@@ -400,7 +405,7 @@ func GroupBy[A any, B comparable](vs []A, f func(A) B) map[B][]A {
 		data[k] = append(data[k], it)
 	}
 
-	return  data
+	return data
 }
 
 func DistinctBy[A any, B comparable](vs []A, f func(A) B) []A {
@@ -409,10 +414,10 @@ func DistinctBy[A any, B comparable](vs []A, f func(A) B) []A {
 	for _, items := range data {
 		a = append(a, items[0])
 	}
-	return  a
+	return a
 }
 
 func DistinctByMap[A any, B comparable, C any](vs []A, f func(A) B, fmap func(A) C) []C {
 	data := DistinctBy(vs, f)
-	return  Map(data, fmap)
+	return Map(data, fmap)
 }
