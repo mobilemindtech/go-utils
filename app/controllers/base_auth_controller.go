@@ -105,7 +105,8 @@ func (this *BaseAuthController) NestPrepareAuth(base *BaseController) {
 		this.baseController.Data["UserInfo"] = this.GetAuthUser()
 		this.baseController.Data["Tenant"] = this.GetAuthTenant()
 
-		this.Auth = services.NewAuthService(this.GetAuthUser())
+		this.Auth = services.NewAuthService(this.baseController.Session)
+		this.Auth.SetUserInfo(this.GetAuthUser())
 	}
 
 	this.baseController.Data["IsLoggedIn"] = this.IsLoggedIn || this.IsTokenLoggedIn
