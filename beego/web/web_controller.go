@@ -198,7 +198,7 @@ func (this *WebController) WebControllerCreateSession() *db.Session {
 	return this.CreateSession()
 }
 
-func (this *WebController) tryAppAutheticate(token string) (*models.User, error) {
+func (this *WebController) tryAppAuthenticate(token string) (*models.User, error) {
 
 	if this.CustomAppAuthenticator == nil {
 		return nil, nil
@@ -1312,8 +1312,7 @@ func (this *WebController) IsAjax() bool {
 func (this *WebController) GetHeaderToken() string {
 	token := this.GetHeaderByName("X-Auth-Token")
 	if len(token) == 0 {
-		token = this.GetHeaderByName("Authorization")
-		token = this.GetHeaderByName("Authorization")
+		token = this.GetHeaderByName("Authorization")		
 	}
 	return token
 }
@@ -1638,11 +1637,12 @@ func (this *WebController) AppAuth() {
 			}
 
 			user, err := cache.Memoize(this.CacheService, token, new(models.User), loader)
-
+			
 			if err != nil {
 
 				if _, ok := err.(*services.LoginErrorUserNotFound); ok {
-					user, err = this.tryAppAutheticate(token)
+					logs.Debug("tryAppAuthenticate")
+					user, err = this.tryAppAuthenticate(token)
 					if err != nil {
 						logs.Error("CUSTOM APP LOGIN ERROR: %v", err)
 						this.LogOut()
