@@ -483,6 +483,7 @@ func (this *Criteria[T]) List() ([]T, error) {
 	return this.GetResults()
 }
 
+
 func (this *Criteria[T]) Exists() (bool, error) {
 	this.Criteria.One()
 	return this.Any, this.Error

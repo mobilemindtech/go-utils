@@ -23,7 +23,7 @@ type User struct {
 	CreatedAt time.Time `orm:"auto_now_add;type(datetime)" json:"-"`
 	UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"-"`
 
-	Name      string    `orm:"size(100)"  valid:"Required;MaxSize(100)" form:""`
+	Name      string    `orm:"size(100)"  valid:"Required;MaxSize(100)" form:"" json:""`
 	UserName  string    `orm:"size(100);unique" valid:"Required;MaxSize(100);Email" form:""`
 	Password  string    `orm:"size(100)" valid:"MaxSize(100)" form:"" json:"-"`
 	Enabled   bool      `orm:"" valid:"Required;" form:"" json:""`

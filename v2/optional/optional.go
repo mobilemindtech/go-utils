@@ -951,6 +951,10 @@ func Map[F any, R any](v *Optional[F], f func(F) R) *Optional[R] {
 	return inline.If(v.NonEmpty(), Just(f(v.UnWrap())), OfNone[R]())
 }
 
+func MapToValue[F any, R any](v *Optional[F], value R) *Optional[R] {
+	return inline.If(v.NonEmpty(), Just(value), OfNone[R]())
+}
+
 func FlatMap[T any, R any](v *Optional[T], f func(T) *Optional[R]) *Optional[R] {
 	return inline.If(v.NonEmpty(), f(v.UnWrap()), OfNone[R]())
 }

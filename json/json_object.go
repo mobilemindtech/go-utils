@@ -11,6 +11,7 @@ import (
 	"github.com/mobilemindtec/go-io/result"
 	ioutil "github.com/mobilemindtec/go-io/util"
 	"github.com/mobilemindtec/go-utils/app/util"
+	goioutil "github.com/mobilemindtec/go-io/util"
 	"github.com/mobilemindtec/go-utils/support"
 	"github.com/mobilemindtec/go-utils/v2/optional"
 	"github.com/mobilemindtec/go-utils/v2/try"
@@ -113,36 +114,36 @@ func (this *Parser[T]) AddConverter(c Converter) *Parser[T] {
 	return this
 }
 
-func (this *Parser[T]) Parse(raw []byte) *optional.Optional[*T] {
-	var entity T
-	return this.ParseInto(raw, &entity)
+func (this *Parser[T]) Parse(raw []byte) *optional.Optional[T] {
+	entity := goioutil.NewOf[T]()
+	return this.ParseInto(raw, entity)
 }
 
-func (this *Parser[T]) ParseFormTo(form url.Values, entity *T) *optional.Optional[*T] {
+func (this *Parser[T]) ParseFormTo(form url.Values, entity T) *optional.Optional[T] {
 	return this.ParseJsonInto(NewFromUrlValues(form), entity)
 }
 
-func (this *Parser[T]) ParseForm(form url.Values) *optional.Optional[*T] {
-	var entity T
-	return this.ParseJsonInto(NewFromUrlValues(form), &entity)
+func (this *Parser[T]) ParseForm(form url.Values) *optional.Optional[T] {
+	entity := goioutil.NewOf[T]()
+	return this.ParseJsonInto(NewFromUrlValues(form), entity)
 }
 
-func (this *Parser[T]) ParseJson(j *Json) *optional.Optional[*T] {
-	var entity T
-	return this.ParseJsonInto(j, &entity)
+func (this *Parser[T]) ParseJson(j *Json) *optional.Optional[T] {
+	entity := goioutil.NewOf[T]()
+	return this.ParseJsonInto(j, entity)
 }
 
-func (this *Parser[T]) ParseInto(raw []byte, entity *T) *optional.Optional[*T] {
+func (this *Parser[T]) ParseInto(raw []byte, entity T) *optional.Optional[T] {
 	j, err := NewFromBytes(raw)
 
 	if err != nil {
-		return optional.OfFail[*T](err)
+		return optional.OfFail[T](err)
 	}
 
 	return this.ParseJsonInto(j, entity)
 }
 
-func (this *Parser[T]) ParseJsonInto(j *Json, entity *T) *optional.Optional[*T] {
+func (this *Parser[T]) ParseJsonInto(j *Json, entity T) *optional.Optional[T] {
 
 	if this.cfg.Converter != nil {
 		this.cfg.Converter(j)
@@ -161,7 +162,7 @@ func (this *Parser[T]) ParseJsonInto(j *Json, entity *T) *optional.Optional[*T] 
 
 
 		if err != nil {
-			return optional.OfFail[*T](err)
+			return optional.OfFail[T](err)
 		}
 
 		if this.cfg.Debug {
@@ -183,10 +184,10 @@ func (this *Parser[T]) ParseJsonInto(j *Json, entity *T) *optional.Optional[*T] 
 	}
 
 	if err != nil {
-		return optional.OfFail[*T](err)
+		return optional.OfFail[T](err)
 	}
 
-	return optional.OfSome[*T](entity)
+	return optional.OfSome[T](entity)
 }
 
 type Json struct {

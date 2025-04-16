@@ -58,6 +58,11 @@ func NewJSONWithDefaultTagNameJson() *JSON {
 	return NewJSON().ConfigureTagName("json")
 }
 
+func NewJSON2() *JSON {
+	return NewJSONWithDefaultTagNameJson().
+		ConfigureDefaultDateTimeFormat(TimestampLayout3)
+}
+
 // NewJSON new parser with snackcase and tagname = [jsonp]
 func NewJSON() *JSON {
 	return &JSON{
