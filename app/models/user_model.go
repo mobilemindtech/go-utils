@@ -279,3 +279,7 @@ func (this *User) FirstName()string{
 	}
 	return this.Name
 }
+
+func (this *User) String() string {
+	return fmt.Sprintf("%v - %v", this.Id, this.Name)
+}
