@@ -260,13 +260,14 @@ func (this *Optional[T]) IsNone() bool {
 	return !IsNilFixed(this.none)
 }
 
+// Val Return fail, or none os some
 func (this *Optional[T]) Val() interface{} {
-	if this.IsSome() {
-		return this.some
-	} else if this.IsNone() {
-		return this.none
-	} else if this.IsFail() {
+	if this.IsFail() {
 		return this.fail
+	}else if this.IsNone() {
+		return this.none
+	} else if this.IsSome() {
+		return this.some
 	} else {
 		return NewNone()
 	}
@@ -327,6 +328,7 @@ func (this *Optional[T]) Foreach(each func(T)) *Optional[T] {
 	return this
 }
 
+
 // Exec Execute operation and map success to Some of Ok
 func (this *Optional[T]) Exec(f func(T) *Optional[bool]) *Optional[T] {
 	if this.some != nil {
@@ -356,6 +358,16 @@ func (this *Optional[T]) ToResult() *result.Result[*option.Option[T]] {
 		return result.OfValue(option.None[T]())
 	} else {
 		return result.OfValue(option.Of(this.Get()))
+	}
+}
+
+func (this *Optional[T]) AsResult() *result.Result[T] {
+	if this.IsFail() {
+		return result.OfError[T](this.GetFail().Error)
+	} else if this.Empty() {
+		return result.OfErrorf[T]("empty value not expected")
+	} else {
+		return result.OfValue(this.Get())
 	}
 }
 

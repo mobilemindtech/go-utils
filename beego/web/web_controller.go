@@ -706,6 +706,15 @@ func (this *WebController) RenderJson(opt interface{}) {
 			return
 		}
 
+		if val, ok := opt.(result.IResult); ok {
+			if val.HasError() {
+				this.RenderJson(val.GetError())
+			} else {
+				this.RenderJson(val.GetValue())
+			}
+			return
+		}
+
 		dataResult = maps.JSON("data", opt)
 		break
 	}

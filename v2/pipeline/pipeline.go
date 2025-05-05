@@ -13,6 +13,7 @@ import (
 	"github.com/mobilemindtec/go-utils/v2/optional"
 	"github.com/mobilemindtec/go-utils/v2/criteria"
 	"github.com/mobilemindtec/go-utils/v2/fn"
+	"github.com/mobilemindtec/go-io/result"
 )
 
 type PipeState int
@@ -601,6 +602,16 @@ func (this *Pipe) MapToBool() *optional.Optional[bool] {
 		return optional.Of[bool](true)
 	default:
 		return optional.OfNone[bool]()
+	}
+}
+
+func (this *Pipe) RunAsResult() *result.Result[bool] {
+	this.Run()
+	switch this.State {
+	case StateSuccess:
+		return result.OfValue(true)
+	case StateError:return result.OfError[bool](this.fail.Error)
+	default:return result.OfErrorf[bool]("undefined state")
 	}
 }
 

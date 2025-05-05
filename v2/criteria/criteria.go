@@ -701,6 +701,11 @@ func (this *Criteria[T]) SetPage(page *db.Page) *Criteria[T] {
 	return this
 }
 
+func (this *Criteria[T]) Apply(f func(*Criteria[T])) *Criteria[T] {
+	f(this)
+	return this
+}
+
 func (this *Criteria[T]) Limit(limit int) *Criteria[T] {
 	return this.SetLimit(int64(limit))
 }

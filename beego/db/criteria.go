@@ -9,6 +9,7 @@ import (
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtec/go-io/result"
 	"github.com/beego/beego/v2/client/orm/clauses/order_clause"
 )
 
@@ -476,12 +477,20 @@ func (this *Criteria) AggregateList(s string, r interface{}) *Criteria {
 	return this.execute(CriteriaAggregateList)
 }
 
+func (this *Criteria) AsResult() *result.Result[bool] {
+	if this.HasError {
+		return result.OfError[bool](this.Error)
+	}
+	return result.OfValue(true)
+}
+
 func (this *Criteria) ListAndCount() *Criteria {
 	this.execute(CriteriaList)
 	this.execute(CriteriaCount)
 	this.criteriaType = CriteriaListAndCount
 	return this
 }
+
 
 func (this *Criteria) One() *Criteria {
 	return this.execute(CriteriaOne)

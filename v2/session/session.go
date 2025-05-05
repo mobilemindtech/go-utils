@@ -466,20 +466,18 @@ func (this *RxSession[T]) PersistIO(entity T) *types.IO[T] {
 			}))
 }
 
-func (this *RxSession[T]) SaveWhere(entity T, c *criteria.Reactive) *optional.Optional[T] {
+func (this *RxSession[T]) FindOrCreate(entity T, c *criteria.Reactive) *result.Result[T] {
 
 	first := c.First()
 	r := optional.Of[T](first.Get())
 
-	if r.IsFail() {
-		return r
+	if !r.IsFail() && r.IsNone() {
+		return result.Try(func() (T, error) {
+			return entity, this.session.Save(entity)
+		})
 	}
 
-	if r.IsNone() {
-		return this.Save(entity)
-	}
-
-	return r
+	return r.AsResult()
 }
 
 func (this *RxSession[T]) RowsF(query string, args ...interface{}) func(func(*db.Row) T) ([]T, error) {

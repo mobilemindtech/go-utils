@@ -1061,6 +1061,17 @@ func (this *Session) eagerDeep(reply interface{}, ignoreTag bool) error {
 	return nil
 }
 
+func (this *Session) PersistMany(items ...interface{}) error {
+	for _, it := range items {
+		this.deepSaveOrUpdate = map[string]int{}
+		if err := this.saveOrUpdateCascadeDeep(it, true); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+
 func (this *Session) SaveCascade(reply interface{}) error {
 	this.deepSaveOrUpdate = map[string]int{}
 	return this.saveOrUpdateCascadeDeep(reply, true)
