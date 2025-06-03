@@ -10,7 +10,7 @@ type ListOfMap = []TMap
 type JsonData = TMap
 
 func Map[F any, T any](data map[string]F, f func(F) T) map[string]T {
-	var m map[string]T
+	m := make(map[string]T)
 	for k, v := range data {
 		m[k] = f(v)
 	} 
