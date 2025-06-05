@@ -75,31 +75,32 @@ func LoadFuncs() {
 	}
 
 	formatDate := func(date time.Time) string {
-		if !time.Time.IsZero(date) {
+
+		if !isZeroDate(date) {
 			return date.Format("02/01/2006")
 		}
-		return ""
+		return "-"
 	}
 
 	formatTime := func(date time.Time) string {
-		if !time.Time.IsZero(date) {
+		if !isZeroDate(date) {
 			return date.Format("15:04")
 		}
-		return ""
+		return "-"
 	}
 
 	formatDateTime := func(date time.Time) string {
-		if !time.Time.IsZero(date) {
+		if !isZeroDate(date) {
 			return date.Format("02/01/2006 15:04")
 		}
-		return ""
+		return "-"
 	}
 
 	dateFormat := func(date time.Time, layout string) string {
-		if !time.Time.IsZero(date) {
+		if !isZeroDate(date) {
 			return date.Format(layout)
 		}
-		return ""
+		return "-"
 	}
 
 	getNow := func(layout string) string {
@@ -183,6 +184,12 @@ func LoadFuncs() {
 		return uuid.NewV4().String()
 	}
 
+	timeDiff := func(start time.Time, end time.Time, label string) string {
+		if isZeroDate(start) || isZeroDate(end) {return "-"}
+		diff := end.Sub(start)
+		return fmt.Sprintf("%v %v", support.ToFixed(diff.Hours(), 2), label)
+	}
+
 	beego.AddFuncMap("is_zero_date", isZeroDate)
 	beego.AddFuncMap("uuid", uuidGen)
 	beego.AddFuncMap("inc", inc)
@@ -194,6 +201,7 @@ func LoadFuncs() {
 	beego.AddFuncMap("format_date", formatDate)
 	beego.AddFuncMap("format_time", formatTime)
 	beego.AddFuncMap("date_format", dateFormat)
+	beego.AddFuncMap("time_diff", timeDiff)
 	beego.AddFuncMap("get_now", getNow)
 	beego.AddFuncMap("get_year", getYear)
 	beego.AddFuncMap("format_date_time", formatDateTime)

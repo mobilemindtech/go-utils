@@ -657,7 +657,7 @@ func (this *WebController) RenderJson(opt interface{}) {
 		dataResult = maps.JSON("error", true, "message", "not found")
 		break
 	case *response.RawJson:
-		dataResult = opt.(*response.RawJson).Valuue
+		dataResult = opt.(*response.RawJson).Value
 		break
 	case *optional.Fail:
 

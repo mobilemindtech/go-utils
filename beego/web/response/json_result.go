@@ -13,5 +13,5 @@ type JsonResult struct {
 	CurrentUnixTime int64 `jsonp:""`
 }
 type RawJson struct {
-	Valuue interface{}
+	Value interface{}
 }
