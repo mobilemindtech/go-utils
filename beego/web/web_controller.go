@@ -1483,6 +1483,11 @@ func (this *WebController) GetBoolByKey(key string) bool {
 	return boolean
 }
 
+func (this *WebController) GetCheckbox(key string) bool {
+	val := this.GetString(key)
+	return strings.ToLower(val) == "on"
+}
+
 func (this *WebController) GetStringByKey(key string) string {
 	return this.Ctx.Input.Query(key)
 }
