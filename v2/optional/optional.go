@@ -968,11 +968,19 @@ func MapToValue[F any, R any](v *Optional[F], value R) *Optional[R] {
 }
 
 func FlatMap[T any, R any](v *Optional[T], f func(T) *Optional[R]) *Optional[R] {
-	return inline.If(v.NonEmpty(), f(v.UnWrap()), OfNone[R]())
+	if v.NonEmpty() {
+		return f(v.UnWrap())
+	} else {
+		return  OfNone[R]()
+	}
 }
 
 func Filter[T any](v *Optional[T], f func(T) bool) *Optional[T] {
-	return inline.If(v.NonEmpty() && f(v.UnWrap()), v, OfNone[T]())
+	if v.NonEmpty() && f(v.UnWrap()) {
+		return  v
+	} else {
+		return OfNone[T]()
+	}
 }
 
 func Foreach[T any](v *Optional[T], f func(T)) *Optional[T] {
