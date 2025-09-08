@@ -261,7 +261,7 @@ func AnyToFloat(s interface{}) float32 {
 }
 
 func AnyToFloat64(s interface{}) float64 {
-	return float64(AnyToInt(s))
+	return float64(AnyToFloat(s))
 }
 
 func AnyToBool(s interface{}) bool {
