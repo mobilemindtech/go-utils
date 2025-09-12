@@ -1,12 +1,11 @@
 package foreach
 
 import (
-
-	"github.com/mobilemindtec/go-utils/v2/optional"
-	"github.com/mobilemindtec/go-utils/v2/fn"
 	"github.com/beego/beego/v2/core/logs"
-	"runtime/debug"
+	"github.com/mobilemindtech/go-utils/v2/fn"
+	"github.com/mobilemindtech/go-utils/v2/optional"
 	"reflect"
+	"runtime/debug"
 )
 
 type ForState int
@@ -193,7 +192,6 @@ func (this *Foreach[T]) Do() *Foreach[T] {
 				break
 			}
 
-
 			this.data = r.Get()
 		}
 
@@ -247,8 +245,6 @@ func (this *Foreach[T]) processError(r interface{}) {
 	this.State = ForError
 	this.fail = optional.NewFailStr("%v", r)
 
-
-
 	if this.errorHandler != nil {
 
 		info := fn.NewFuncInfo(this.errorHandler)
@@ -257,14 +253,14 @@ func (this *Foreach[T]) processError(r interface{}) {
 			info.CallEmpty()
 		} else {
 
-			if info.ArgsCount != 1  { // onSuccess = func(interface{})
+			if info.ArgsCount != 1 { // onSuccess = func(interface{})
 				panic("step OnError: func must have one argument of error or Fail")
 			}
 
 			args := []reflect.Value{}
 			if info.ArgsTypes[0] == reflect.TypeOf(this.fail.Error) {
 				args = append(args, reflect.ValueOf(this.fail.Error))
-			}else {
+			} else {
 				args = append(args, reflect.ValueOf(this.fail))
 			}
 

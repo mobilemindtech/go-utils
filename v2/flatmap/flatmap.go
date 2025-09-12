@@ -3,7 +3,7 @@ package flatmap
 import (
 	"fmt"
 
-	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtech/go-utils/v2/optional"
 )
 
 type FlatMap[T any, R any] struct {

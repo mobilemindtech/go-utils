@@ -2,8 +2,8 @@ package assert
 
 import (
 	"fmt"
+	"github.com/mobilemindtech/go-io/util"
 	"strings"
-	"github.com/mobilemindtec/go-io/util"
 )
 
 func Asssert(a bool, msg string, args ...interface{}) {
@@ -21,7 +21,6 @@ func Asssertf(f func() bool, msg string, args ...interface{}) {
 func AsssertNotEmpty(a string, msg string, args ...interface{}) {
 	Asssert(len(strings.TrimSpace(a)) > 0, msg, args...)
 }
-
 
 func AsssertNotNil(a any, msg string, args ...interface{}) {
 	Asssert(util.IsNotNil(a), msg, args...)

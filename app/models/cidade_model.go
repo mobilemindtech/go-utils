@@ -1,7 +1,7 @@
 package models
 
 import (
-	"github.com/mobilemindtec/go-utils/beego/db"
+	"github.com/mobilemindtech/go-utils/beego/db"
 )
 
 type Cidade struct {

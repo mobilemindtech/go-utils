@@ -4,8 +4,8 @@ import (
 	"sync"
 
 	"github.com/beego/beego/v2/core/logs"
-	"github.com/mobilemindtec/go-utils/v2/ctx"
-	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtech/go-utils/v2/ctx"
+	"github.com/mobilemindtech/go-utils/v2/optional"
 	"github.com/sirsean/go-pool"
 )
 

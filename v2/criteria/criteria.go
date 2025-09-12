@@ -3,17 +3,17 @@ package criteria
 import (
 	"errors"
 	_ "fmt"
-	"github.com/mobilemindtec/go-io/io"
-	"github.com/mobilemindtec/go-io/option"
-	"github.com/mobilemindtec/go-io/result"
-	"github.com/mobilemindtec/go-io/types"
-	"github.com/mobilemindtec/go-io/util"
-	"github.com/mobilemindtec/go-utils/v2/lists"
+	"github.com/mobilemindtech/go-io/io"
+	"github.com/mobilemindtech/go-io/option"
+	"github.com/mobilemindtech/go-io/result"
+	"github.com/mobilemindtech/go-io/types"
+	"github.com/mobilemindtech/go-io/util"
+	"github.com/mobilemindtech/go-utils/v2/lists"
 	"reflect"
 	"strings"
 
-	"github.com/mobilemindtec/go-utils/beego/db"
-	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtech/go-utils/beego/db"
+	"github.com/mobilemindtech/go-utils/v2/optional"
 )
 
 type Page struct {
@@ -482,7 +482,6 @@ func (this *Criteria[T]) List() ([]T, error) {
 	this.Criteria.List()
 	return this.GetResults()
 }
-
 
 func (this *Criteria[T]) Exists() (bool, error) {
 	this.Criteria.One()

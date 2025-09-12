@@ -3,7 +3,7 @@ package db
 import (
 	"fmt"
 	"github.com/beego/beego/v2/client/orm"
-	"github.com/mobilemindtec/go-utils/app/util"
+	"github.com/mobilemindtech/go-utils/app/util"
 	"strconv"
 	"time"
 )
@@ -92,7 +92,7 @@ func (this *RawQuery) Values() *RawQuery {
 
 func (this *RawQuery) ExecAsValuesMap() ([]map[string]interface{}, error) {
 	this.Values()
-	if  this.HasError() {
+	if this.HasError() {
 		return nil, this.Error
 	}
 	return this.GetValues(), nil
@@ -105,7 +105,7 @@ func (this *RawQuery) ValuesList() *RawQuery {
 
 func (this *RawQuery) ExecAsValuesList() ([][]interface{}, error) {
 	this.ValuesList()
-	if  this.HasError() {
+	if this.HasError() {
 		return nil, this.Error
 	}
 	return this.GetValuesList(), nil
@@ -117,7 +117,7 @@ func (this *RawQuery) ValuesFlat() *RawQuery {
 }
 func (this *RawQuery) ExecAsValuesFlat() ([]interface{}, error) {
 	this.ValuesFlat()
-	if  this.HasError() {
+	if this.HasError() {
 		return nil, this.Error
 	}
 	return this.GetValuesFlat(), nil
@@ -192,8 +192,6 @@ func (this *RawQuery) ExecAsSliceOSlice() ([][]interface{}, error) {
 	}
 	return this.GetValuesList(), nil
 }
-
-
 
 func ValueToInt(val interface{}) int {
 	switch val.(type) {

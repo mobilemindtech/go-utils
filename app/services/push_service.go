@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/core/logs"
-	"github.com/mobilemindtec/go-utils/beego/db"
+	"github.com/mobilemindtech/go-utils/beego/db"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -21,7 +21,7 @@ type Subscriber struct {
 }
 
 type PushService struct {
-	Session     *db.Session
+	Session *db.Session
 
 	pushServerUser  string
 	pushServerKey   string
@@ -108,10 +108,10 @@ func (this *PushService) NotificateByUserNameList(usernameList []string, message
 	notification["color"] = this.notificationColor
 
 	if usernameList == nil || len(usernameList) == 0 {
-		return this.post("all",notification)
+		return this.post("all", notification)
 	} else {
 		notification["users"] = usernameList
-		return this.post("users",notification)
+		return this.post("users", notification)
 	}
 
 	return nil
@@ -126,7 +126,6 @@ func (this *PushService) post(path string, notification map[string]interface{}) 
 	} else {
 		action = fmt.Sprintf("/event/%v/%v", this.pushAppDevName, path)
 	}
-
 
 	jsonData, err := json.Marshal(notification)
 

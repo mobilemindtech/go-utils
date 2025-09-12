@@ -8,12 +8,12 @@ import (
 	"runtime/debug"
 
 	"github.com/beego/beego/v2/core/logs"
-	"github.com/mobilemindtec/go-utils/v2/ctx"
-	"github.com/mobilemindtec/go-utils/v2/foreach"
-	"github.com/mobilemindtec/go-utils/v2/optional"
-	"github.com/mobilemindtec/go-utils/v2/criteria"
-	"github.com/mobilemindtec/go-utils/v2/fn"
-	"github.com/mobilemindtec/go-io/result"
+	"github.com/mobilemindtech/go-io/result"
+	"github.com/mobilemindtech/go-utils/v2/criteria"
+	"github.com/mobilemindtech/go-utils/v2/ctx"
+	"github.com/mobilemindtech/go-utils/v2/fn"
+	"github.com/mobilemindtech/go-utils/v2/foreach"
+	"github.com/mobilemindtech/go-utils/v2/optional"
 )
 
 type PipeState int
@@ -32,12 +32,11 @@ func NewContinue() *Continue {
 	return &Continue{}
 }
 func FailOrContinue(err error) interface{} {
-	if	err != nil {
+	if err != nil {
 		return optional.NewFail(err)
 	}
 	return NewContinue()
 }
-
 
 type PipeStep struct {
 	ctxName     string
@@ -288,7 +287,7 @@ func (this *Pipe) configure() {
 				info.CallEmpty()
 			} else {
 
-				if info.ArgsCount != 1  { // onSuccess = func(interface{})
+				if info.ArgsCount != 1 { // onSuccess = func(interface{})
 					panic("step OnError: func must have one argument of error or Fail")
 				}
 
@@ -428,7 +427,6 @@ func (this *Pipe) Run() *Pipe {
 				r = res[0].Interface()
 			}
 		}
-
 
 		switch nextFnInfo.ArgsCount {
 		case 0:
@@ -610,8 +608,10 @@ func (this *Pipe) RunAsResult() *result.Result[bool] {
 	switch this.State {
 	case StateSuccess:
 		return result.OfValue(true)
-	case StateError:return result.OfError[bool](this.fail.Error)
-	default:return result.OfErrorf[bool]("undefined state")
+	case StateError:
+		return result.OfError[bool](this.fail.Error)
+	default:
+		return result.OfErrorf[bool]("undefined state")
 	}
 }
 
@@ -668,10 +668,10 @@ func GetCtxPtr[T any](c interface{}, key string) *T {
 	}
 }
 
-func GetCtxVal[T any](pipe *Pipe) T{
+func GetCtxVal[T any](pipe *Pipe) T {
 	var t T
 	typOf := reflect.TypeOf(t)
-	rval :=  pipe.findInCtxbyType(typOf, "GetCtxVal")
+	rval := pipe.findInCtxbyType(typOf, "GetCtxVal")
 	return rval.Interface().(T)
 }
 

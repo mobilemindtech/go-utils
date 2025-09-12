@@ -1,4 +1,4 @@
-module github.com/mobilemindtec/go-utils
+module github.com/mobilemindtech/go-utils
 
 go 1.24.0
 
@@ -8,7 +8,7 @@ require (
 	github.com/go-redis/redis/v7 v7.4.1
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/leekchan/accounting v1.0.0
-	github.com/mobilemindtec/go-io v0.0.0-20241018190539-11fe1345c51e
+	github.com/mobilemindtech/go-io v0.0.0-20241018190539-11fe1345c51e
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirsean/go-pool v0.0.0-20170808185629-2b94e61c3882
 	golang.org/x/text v0.22.0

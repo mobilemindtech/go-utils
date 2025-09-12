@@ -3,7 +3,7 @@ package models
 import (
 	"time"
 
-	"github.com/mobilemindtec/go-utils/beego/db"
+	"github.com/mobilemindtech/go-utils/beego/db"
 	uuid "github.com/satori/go.uuid"
 )
 

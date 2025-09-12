@@ -3,7 +3,7 @@ package collections
 import (
 	"sync"
 
-	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtech/go-utils/v2/optional"
 )
 
 type KeyVal[K comparable, V any] struct {

@@ -3,7 +3,7 @@ package response
 import (
 	"fmt"
 	beego "github.com/beego/beego/v2/server/web"
-	"github.com/mobilemindtec/go-utils/v2/maps"
+	"github.com/mobilemindtech/go-utils/v2/maps"
 )
 
 type RenderResponse interface {

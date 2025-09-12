@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"github.com/beego/beego/v2/client/orm"
-	"github.com/beego/beego/v2/core/logs"
-	"github.com/mobilemindtec/go-utils/v2/optional"
-	"github.com/mobilemindtec/go-io/result"
 	"github.com/beego/beego/v2/client/orm/clauses/order_clause"
+	"github.com/beego/beego/v2/core/logs"
+	"github.com/mobilemindtech/go-io/result"
+	"github.com/mobilemindtech/go-utils/v2/optional"
 )
 
 type CriteriaExpression int
@@ -62,8 +62,8 @@ const (
 )
 
 type CriteriaOrder struct {
-	Path string
-	Desc bool
+	Path  string
+	Desc  bool
 	IsRaw bool
 }
 
@@ -93,8 +93,8 @@ func (this *CriteriaSet) AddCriteria(criterias ...*Criteria) *CriteriaSet {
 type Criteria struct {
 	Path       string
 	Value      interface{}
-	RawValues      []interface{}
-	RawQuery      string
+	RawValues  []interface{}
+	RawQuery   string
 	Value2     interface{}
 	Expression CriteriaExpression
 
@@ -118,7 +118,7 @@ type Criteria struct {
 
 	UpdateParams map[string]interface{}
 
-	Page *Page
+	Page        *Page
 	searchPaths []string
 	searchValue string
 
@@ -157,17 +157,17 @@ type Criteria struct {
 
 func NewCriteria(session *Session, entity interface{}, entities interface{}) *Criteria {
 	return &Criteria{
-		criterias: []*Criteria{},
-		criteriasOr: []*Criteria{},
-		criteriasAnd: []*Criteria{},
-		criteriasAndOr: []*Criteria{},
+		criterias:         []*Criteria{},
+		criteriasOr:       []*Criteria{},
+		criteriasAnd:      []*Criteria{},
+		criteriasAndOr:    []*Criteria{},
 		criteriasAndOrAnd: []*CriteriaSet{},
-		criteriasOrAnd: []*Criteria{},
-		Session: session,
-		Result: entity,
-		Results: entities,
-		RelatedSelList: []string{},
-		searchPaths: []string{},
+		criteriasOrAnd:    []*Criteria{},
+		Session:           session,
+		Result:            entity,
+		Results:           entities,
+		RelatedSelList:    []string{},
+		searchPaths:       []string{},
 	}
 }
 
@@ -325,11 +325,11 @@ func (this *Criteria) Eq(path string, value interface{}) *Criteria {
 func (this *Criteria) Raw(path string, query string, args ...interface{}) *Criteria {
 	this.criterias = append(
 		this.criterias, &Criteria{Path: path,
-			RawValues: args,
-			RawQuery: query,
+			RawValues:  args,
+			RawQuery:   query,
 			Expression: Raw,
-			ForceAnd: false,
-			ForceOr: false,
+			ForceAnd:   false,
+			ForceOr:    false,
 		})
 	return this
 }
@@ -491,7 +491,6 @@ func (this *Criteria) ListAndCount() *Criteria {
 	return this
 }
 
-
 func (this *Criteria) One() *Criteria {
 	return this.execute(CriteriaOne)
 }
@@ -571,7 +570,7 @@ func (this *Criteria) buildPage() {
 			}
 		}
 
-		if this.Page.FilterColumns != nil && len(this.Page.FilterColumns) > 0{
+		if this.Page.FilterColumns != nil && len(this.Page.FilterColumns) > 0 {
 
 			if len(this.Page.FilterColumns) == 1 {
 
@@ -996,7 +995,6 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria {
 		query = query.Distinct()
 	}
 
-	
 	switch resultType {
 
 	case CriteriaAggregateOne:
@@ -1070,11 +1068,9 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria {
 			query = query.OrderBy(orders...)
 		}
 
-		
-
 		if len(this.RelatedSelList) > 0 {
 			if len(this.RelatedSelList) == 1 && this.RelatedSelList[0] == "all" {
-				query = query.RelatedSel()				
+				query = query.RelatedSel()
 			} else {
 				for _, it := range this.RelatedSelList {
 					query = query.RelatedSel(it)
@@ -1123,7 +1119,7 @@ func (this *Criteria) execute(resultType CriteriaResult) *Criteria {
 				} else {
 					orders = append(orders, order.Path)
 				}
-			}			
+			}
 		}
 
 		if len(orders) > 0 {

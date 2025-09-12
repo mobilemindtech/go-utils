@@ -7,19 +7,19 @@ import (
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/core/validation"
 	"github.com/beego/i18n"
-	"github.com/mobilemindtec/go-utils/support"
-	"github.com/mobilemindtec/go-utils/v2/optional"
-	"github.com/mobilemindtec/go-utils/v2/maps"
-	"github.com/mobilemindtec/go-io/result"
-	"github.com/mobilemindtec/go-io/types/unit"
-	iov "github.com/mobilemindtec/go-io/validation"
+	"github.com/mobilemindtech/go-io/result"
+	"github.com/mobilemindtech/go-io/types/unit"
+	iov "github.com/mobilemindtech/go-io/validation"
+	"github.com/mobilemindtech/go-utils/support"
+	"github.com/mobilemindtech/go-utils/v2/maps"
+	"github.com/mobilemindtech/go-utils/v2/optional"
 	"strings"
 )
 
 type ValidationError struct {
 	Message string
-	List []string
-	Map map[string]string
+	List    []string
+	Map     map[string]string
 }
 
 func NewValidationError() *ValidationError {
@@ -36,10 +36,9 @@ type EntityValidatorResult struct {
 	HasError     bool
 }
 
-
 func (this *EntityValidatorResult) Error() string {
-	if len(this.Errors) == 0 && len(this.ErrorsFields)  == 0 {
-		return  ""
+	if len(this.Errors) == 0 && len(this.ErrorsFields) == 0 {
+		return ""
 	}
 
 	var lst []string
@@ -81,7 +80,7 @@ func NewEntityValidatorResult() *EntityValidatorResult {
 type EntityValidator struct {
 	Lang              string
 	ViewPath          string
-	valActionsFuncs        []FuncValidation
+	valActionsFuncs   []FuncValidation
 	valActionsForType []*ValidatorForType
 	values            []interface{}
 }
@@ -93,9 +92,9 @@ func NewEntityValidator(lang string, viewPath string) *EntityValidator {
 // New Create new validator with default lang pt-BR
 func New() *EntityValidator {
 	return &EntityValidator{
-		Lang: "pt-BR",
+		Lang:   "pt-BR",
 		values: []interface{}{}}
-		//valActions: []CustomValidation{}}
+	//valActions: []CustomValidation{}}
 }
 
 // WithPath Configure path to find message, eg.:
@@ -105,7 +104,6 @@ func (this *EntityValidator) WithPath(path string) *EntityValidator {
 	this.ViewPath = path
 	return this
 }
-
 
 func (this *EntityValidator) AddFuncValidation(acs ...FuncValidation) *EntityValidator {
 	for _, ac := range acs {
@@ -159,7 +157,6 @@ func (this *EntityValidator) Validate(entities ...interface{}) interface{} {
 	return optional.SomeOk()
 }
 
-
 func (this *EntityValidator) ValidateResultWith(entity interface{}, f func(validator *Validation)) *result.Result[iov.Validation] {
 	return result.Try(func() (iov.Validation, error) {
 		val, err := this.ValidMult([]interface{}{entity}, f)
@@ -188,7 +185,7 @@ func (this *EntityValidator) ValidateResult(entities ...interface{}) *result.Res
 	})
 }
 
-// ValidateOrError retorn a Result error if validation not pass or a error occurried. 
+// ValidateOrError retorn a Result error if validation not pass or a error occurried.
 func (this *EntityValidator) ValidateOrError(entities ...interface{}) *result.Result[*unit.Unit] {
 	return result.Try(func() (*unit.Unit, error) {
 		val, err := this.ValidMult(entities, nil)
@@ -198,14 +195,13 @@ func (this *EntityValidator) ValidateOrError(entities ...interface{}) *result.Re
 		if val.HasError {
 			return nil, &ValidationError{
 				Message: val.Error(),
-				Map: val.Errors,
-				List: maps.ToSliceKV(val.Errors),
+				Map:     val.Errors,
+				List:    maps.ToSliceKV(val.Errors),
 			}
 		}
 		return unit.OfUnit(), nil
 	})
 }
-
 
 func (this *EntityValidator) ValidMult(entities []interface{}, action func(validator *Validation)) (*EntityValidatorResult, error) {
 

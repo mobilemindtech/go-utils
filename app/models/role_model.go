@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/client/orm"
-	"github.com/mobilemindtec/go-utils/beego/db"
+	"github.com/mobilemindtech/go-utils/beego/db"
 )
 
 type Role struct {
@@ -38,7 +38,7 @@ func (this *Role) List() (*[]*Role, error) {
 
 func (this *Role) FindByAuthorityOrNil(authority string) *Role {
 	role, _ := this.FindByAuthority(authority)
-	return  role
+	return role
 }
 
 func (this *Role) FindByAuthority(authority string) (role *Role, err error) {

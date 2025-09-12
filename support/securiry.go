@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	beego "github.com/beego/beego/v2/server/web"
 	jwt "github.com/golang-jwt/jwt/v5"
-	"github.com/mobilemindtec/go-io/result"
+	"github.com/mobilemindtech/go-io/result"
 	"math/rand"
 	"time"
 )

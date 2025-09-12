@@ -3,14 +3,14 @@ package optional
 import (
 	"errors"
 	"fmt"
-	"github.com/mobilemindtec/go-io/option"
-	"github.com/mobilemindtec/go-io/result"
-	"github.com/mobilemindtec/go-utils/v2/inline"
+	"github.com/mobilemindtech/go-io/option"
+	"github.com/mobilemindtech/go-io/result"
+	"github.com/mobilemindtech/go-utils/v2/inline"
 	"reflect"
 	"strings"
 	"time"
 
-	lst "github.com/mobilemindtec/go-utils/lists"
+	lst "github.com/mobilemindtech/go-utils/lists"
 )
 
 type Optional[T any] struct {
@@ -216,7 +216,6 @@ func (this *Optional[T]) OrNil() interface{} {
 	return nil
 }
 
-
 func (this *Optional[T]) OrElse(opt *Optional[T]) *Optional[T] {
 	if this.IsSome() || this.IsFail() {
 		return this
@@ -264,7 +263,7 @@ func (this *Optional[T]) IsNone() bool {
 func (this *Optional[T]) Val() interface{} {
 	if this.IsFail() {
 		return this.fail
-	}else if this.IsNone() {
+	} else if this.IsNone() {
 		return this.none
 	} else if this.IsSome() {
 		return this.some
@@ -328,7 +327,6 @@ func (this *Optional[T]) Foreach(each func(T)) *Optional[T] {
 	return this
 }
 
-
 // Exec Execute operation and map success to Some of Ok
 func (this *Optional[T]) Exec(f func(T) *Optional[bool]) *Optional[T] {
 	if this.some != nil {
@@ -345,7 +343,7 @@ func (this *Optional[T]) TryExec(f func(T) error) *Optional[T] {
 	if this.some != nil {
 		v := GetItem[T](this.some)
 		if err := f(v); err != nil {
-			return OfFail[T](err)			
+			return OfFail[T](err)
 		}
 	}
 	return this
@@ -971,13 +969,13 @@ func FlatMap[T any, R any](v *Optional[T], f func(T) *Optional[R]) *Optional[R] 
 	if v.NonEmpty() {
 		return f(v.UnWrap())
 	} else {
-		return  OfNone[R]()
+		return OfNone[R]()
 	}
 }
 
 func Filter[T any](v *Optional[T], f func(T) bool) *Optional[T] {
 	if v.NonEmpty() && f(v.UnWrap()) {
-		return  v
+		return v
 	} else {
 		return OfNone[T]()
 	}

@@ -1,7 +1,7 @@
 package lazy
 
 import (
-	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtech/go-utils/v2/optional"
 )
 
 // Lazy express a lazy function

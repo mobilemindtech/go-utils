@@ -1,49 +1,48 @@
 package services
 
 import (
-	"github.com/mobilemindtec/go-utils/app/models"
-  beego "github.com/beego/beego/v2/server/web"  
-  "github.com/beego/beego/v2/core/logs"
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
-  "encoding/base64"
-  "encoding/hex"
-  "crypto/sha1"
-  "crypto/hmac"			
+	"fmt"
+	"github.com/beego/beego/v2/core/logs"
+	beego "github.com/beego/beego/v2/server/web"
+	"github.com/mobilemindtech/go-utils/app/models"
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"bytes"
-	"fmt"
 )
 
 type MailService struct {
-	Controller beego.Controller
+	Controller                  beego.Controller
 	PasswordRecoverTemplateName string
-	
-	ApiKey string
-	ApiAppName string
-	AppName string
-	AppUrl string
-	EmailDefault string
+
+	ApiKey               string
+	ApiAppName           string
+	AppName              string
+	AppUrl               string
+	EmailDefault         string
 	EmailPasswordDefault string
 
-  MailServerUrl string
-
+	MailServerUrl string
 }
 
-func NewMailService(data map[string]string) *MailService{
-	c := &MailService{  }
-  c.ApiKey = data["apiKey"]
-  c.ApiAppName = data["apiAppName"]
-  c.EmailDefault = data["emailDefault"]
-  c.EmailPasswordDefault = data["emailPasswordPadrao"]
-  c.AppName = data["appName"]
-  c.AppUrl = data["appUrl"]
-  c.MailServerUrl = data["mailServerUrl"]
-  return c
+func NewMailService(data map[string]string) *MailService {
+	c := &MailService{}
+	c.ApiKey = data["apiKey"]
+	c.ApiAppName = data["apiAppName"]
+	c.EmailDefault = data["emailDefault"]
+	c.EmailPasswordDefault = data["emailPasswordPadrao"]
+	c.AppName = data["appName"]
+	c.AppUrl = data["appUrl"]
+	c.MailServerUrl = data["mailServerUrl"]
+	return c
 }
 
-func (this *MailService) Send(email *models.Email) error{
+func (this *MailService) Send(email *models.Email) error {
 	data := this.GetDefaultEmail()
 	data["subject"] = email.Subject
 	data["to"] = email.To
@@ -57,11 +56,9 @@ func (this *MailService) SendPasswordRecover(to string, name string, token strin
 	return this.SendPasswordRecoverWithUrl(to, name, url)
 }
 
-
 func (this *MailService) SendPasswordRecoverWithUrl(to string, name string, url string) error {
 
-
-  this.Controller.TplName = this.PasswordRecoverTemplateName
+	this.Controller.TplName = this.PasswordRecoverTemplateName
 
 	this.Controller.Data["user_name"] = name
 	this.Controller.Data["recover_url"] = url
@@ -73,7 +70,6 @@ func (this *MailService) SendPasswordRecoverWithUrl(to string, name string, url 
 		return err
 	}
 
-
 	email := this.GetDefaultEmail()
 	email["subject"] = fmt.Sprintf("%v - Recuperação de Senha", this.AppName)
 	email["to"] = to
@@ -84,8 +80,7 @@ func (this *MailService) SendPasswordRecoverWithUrl(to string, name string, url 
 
 func (this *MailService) SendPasswordRecoverCode(to string, name string, code string) error {
 
-
-  this.Controller.TplName = this.PasswordRecoverTemplateName
+	this.Controller.TplName = this.PasswordRecoverTemplateName
 
 	this.Controller.Data["user_name"] = name
 	this.Controller.Data["code"] = code
@@ -97,7 +92,6 @@ func (this *MailService) SendPasswordRecoverCode(to string, name string, code st
 		return err
 	}
 
-
 	email := this.GetDefaultEmail()
 	email["subject"] = fmt.Sprintf("%v - Recuperação de Senha", this.AppName)
 	email["to"] = to
@@ -108,15 +102,13 @@ func (this *MailService) SendPasswordRecoverCode(to string, name string, code st
 
 func (this *MailService) PostEmail(email map[string]string) error {
 
-
 	if len(strings.TrimSpace(this.EmailDefault)) > 0 && len(strings.TrimSpace(this.EmailPasswordDefault)) > 0 {
 		email["username"] = this.EmailDefault
-    email["from"] = this.EmailDefault
+		email["from"] = this.EmailDefault
 		email["password"] = this.EmailPasswordDefault
 	}
 
 	email["application"] = this.ApiAppName
-
 
 	jsonData, err := json.Marshal(email)
 
@@ -129,26 +121,25 @@ func (this *MailService) PostEmail(email map[string]string) error {
 
 	data := bytes.NewBuffer(jsonData)
 
-  logs.Debug("MAIL SERVER URL %v TO %v", this.MailServerUrl, email["to"])
+	logs.Debug("MAIL SERVER URL %v TO %v", this.MailServerUrl, email["to"])
 
-  client := &http.Client{}
-  req, err := http.NewRequest("POST", this.MailServerUrl, data)
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", this.MailServerUrl, data)
 
-  if err != nil {
-    logs.Debug("error http.NewRequest ", err.Error())
-    return err
-  }
+	if err != nil {
+		logs.Debug("error http.NewRequest ", err.Error())
+		return err
+	}
 
-  req.Header.Add("Content-Type", "application/json")
-  req.Header.Add("X-Hub-Signature", signatureHash)
-  
-  r, err := client.Do(req)
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("X-Hub-Signature", signatureHash)
+
+	r, err := client.Do(req)
 
 	if err != nil {
 		logs.Debug("error http.Do ", err.Error())
 		return err
 	}
-
 
 	response, err := ioutil.ReadAll(r.Body)
 
@@ -162,8 +153,7 @@ func (this *MailService) PostEmail(email map[string]string) error {
 	return nil
 }
 
-
-func (this *MailService) OnTemplate(templateName string, values map[string]string) (string, error){
+func (this *MailService) OnTemplate(templateName string, values map[string]string) (string, error) {
 
 	content, err := this.GetHtmlTemplate(templateName)
 
@@ -174,7 +164,7 @@ func (this *MailService) OnTemplate(templateName string, values map[string]strin
 	return this.ReplaceTemplate(content, values), nil
 }
 
-func (this *MailService) GetHtmlTemplate(templateName string) (string, error){
+func (this *MailService) GetHtmlTemplate(templateName string) (string, error) {
 
 	content := ""
 
@@ -187,7 +177,7 @@ func (this *MailService) GetHtmlTemplate(templateName string) (string, error){
 	return string(buffer), nil
 }
 
-func (this *MailService) ReplaceTemplate(templateContent string, values map[string]string) string{
+func (this *MailService) ReplaceTemplate(templateContent string, values map[string]string) string {
 
 	for k, v := range values {
 		templateContent = strings.Replace(templateContent, k, v, -1)
@@ -207,15 +197,13 @@ func (this *MailService) GetDefaultEmail() map[string]string {
 	return emailMap
 }
 
-
-
 func (this *MailService) GenerateHash(body []byte) string {
-  mac := hmac.New(sha1.New, []byte(this.ApiKey))
+	mac := hmac.New(sha1.New, []byte(this.ApiKey))
 
-  bodyHex := []byte(hex.EncodeToString(body))
+	bodyHex := []byte(hex.EncodeToString(body))
 
-  mac.Write(bodyHex)
-  rawBodyMAC := mac.Sum(nil)
-  computedHash := base64.StdEncoding.EncodeToString(rawBodyMAC)	
-  return computedHash
+	mac.Write(bodyHex)
+	rawBodyMAC := mac.Sum(nil)
+	computedHash := base64.StdEncoding.EncodeToString(rawBodyMAC)
+	return computedHash
 }

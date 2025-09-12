@@ -3,10 +3,10 @@ package controllers
 import (
 	"time"
 
-	"github.com/mobilemindtec/go-utils/app/models"
-	"github.com/mobilemindtec/go-utils/app/services"
-	"github.com/mobilemindtec/go-utils/beego/web"
-	"github.com/mobilemindtec/go-utils/cache"
+	"github.com/mobilemindtech/go-utils/app/models"
+	"github.com/mobilemindtech/go-utils/app/services"
+	"github.com/mobilemindtech/go-utils/beego/web"
+	"github.com/mobilemindtech/go-utils/cache"
 )
 
 type BaseController struct {

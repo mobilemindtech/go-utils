@@ -9,12 +9,12 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/core/logs"
-	"github.com/mobilemindtec/go-utils/app/util"
-	"github.com/mobilemindtec/go-utils/support"
-	"github.com/mobilemindtec/go-utils/v2/optional"
-	"github.com/mobilemindtec/go-utils/v2/try"
-	"github.com/mobilemindtec/go-io/result"
-	ioutil "github.com/mobilemindtec/go-io/util"
+	"github.com/mobilemindtech/go-io/result"
+	ioutil "github.com/mobilemindtech/go-io/util"
+	"github.com/mobilemindtech/go-utils/app/util"
+	"github.com/mobilemindtech/go-utils/support"
+	"github.com/mobilemindtech/go-utils/v2/optional"
+	"github.com/mobilemindtech/go-utils/v2/try"
 )
 
 const (
@@ -30,10 +30,10 @@ const (
 
 type JSON struct {
 	support.JsonParser
-	Debug           bool
-	DateFormat      string
-	DateTimeFormat  string
-	TimeFormat      string
+	Debug          bool
+	DateFormat     string
+	DateTimeFormat string
+	TimeFormat     string
 	//TimestampFormat string
 
 	DebugParse  bool
@@ -43,7 +43,7 @@ type JSON struct {
 	DefaultDateTimeFormat string
 
 	CamelCase bool
-	TagNames []string
+	TagNames  []string
 }
 
 // NewJSONWithCamelCase new parser with camelcase and tagname = [jsonp]. default is snakecase
@@ -66,9 +66,9 @@ func NewJSON2() *JSON {
 // NewJSON new parser with snackcase and tagname = [jsonp]
 func NewJSON() *JSON {
 	return &JSON{
-		DateFormat:     DateLayout,
-		DateTimeFormat: DateTimeLayout,
-		TimeFormat:     TimeLayout,
+		DateFormat:            DateLayout,
+		DateTimeFormat:        DateTimeLayout,
+		TimeFormat:            TimeLayout,
 		DefaultDateTimeFormat: TimestampLayout,
 		DateLayouts:           []string{TimestampLayout, TimestampLayout2, TimestampLayout3, DateTimeLayout, DateTimeLayout, TimeLayout},
 		TagNames:              []string{"jsonp", "json"},
@@ -233,7 +233,6 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
 
 	//logs.Debug("3 fullType ", fullType, " fullValue ", fullValue )
 
-
 	jsonResult := make(map[string]interface{})
 
 	for i := 0; i < fullType.NumField(); i++ {
@@ -242,24 +241,27 @@ func (this *JSON) ToMap(obj interface{}) (map[string]interface{}, error) {
 
 		attr := ""
 
-		if !exists {continue}
+		if !exists {
+			continue
+		}
 
 		if len(tags) > 0 {
 			attr = tags[0]
 		}
 
-		if attr == "-" { continue }
-
-		if len(strings.TrimSpace(attr)) == 0 {
-				attr = Underscore(field.Name)
+		if attr == "-" {
+			continue
 		}
 
+		if len(strings.TrimSpace(attr)) == 0 {
+			attr = Underscore(field.Name)
+		}
 
 		if this.CamelCase {
 			attr = field.Name
 		}
 
-			//logs.Debug("Field ", attr)
+		//logs.Debug("Field ", attr)
 
 		fieldStruct := fullValue.FieldByName(field.Name)
 		fieldValue := fieldStruct.Interface()
@@ -313,8 +315,6 @@ func (this *JSON) convertItem(jsonResult map[string]interface{}, attr string, ta
 	if this.Debug {
 		//logs.Debug("Attr = ", attr, ", Field = ", field.Name, ", Type = ", ftype, "Kind = ", fieldStruct.Type().Kind(), ", Real Kind", realKind, "isPtr = ", isPtr) //, ", Value = ", fieldValue)
 	}
-
-
 
 	switch realKind {
 	case reflect.String:
@@ -396,7 +396,6 @@ func (this *JSON) convertItem(jsonResult map[string]interface{}, attr string, ta
 			return nil
 		}
 
-
 		//logs.Debug("slice 2 ", slice)
 
 		if isPtr || (isInterface && realTypePrt) {
@@ -450,7 +449,7 @@ func (this *JSON) convertItem(jsonResult map[string]interface{}, attr string, ta
 			zero := reflect.Zero(reflect.TypeOf(mp)).Interface() == mp
 
 			if mp.IsNil() || zero {
-				return  nil
+				return nil
 			}
 
 			if isPtr || (isInterface && realTypePrt) {
@@ -472,7 +471,7 @@ func (this *JSON) convertItem(jsonResult map[string]interface{}, attr string, ta
 		zero := reflect.Zero(reflect.TypeOf(fieldValue)).Interface() == fieldValue
 
 		if zero {
-			if !omitEmpty{
+			if !omitEmpty {
 				jsonResult[attr] = nil
 			}
 			return nil
@@ -554,7 +553,9 @@ func (this *JSON) DecodeFromMap(jsonData map[string]interface{}, obj interface{}
 		attr := ""
 
 		//logs.Debug("get value ", field.Name)
-		if !exists {continue}
+		if !exists {
+			continue
+		}
 
 		for _, tag := range tags {
 			if len(tag) > 0 {
@@ -563,7 +564,9 @@ func (this *JSON) DecodeFromMap(jsonData map[string]interface{}, obj interface{}
 			}
 		}
 
-		if attr == "-" { continue }
+		if attr == "-" {
+			continue
+		}
 
 		if len(strings.TrimSpace(attr)) == 0 {
 			attr = Underscore(field.Name)
@@ -852,8 +855,6 @@ func (this *JSON) formatTime(fieldValue interface{}, ptr bool, tags []string) (s
 		} else {
 			// "timestamp" is default
 
-
-
 			value = date.Format(this.DefaultDateTimeFormat)
 			expectedFormat = this.DefaultDateTimeFormat
 		}
@@ -977,7 +978,6 @@ func (this *JSON) hasFormatTag(tags []string) (string, bool) {
 	return "", false
 }
 
-
 func (this *JSON) getTagsByTagByNames(field reflect.StructField, tagNames []string) (bool, []string) {
 
 	var tags []string
@@ -986,7 +986,9 @@ func (this *JSON) getTagsByTagByNames(field reflect.StructField, tagNames []stri
 	for _, tagName := range tagNames {
 		tag, found := field.Tag.Lookup(tagName)
 
-		if found { exists = true }
+		if found {
+			exists = true
+		}
 
 		if len(strings.TrimSpace(tag)) > 0 {
 			if strings.Contains(tag, ";") {
@@ -1006,14 +1008,14 @@ func Decode(b []byte, obj interface{}) error {
 }
 
 func DecodeOpt[T any](b []byte) *optional.Optional[*T] {
-	return try.Of(func()(*T, error){
+	return try.Of(func() (*T, error) {
 		var t T
 		return &t, NewJSON().Decode(b, &t)
 	})
 }
 
 func DecodeResult[T any](b []byte) *result.Result[T] {
-	return result.Try(func()(T, error){
+	return result.Try(func() (T, error) {
 		t := ioutil.NewOf[T]()
 		return t, NewJSON().Decode(b, t)
 	})
@@ -1021,7 +1023,7 @@ func DecodeResult[T any](b []byte) *result.Result[T] {
 
 func DecodeAsCamelCase(b []byte, obj interface{}) error {
 	j := NewJSON()
-	j.CamelCase  = true
+	j.CamelCase = true
 	return j.Decode(b, obj)
 }
 
@@ -1029,7 +1031,7 @@ func Encode(obj interface{}) ([]byte, error) {
 	return NewJSON().Encode(obj)
 }
 func EncodeOpt(obj interface{}) *optional.Optional[[]byte] {
-	return try.Of(func()([]byte, error){
+	return try.Of(func() ([]byte, error) {
 		return Encode(obj)
 	})
 }
@@ -1039,7 +1041,7 @@ func EncodeAsMap(obj interface{}) (map[string]interface{}, error) {
 }
 
 func EncodeAsMapOpt(obj interface{}) *optional.Optional[map[string]interface{}] {
-	return try.Of(func()(map[string]interface{}, error){
+	return try.Of(func() (map[string]interface{}, error) {
 		return EncodeAsMap(obj)
 	})
 }
@@ -1049,7 +1051,7 @@ func EncodeAsSlice(obj interface{}) ([]interface{}, error) {
 }
 
 func EncodeAsSliceOpt(obj interface{}) *optional.Optional[[]interface{}] {
-	return try.Of(func()([]interface{}, error){
+	return try.Of(func() ([]interface{}, error) {
 		return EncodeAsSlice(obj)
 	})
 }
@@ -1065,7 +1067,7 @@ func EncodeAsString(obj interface{}) (string, error) {
 }
 
 func EncodeAsStringOpt(obj interface{}) *optional.Optional[string] {
-	return try.Of(func()(string, error){
+	return try.Of(func() (string, error) {
 		return NewJSON().EncodeAsString(obj)
 	})
 }

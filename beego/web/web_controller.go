@@ -3,8 +3,8 @@ package web
 import (
 	"errors"
 	"fmt"
-	"github.com/mobilemindtec/go-utils/app/util"
-	"github.com/mobilemindtec/go-utils/beego/web/response"
+	"github.com/mobilemindtech/go-utils/app/util"
+	"github.com/mobilemindtech/go-utils/beego/web/response"
 	"html/template"
 	"mime/multipart"
 	"net/http"
@@ -18,21 +18,21 @@ import (
 	"github.com/beego/beego/v2/core/validation"
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/beego/i18n"
-	"github.com/mobilemindtec/go-io/option"
-	"github.com/mobilemindtec/go-io/result"
-	"github.com/mobilemindtec/go-utils/app/models"
-	"github.com/mobilemindtec/go-utils/app/route"
-	"github.com/mobilemindtec/go-utils/app/services"
-	"github.com/mobilemindtec/go-utils/beego/db"
-	"github.com/mobilemindtec/go-utils/beego/validator"
-	"github.com/mobilemindtec/go-utils/cache"
-	"github.com/mobilemindtec/go-utils/json"
-	"github.com/mobilemindtec/go-utils/support"
-	"github.com/mobilemindtec/go-utils/v2/criteria"
-	"github.com/mobilemindtec/go-utils/v2/ioc"
-	"github.com/mobilemindtec/go-utils/v2/lists"
-	"github.com/mobilemindtec/go-utils/v2/maps"
-	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtech/go-io/option"
+	"github.com/mobilemindtech/go-io/result"
+	"github.com/mobilemindtech/go-utils/app/models"
+	"github.com/mobilemindtech/go-utils/app/route"
+	"github.com/mobilemindtech/go-utils/app/services"
+	"github.com/mobilemindtech/go-utils/beego/db"
+	"github.com/mobilemindtech/go-utils/beego/validator"
+	"github.com/mobilemindtech/go-utils/cache"
+	"github.com/mobilemindtech/go-utils/json"
+	"github.com/mobilemindtech/go-utils/support"
+	"github.com/mobilemindtech/go-utils/v2/criteria"
+	"github.com/mobilemindtech/go-utils/v2/ioc"
+	"github.com/mobilemindtech/go-utils/v2/lists"
+	"github.com/mobilemindtech/go-utils/v2/maps"
+	"github.com/mobilemindtech/go-utils/v2/optional"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -1321,7 +1321,7 @@ func (this *WebController) IsAjax() bool {
 func (this *WebController) GetHeaderToken() string {
 	token := this.GetHeaderByName("X-Auth-Token")
 	if len(token) == 0 {
-		token = this.GetHeaderByName("Authorization")		
+		token = this.GetHeaderByName("Authorization")
 	}
 	return token
 }
@@ -1651,7 +1651,7 @@ func (this *WebController) AppAuth() {
 			}
 
 			user, err := cache.Memoize(this.CacheService, token, new(models.User), loader)
-			
+
 			if err != nil {
 
 				if _, ok := err.(*services.LoginErrorUserNotFound); ok {

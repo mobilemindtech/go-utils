@@ -1,7 +1,7 @@
 package fn
 
 import (
-	_ "github.com/mobilemindtec/go-utils/v2/optional"
+	_ "github.com/mobilemindtech/go-utils/v2/optional"
 	"reflect"
 )
 

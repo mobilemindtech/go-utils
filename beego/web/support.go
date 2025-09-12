@@ -6,9 +6,9 @@ import (
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/beego/i18n"
 	"github.com/leekchan/accounting"
-	"github.com/mobilemindtec/go-utils/beego/db"
-	"github.com/mobilemindtec/go-utils/beego/filters"
-	"github.com/mobilemindtec/go-utils/support"
+	"github.com/mobilemindtech/go-utils/beego/db"
+	"github.com/mobilemindtech/go-utils/beego/filters"
+	"github.com/mobilemindtech/go-utils/support"
 	"github.com/satori/go.uuid"
 	"strconv"
 	"strings"
@@ -185,7 +185,9 @@ func LoadFuncs() {
 	}
 
 	timeDiff := func(start time.Time, end time.Time, label string) string {
-		if isZeroDate(start) || isZeroDate(end) {return "-"}
+		if isZeroDate(start) || isZeroDate(end) {
+			return "-"
+		}
 		diff := end.Sub(start)
 		return fmt.Sprintf("%v %v", support.ToFixed(diff.Hours(), 2), label)
 	}

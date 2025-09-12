@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/client/orm"
-	"github.com/mobilemindtec/go-utils/app/util"
-	"github.com/mobilemindtec/go-utils/beego/db"
-	"github.com/mobilemindtec/go-utils/support"
+	"github.com/mobilemindtech/go-utils/app/util"
+	"github.com/mobilemindtech/go-utils/beego/db"
+	"github.com/mobilemindtech/go-utils/support"
 	uuid "github.com/satori/go.uuid"
 	"strings"
 )
@@ -272,7 +272,7 @@ func (this *User) UpdateLastLogin(userId int64) {
 		fmt.Println("last login update success")
 	}
 }
-func (this *User) FirstName()string{
+func (this *User) FirstName() string {
 	sp := strings.Split(this.Name, " ")
 	if len(sp) > 0 {
 		return sp[0]

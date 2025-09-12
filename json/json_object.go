@@ -7,16 +7,16 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/beego/beego/v2/core/logs"
-	"github.com/mobilemindtec/go-io/result"
-	ioutil "github.com/mobilemindtec/go-io/util"
-	"github.com/mobilemindtec/go-utils/app/util"
-	goioutil "github.com/mobilemindtec/go-io/util"
-	"github.com/mobilemindtec/go-utils/support"
-	"github.com/mobilemindtec/go-utils/v2/optional"
-	"github.com/mobilemindtec/go-utils/v2/try"
-	"github.com/mobilemindtec/go-utils/v2/lists"
 	"fmt"
+	"github.com/beego/beego/v2/core/logs"
+	"github.com/mobilemindtech/go-io/result"
+	goioutil "github.com/mobilemindtech/go-io/util"
+	ioutil "github.com/mobilemindtech/go-io/util"
+	"github.com/mobilemindtech/go-utils/app/util"
+	"github.com/mobilemindtech/go-utils/support"
+	"github.com/mobilemindtech/go-utils/v2/lists"
+	"github.com/mobilemindtech/go-utils/v2/optional"
+	"github.com/mobilemindtech/go-utils/v2/try"
 )
 
 type JsonWriter interface {
@@ -34,17 +34,17 @@ type ParserConfig struct {
 	UseDefaultEncoder bool
 	UseCamelCase      bool
 	Debug             bool
-	TagNames []string
+	TagNames          []string
 }
 
 // NewParserConfig parser config with default config using tagNames = [jsonp] and NewJSON encode/decoder
 func NewParserConfig() *ParserConfig {
-	return &ParserConfig{ TagNames: []string{}}
+	return &ParserConfig{TagNames: []string{}}
 }
 
 // NewParserConfigWithDefaultJsonTagName parser config with default config using tagNames = [json, jsonp] and NewJSON encode/decoder
 func NewParserConfigWithDefaultJsonTagName() *ParserConfig {
-	return &ParserConfig{ TagNames: []string{"json"}}
+	return &ParserConfig{TagNames: []string{"json"}}
 }
 
 func (this *ParserConfig) GetTagNames() []string {
@@ -154,12 +154,10 @@ func (this *Parser[T]) ParseJsonInto(j *Json, entity T) *optional.Optional[T] {
 	if this.cfg.Debug {
 		logs.Debug("JSON DATA = %v", j.data)
 	}
-	
+
 	if this.cfg.UseDefaultEncoder {
 
-
 		newJsonData, err := json.Marshal(j.data)
-
 
 		if err != nil {
 			return optional.OfFail[T](err)
@@ -179,7 +177,6 @@ func (this *Parser[T]) ParseJsonInto(j *Json, entity T) *optional.Optional[T] {
 			jsn.ConfigureTagName(tagName)
 		}
 		err = jsn.DecodeFromMap(j.data, entity)
-
 
 	}
 
@@ -341,7 +338,7 @@ func (this *Json) GetArrayOfInt(key string) []int {
 
 		switch opt.(type) {
 		case []interface{}:
-			var arr  []int
+			var arr []int
 			for _, it := range opt.([]interface{}) {
 				switch it.(type) {
 				case int:
@@ -360,16 +357,16 @@ func (this *Json) GetArrayOfInt(key string) []int {
 					arr = append(arr, support.StrToInt(it.(string)))
 					break
 				default:
-				panic(fmt.Errorf("can't parse %v item of type %v of int", key, reflect.TypeOf(it)))
+					panic(fmt.Errorf("can't parse %v item of type %v of int", key, reflect.TypeOf(it)))
 				}
 			}
-			return  arr
+			return arr
 		case []int:
 			return opt.([]int)
 		case []int64:
-			return lists.Map(opt.([]int64), func(i int64) int { return int(i)})
-		//default:
-		//	panic(fmt.Errorf("can't parse %v of type %v to array of int", key, reflect.TypeOf(opt)))
+			return lists.Map(opt.([]int64), func(i int64) int { return int(i) })
+			//default:
+			//	panic(fmt.Errorf("can't parse %v of type %v to array of int", key, reflect.TypeOf(opt)))
 		}
 	}
 
@@ -404,11 +401,9 @@ func (this *Json) GetArrayOfString(key string) []string {
 				}
 			}
 			return arr
-		//default:
-		//	panic(fmt.Errorf("can't parse %v of type %v to array of string", key, reflect.TypeOf(opt)))
+			//default:
+			//	panic(fmt.Errorf("can't parse %v of type %v to array of string", key, reflect.TypeOf(opt)))
 		}
-
-
 
 	}
 
@@ -650,7 +645,6 @@ func (this *Json) LogAll() {
 	this.LogRaw()
 	this.LogData()
 }
-
 
 func Marshal(v interface{}) ([]byte, error) {
 	return json.Marshal(v)

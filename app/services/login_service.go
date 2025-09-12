@@ -4,8 +4,8 @@ import (
 	"errors"
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/i18n"
-	"github.com/mobilemindtec/go-utils/app/models"
-	"github.com/mobilemindtec/go-utils/beego/db"
+	"github.com/mobilemindtech/go-utils/app/models"
+	"github.com/mobilemindtech/go-utils/beego/db"
 	_ "time"
 )
 

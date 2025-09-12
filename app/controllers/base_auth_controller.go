@@ -5,10 +5,10 @@ import (
 	"strings"
 
 	"github.com/beego/beego/v2/core/logs"
-	"github.com/mobilemindtec/go-utils/app/models"
-	"github.com/mobilemindtec/go-utils/app/route"
-	"github.com/mobilemindtec/go-utils/app/services"
-	"github.com/mobilemindtec/go-utils/cache"
+	"github.com/mobilemindtech/go-utils/app/models"
+	"github.com/mobilemindtech/go-utils/app/route"
+	"github.com/mobilemindtech/go-utils/app/services"
+	"github.com/mobilemindtech/go-utils/cache"
 )
 
 type BaseAuthController struct {

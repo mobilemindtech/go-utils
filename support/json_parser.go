@@ -11,8 +11,8 @@ import (
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/server/web/context"
-	"github.com/mobilemindtec/go-utils/app/util"
-	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtech/go-utils/app/util"
+	"github.com/mobilemindtech/go-utils/v2/optional"
 )
 
 type FormatType int64

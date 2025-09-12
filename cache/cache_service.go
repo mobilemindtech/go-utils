@@ -13,10 +13,10 @@ import (
 	"github.com/beego/beego/v2/core/logs"
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/go-redis/redis/v7"
-	"github.com/mobilemindtec/go-utils/support"
-	"github.com/mobilemindtec/go-utils/v2/lists"
-	"github.com/mobilemindtec/go-utils/v2/optional"
-	"github.com/mobilemindtec/go-io/result"
+	"github.com/mobilemindtech/go-io/result"
+	"github.com/mobilemindtech/go-utils/support"
+	"github.com/mobilemindtech/go-utils/v2/lists"
+	"github.com/mobilemindtech/go-utils/v2/optional"
 )
 
 const (

@@ -1,7 +1,7 @@
 package either
 
 import (
-	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtech/go-utils/v2/optional"
 )
 
 type Either[L any, R any] struct {
@@ -53,7 +53,6 @@ func (this Either[L, R]) IfLeft(f func(L)) Either[L, R] {
 func (this Either[L, R]) IsRight() bool {
 	return !optional.IsNilFixed(this.right)
 }
-
 
 // MapIf map either to another either
 func Map[L any, R any, LN any, RN any](e *Either[L, R], f func(*Either[L, R]) *Either[LN, RN]) *Either[LN, RN] {

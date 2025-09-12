@@ -32,7 +32,7 @@ beego
 ## use document validator
 
 ```
-import "github.com/mobilemindtec/go-utils/validator"
+import "github.com/mobilemindtech/go-utils/validator"
 
 ok, err := cpf.IsValid("999.999.999-99")
 ok, err :=  cnpj.IsValid("99.999.999/9999-99")
@@ -42,7 +42,7 @@ ok, err :=  cnpj.IsValid("99.999.999/9999-99")
 ## use json parser
 
 ```
-import "github.com/mobilemindtec/go-utils/support"
+import "github.com/mobilemindtech/go-utils/support"
 
 var jsonMap map[string]interface{},
 var err error
@@ -101,7 +101,7 @@ err = parser.JsonToModel(entity)
 
 ## use utils
 ```
-import "github.com/mobilemindtec/go-utils/support"
+import "github.com/mobilemindtech/go-utils/support"
 
 result := support.FilterNumber("aa13") // rerutn 13
 result := support.IsEmpty("") // rerutn true
@@ -110,7 +110,7 @@ result := support.IsEmpty("") // rerutn true
 ## use security
 
 ```
-import "github.com/mobilemindtec/go-utils/support"
+import "github.com/mobilemindtech/go-utils/support"
 
 // create sha1 hash
 hash := support.TextToSha1("password")
@@ -129,7 +129,7 @@ ok := support.IsSomeHashSha256(hash, "password")
 ## use entity validator
 
 ```
-import "github.com/mobilemindtec/go-utils/beego/validator"
+import "github.com/mobilemindtech/go-utils/beego/validator"
 
 var result *validator.EntityValidatorResult
 var err error
@@ -165,13 +165,13 @@ validator.AddRelationValidator() // // add custom func to valid relations.. uses
 ## use filter
 ```
 // add at base controller init
-import "github.com/mobilemindtec/go-utils/beego/filters"
+import "github.com/mobilemindtech/go-utils/beego/filters"
 beego.InsertFilter("*", beego.BeforeRouter, filters.FilterMethod) // enable put 
 ```
 
 ## use base controller
 ```
-import "github.com/mobilemindtec/go-utils/beego/web"
+import "github.com/mobilemindtech/go-utils/beego/web"
 
 type MyBaseController struct {
   web.BaseController  

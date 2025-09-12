@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/client/orm"
-	"github.com/mobilemindtec/go-utils/beego/db"
+	"github.com/mobilemindtech/go-utils/beego/db"
 )
 
 type UserRole struct {

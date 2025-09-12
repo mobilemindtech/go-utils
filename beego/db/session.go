@@ -11,11 +11,11 @@ import (
 
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/core/logs"
-	"github.com/mobilemindtec/go-utils/v2/optional"
-	"github.com/mobilemindtec/go-utils/v2/lists"
-	"github.com/mobilemindtec/go-utils/support"
-	"github.com/mobilemindtec/go-io/result"
-	"github.com/mobilemindtec/go-io/option"
+	"github.com/mobilemindtech/go-io/option"
+	"github.com/mobilemindtech/go-io/result"
+	"github.com/mobilemindtech/go-utils/support"
+	"github.com/mobilemindtech/go-utils/v2/lists"
+	"github.com/mobilemindtech/go-utils/v2/optional"
 )
 
 type SessionState int
@@ -43,7 +43,6 @@ func (r *Row) GetAsInt(colName string) int {
 func (r *Row) GetAsInt64(colName string) int64 {
 	return support.AnyToInt64(r.Get(colName))
 }
-
 
 func (r *Row) GetAsFloat(colName string) float32 {
 	return support.AnyToFloat(r.Get(colName))
@@ -505,7 +504,6 @@ func (this *Session) LoadBatch(entities ...interface{}) error {
 			}
 		}
 
-
 	}
 
 	return nil
@@ -907,8 +905,8 @@ func (this *Session) Rows(query string, args ...interface{}) ([]*Row, error) {
 	return lists.Map(
 		params,
 		func(param orm.Params) *Row {
-		return NewRow(param)
-	}), nil
+			return NewRow(param)
+		}), nil
 }
 
 func (this *Session) FirstRowResult(query string, args ...interface{}) *result.Result[*option.Option[*Row]] {
@@ -1070,7 +1068,6 @@ func (this *Session) PersistMany(items ...interface{}) error {
 	}
 	return nil
 }
-
 
 func (this *Session) SaveCascade(reply interface{}) error {
 	this.deepSaveOrUpdate = map[string]int{}
@@ -1554,7 +1551,7 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
 							if !authorized {
 								logs.Error(
 									"unautorized! try call [%v] using tenant [%v], but model [%v] is owned by the tenant [%v]",
-										action, currentTenant.GetId(), fullType, entityTenant.GetId())
+									action, currentTenant.GetId(), fullType, entityTenant.GetId())
 							}
 
 							return authorized
@@ -1654,7 +1651,7 @@ func RunWithNewTransaction[T any](f func(session *Session) (T, error)) (T, error
 
 	t, err := f(session)
 
-	if  err != nil {
+	if err != nil {
 		session.Rollback()
 		return t, err
 	} else {

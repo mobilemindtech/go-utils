@@ -2,7 +2,7 @@ package web
 
 import (
 	"fmt"
-	"github.com/mobilemindtec/go-utils/app/util"
+	"github.com/mobilemindtech/go-utils/app/util"
 	"html/template"
 	"os"
 	"runtime/debug"
@@ -14,14 +14,14 @@ import (
 	"github.com/beego/beego/v2/core/validation"
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/beego/i18n"
-	"github.com/mobilemindtec/go-utils/beego/db"
-	"github.com/mobilemindtec/go-utils/beego/validator"
-	"github.com/mobilemindtec/go-utils/beego/web/response"
-	"github.com/mobilemindtec/go-utils/cache"
-	"github.com/mobilemindtec/go-utils/json"
-	"github.com/mobilemindtec/go-utils/support"
-	"github.com/mobilemindtec/go-utils/v2/criteria"
-	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtech/go-utils/beego/db"
+	"github.com/mobilemindtech/go-utils/beego/validator"
+	"github.com/mobilemindtech/go-utils/beego/web/response"
+	"github.com/mobilemindtech/go-utils/cache"
+	"github.com/mobilemindtech/go-utils/json"
+	"github.com/mobilemindtech/go-utils/support"
+	"github.com/mobilemindtech/go-utils/v2/criteria"
+	"github.com/mobilemindtech/go-utils/v2/optional"
 )
 
 type BaseController struct {

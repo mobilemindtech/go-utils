@@ -2,20 +2,20 @@ package session
 
 import (
 	_ "errors"
-	"github.com/mobilemindtec/go-io/io"
-	"github.com/mobilemindtec/go-io/option"
-	"github.com/mobilemindtec/go-io/result"
-	"github.com/mobilemindtec/go-io/types"
-	"github.com/mobilemindtec/go-io/types/unit"
+	"github.com/mobilemindtech/go-io/io"
+	"github.com/mobilemindtech/go-io/option"
+	"github.com/mobilemindtech/go-io/result"
+	"github.com/mobilemindtech/go-io/types"
+	"github.com/mobilemindtech/go-io/types/unit"
 
-	"github.com/mobilemindtec/go-utils/v2/criteria"
+	"github.com/mobilemindtech/go-utils/v2/criteria"
 
 	"fmt"
 	"reflect"
 
-	"github.com/mobilemindtec/go-utils/app/models"
-	"github.com/mobilemindtec/go-utils/beego/db"
-	"github.com/mobilemindtec/go-utils/v2/optional"
+	"github.com/mobilemindtech/go-utils/app/models"
+	"github.com/mobilemindtech/go-utils/beego/db"
+	"github.com/mobilemindtech/go-utils/v2/optional"
 )
 
 type Action struct {
@@ -290,7 +290,6 @@ func (this *RxSession[T]) AddRemoveCascadeOf(items ...T) *RxSession[T] {
 	return this
 }
 
-
 func (this *RxSession[T]) Exec() *optional.Optional[bool] {
 	r := this.Run()
 	switch r.Val().(type) {
@@ -443,7 +442,6 @@ func (this *RxSession[T]) PersistFirstWithBatch(entity T, entities ...interface{
 		}
 	}
 
-
 	return result.OfValue(entity)
 }
 
@@ -481,17 +479,17 @@ func (this *RxSession[T]) FindOrCreate(entity T, c *criteria.Reactive) *result.R
 }
 
 func (this *RxSession[T]) RowsF(query string, args ...interface{}) func(func(*db.Row) T) ([]T, error) {
-		return func(f func(*db.Row) T) ([]T, error) {
-			vals, err := this.session.Rows(query, args...)
-			if err != nil {
-				return nil, err
-			}
-			var items []T
-			for _, it := range vals {
-				items = append(items, f(it))
-			}
-			return items, nil
+	return func(f func(*db.Row) T) ([]T, error) {
+		vals, err := this.session.Rows(query, args...)
+		if err != nil {
+			return nil, err
 		}
+		var items []T
+		for _, it := range vals {
+			items = append(items, f(it))
+		}
+		return items, nil
+	}
 }
 
 func (this *RxSession[T]) FirstRowResultF(query string, args ...interface{}) func(func(*db.Row) T) *result.Result[*option.Option[T]] {
