@@ -9,6 +9,7 @@ import (
 	"github.com/mobilemindtech/go-io/types"
 	"github.com/mobilemindtech/go-io/util"
 	"github.com/mobilemindtech/go-utils/v2/lists"
+	"github.com/mobilemindtech/go-utils/assert"
 	"reflect"
 	"strings"
 
@@ -169,6 +170,9 @@ func Read[T any]() *Criteria[T] {
 }
 
 func New[T interface{}](session *db.Session) *Criteria[T] {
+
+	assert.Assert(session != nil, "session can't be nil")
+
 	criteria := &Criteria[T]{}
 	criteria.SetDefaults()
 	criteria.Session = session

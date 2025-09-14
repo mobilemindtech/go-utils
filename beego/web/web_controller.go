@@ -1281,6 +1281,14 @@ func (this *WebController) RawBody() []byte {
 	return this.Ctx.Input.RequestBody
 }
 
+func (this *WebController) BodyAsJson() (*json.Json, error) {
+	return json.NewFromBytes(this.RawBody())
+}
+
+func (this *WebController) BodyAsJsonResult() *result.Result[*json.Json] {
+	return result.Try(this.BodyAsJson)
+}
+
 func (this *WebController) NotFound() {
 	this.Ctx.Output.SetStatus(404)
 }

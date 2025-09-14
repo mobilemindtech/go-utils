@@ -11,6 +11,7 @@ import (
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/mobilemindtech/go-io/result"
 	"github.com/mobilemindtech/go-utils/v2/optional"
+	"github.com/mobilemindtech/go-utils/assert"
 )
 
 type CriteriaExpression int
@@ -156,6 +157,9 @@ type Criteria struct {
 }
 
 func NewCriteria(session *Session, entity interface{}, entities interface{}) *Criteria {
+
+	assert.Assert(session != nil, "session can't be nil")
+
 	return &Criteria{
 		criterias:         []*Criteria{},
 		criteriasOr:       []*Criteria{},
@@ -524,11 +528,11 @@ func (this *Criteria) Query() orm.QuerySeter {
 
 		//entity := this.Result
 
-		if model, ok := this.Result.(Model); ok {
-			this.query = this.Session.GetDb().QueryTable(model.TableName())
-		} else {
-			this.SetError(errors.New("entity does not implements of Model"))
-		}
+		model, ok := this.Result.(Model)
+
+		assert.Assert(ok, "entity [%v] should implements Model interface", reflect.TypeOf(this.Result))
+
+		this.query = this.Session.GetDb().QueryTable(model.TableName())
 	}
 
 	return this.query
