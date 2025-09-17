@@ -32,6 +32,7 @@ import (
 	"github.com/mobilemindtech/go-utils/v2/ioc"
 	"github.com/mobilemindtech/go-utils/v2/lists"
 	"github.com/mobilemindtech/go-utils/v2/maps"
+	"github.com/mobilemindtech/go-utils/v2/inline"
 	"github.com/mobilemindtech/go-utils/v2/optional"
 	uuid "github.com/satori/go.uuid"
 )
@@ -324,14 +325,14 @@ func (this *WebController) AuthPrepare() {
 
 		this.SetAuthTenant(tenant)
 
-		logs.Trace("::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
-		logs.Trace(":: Tenant = %v - %v", this.GetAuthTenant().Id, this.GetAuthTenant().Name)
-		logs.Trace(":: Custom App = %v", this.GetCustomAppName())
-		logs.Trace(":: User = %v - %v", this.GetAuthUser().Id, this.GetAuthUser().Name)
-		logs.Trace(":: User Authority = %v,  Roles = %v", this.GetAuthUser().Role.Authority, this.GetAuthUser().GetAuthorities())
-		logs.Trace(":: Login web = %v, token = %v, custom app = %v", this.IsWebLoggedIn, this.IsTokenLoggedIn, this.IsCustomAppLoggedIn)
-		logs.Trace(":: Auth Token = %v", this.GetHeaderToken())
-		logs.Trace("::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
+		//logs.Trace("::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
+		logs.Trace("::> Tenant = %v - %v", this.GetAuthTenant().Id, this.GetAuthTenant().Name)
+		logs.Trace("::> User = %v - %v", this.GetAuthUser().Id, this.GetAuthUser().Name)
+		logs.Trace("::> User Role = %v", this.GetAuthUser().Role.Authority)
+		logs.Trace("::> Custom App = %v", inline.If(len(this.GetCustomAppName()) == 0, "-", this.GetCustomAppName()))
+		//logs.Trace("::> Login by Web? = %v, Token? = %v, CustomApp? = %v", this.IsWebLoggedIn, this.IsTokenLoggedIn, this.IsCustomAppLoggedIn)
+		//logs.Trace(":: Auth Token = %v", this.GetHeaderToken())
+		//logs.Trace("::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
 
 		this.Data["UserInfo"] = this.GetAuthUser()
 		this.Data["Tenant"] = this.GetAuthTenant()
