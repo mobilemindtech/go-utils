@@ -1,17 +1,17 @@
 module github.com/mobilemindtech/go-utils
 
-go 1.24.0
+go 1.24.3
 
 require (
-	github.com/beego/beego/v2 v2.3.4
+	github.com/beego/beego/v2 v2.3.8
 	github.com/beego/i18n v0.0.0-20161101132742-e9308947f407
 	github.com/go-redis/redis/v7 v7.4.1
-	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/leekchan/accounting v1.0.0
-	github.com/mobilemindtech/go-io v0.0.0-20241018190539-11fe1345c51e
+	github.com/mobilemindtech/go-io v0.0.0-20250914174532-f74450d8e6a5
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirsean/go-pool v0.0.0-20170808185629-2b94e61c3882
-	golang.org/x/text v0.22.0
+	golang.org/x/text v0.29.0
 )
 
 require (

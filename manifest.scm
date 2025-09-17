@@ -14,11 +14,11 @@
 (define-public go-1.24
   (package
     (name "go")
-    (version "1.24.0")
+    (version "1.24.3")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://go.dev/dl/go" version ".linux-amd64.tar.gz"))
-              (sha256 (base32 "0n489iywy8pybcfdrc41bpkgph7p39kk8qf2h57aflmql0wcmafy"))))
+              (sha256 (base32 "1n5xj7iyhcwspkk11366np3ah13jmjjfm5c80zlp3adgagmgccrk"))))
     (build-system trivial-build-system) ; apenas extrai sem compilar
     (inputs (list coreutils)) ; general require
     (native-inputs (list coreutils tar gzip)) ; require by "build"
@@ -31,7 +31,7 @@
           (setenv "PATH" (string-append (assoc-ref %build-inputs "coreutils") "/bin:"
                                         (assoc-ref %build-inputs "tar") "/bin:"
                                         (assoc-ref %build-inputs "gzip") "/bin:"
-                                        (getenv "PATH")))              
+                                        (getenv "PATH")))
           (define out (assoc-ref %outputs "out"))
           (mkdir out)  ; Criar diretório de saída
 
@@ -51,7 +51,11 @@
 
 (packages->manifest
  (list
-  (specification->package "coreutils")    
+  (specification->package "bash")
+  (specification->package "grep")
+  (specification->package "git")
+  (specification->package "coreutils")
+  (specification->package "node@22")
   go-1.24))
 
 
