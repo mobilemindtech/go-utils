@@ -29,8 +29,14 @@ type CacheService struct {
 	sessionKashKey string
 }
 
-func New() *CacheService {
-	v := &CacheService{duration: DefaultDuration}
+func New(duration ...int) *CacheService {
+
+	mils := DefaultDuration
+	if len(duration) > 0 {
+		mils = duration[0]
+	}
+
+	v := &CacheService{duration: mils}
 	v.Init()
 	return v
 }
@@ -50,6 +56,11 @@ func (this *CacheService) Init() {
 	})
 
 }
+
+func (this *CacheService) IsCacheDisabled() bool {
+	return this.duration <= 0
+}
+
 
 func (this *CacheService) Close() {
 	this.rdb.Close()
@@ -87,6 +98,11 @@ func (this *CacheService) getSessionKey(key string) string {
 }
 
 func (this *CacheService) Put(key string, value interface{}) {
+
+	if this.IsCacheDisabled() {
+		logs.Warning("redis cache is disabled for this call")
+		return
+	}
 
 	payload, err := json.Marshal(value)
 

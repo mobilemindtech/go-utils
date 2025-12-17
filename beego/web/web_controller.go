@@ -1941,6 +1941,17 @@ func (this *WebController) GetAuthTenant() *models.Tenant {
 	return this.tenant
 }
 
+func (this *WebController) GetAuthTenantString() string {
+	tenant := this.GetAuthTenantSession()
+	if tenant != nil && tenant.IsPersisted() {
+
+		return fmt.Sprintf("%v - %v", tenant.Id, tenant.Name)
+
+	}
+	return "[has not auth tenant]"
+}
+
+
 func (this *WebController) SetAuthTenant(t *models.Tenant) {
 	this.tenant = t
 }
