@@ -485,6 +485,15 @@ func (this *Session) Load(entity interface{}) (bool, error) {
 	return this.Get(entity)
 }
 
+func (this *Session) LoadResult(entity interface{}) *result.Result[bool] {
+	if this.IsNil(entity) {
+		return result.OfValue(false)
+	}
+	return result.Try(func() (bool, error) {
+		return this.Get(entity)
+	})
+}
+
 func (this *Session) TryLoadBatch(entities ...interface{}) error {
 	return this.LoadBatch(entities...)
 }

@@ -301,3 +301,36 @@ func IsNotNil[T any](v T) bool {
 func IsNil[T any](v T) bool {
 	return util.IsNil(v)
 }
+
+func ContainsXMLTag(input string) bool {
+	// Expressão regular para identificar padrões de tags XML
+	// Busca por padrões como <tag>, </tag>, <tag />, etc.
+	xmlPattern := regexp.MustCompile(`<\/?[a-zA-Z][a-zA-Z0-9]*(\s+[a-zA-Z][a-zA-Z0-9]*=\"[^\"]*\")*\s*\/?>`)
+	return xmlPattern.MatchString(input)
+}
+
+func SanitizeText(input string) string {
+	// Mapa de caracteres a serem removidos
+	charsToRemove := map[rune]bool{
+		'\'': true,
+		'"':  true,
+		'\\': true,
+		'/':  true,
+		'<':  true,
+		'>':  true,
+	}
+
+	// Cria um novo string builder para construir o resultado
+	var result strings.Builder
+	result.Grow(len(input)) // Pré-aloca o tamanho da string
+
+	// Itera sobre cada caractere da string de entrada
+	for _, char := range input {
+		// Se o caractere não estiver no mapa, adiciona ao resultado
+		if !charsToRemove[char] {
+			result.WriteRune(char)
+		}
+	}
+
+	return result.String()
+}

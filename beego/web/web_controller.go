@@ -1360,10 +1360,6 @@ func (this *WebController) GetHeaderByNames(names ...string) string {
 	return ""
 }
 
-func (this *WebController) Log(format string, v ...interface{}) {
-	logs.Debug(fmt.Sprintf(format, v...))
-}
-
 func (this *WebController) GetCurrentTimeUnix() int64 {
 	return this.GetCurrentTime().Unix()
 }
