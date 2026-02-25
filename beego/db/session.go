@@ -193,6 +193,7 @@ func (this *Session) SetError() *Session {
 	return this
 }
 
+
 // should be a *models.Tenant
 func (this *Session) RunWithTenant(tenant interface{}, runner func()) {
 

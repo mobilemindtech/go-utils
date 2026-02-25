@@ -37,6 +37,18 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+type NotFound struct {
+	Message string
+}
+
+func (this *NotFound) Error() string {
+	return this.Message
+}
+
+func MakeNotFound() *NotFound {
+	return &NotFound{"Not Found"}
+}
+
 type Multipart struct {
 	FileHeader *multipart.FileHeader
 	File       *multipart.File
@@ -692,6 +704,13 @@ func (this *WebController) RenderJson(opt interface{}) {
 		statusCodeResult = 400
 		break
 	case error:
+
+		if errors.Is(opt.(error), MakeNotFound()) {
+			statusCodeResult = 404
+			dataResult = maps.JSON("error", true, "message", "not found")
+			break
+		}
+
 		statusCodeResult = 500
 		dataResult = maps.JSON("error", true, "message", fmt.Sprintf("%v", opt.(error).Error()))
 		break

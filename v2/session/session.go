@@ -71,6 +71,14 @@ type RxSession[T any] struct {
 	actions []interface{}
 	where   *criteria.Reactive
 }
+func RunSessionWithTenantId[T any](session *db.Session, tenantId int64, f func() T) T {
+	tmp := session.Tenant
+	session.Tenant = models.NewTenantWithId(tenantId)
+	defer func() {
+		session.Tenant = tmp
+	}()
+	return f()
+}
 
 func WithTxOpt[T any]() *optional.Optional[*RxSession[T]] {
 	s := db.NewSession()

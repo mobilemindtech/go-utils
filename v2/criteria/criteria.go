@@ -31,6 +31,10 @@ type PageOf[T any] struct {
 	Data       []T `json:"data" jsonp:""`
 }
 
+func NewPageOf[T any](data []T, totalCount int) *PageOf[T] {
+	return &PageOf[T]{TotalCount: totalCount, Data: data}
+}
+
 func (this *PageOf[T]) Foreach(f func(T)) {
 	for _, it := range this.Data {
 		f(it)
