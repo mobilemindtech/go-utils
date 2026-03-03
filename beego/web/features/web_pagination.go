@@ -44,23 +44,27 @@ func (this *WebPagination) GetPage() *db.Page {
 		}
 	}
 
-	page.Limit = support.StrToInt64(this.base.GetQuery("limit"))
-	if page.Limit <= 0 {
-		page.Limit = defaultLimit
+	limitStr := this.base.GetQuery("limit")
+
+	if len(limitStr) > 0 {
+
+		page.Limit = support.StrToInt64(limitStr)
+		if page.Limit <= 0 {
+			page.Limit = defaultLimit
+		}
+
+		page.Sort = this.base.GetQuery("sort")
+		if len(page.Sort) == 0 {
+			page.Sort = this.base.GetQuery("order_column")
+		}
+
+		page.Order = this.base.GetQuery("order")
+		if len(page.Order) == 0 {
+			page.Order = this.base.GetQuery("order_sort")
+		}
+
+		page.Offset = support.StrToInt64(this.base.GetQuery("offset"))
+		page.Search = this.base.GetQuery("search")
 	}
-
-	page.Sort = this.base.GetQuery("sort")
-	if len(page.Sort) == 0 {
-		page.Sort = this.base.GetQuery("order_column")
-	}
-
-	page.Order = this.base.GetQuery("order")
-	if len(page.Order) == 0 {
-		page.Order = this.base.GetQuery("order_sort")
-	}
-
-	page.Offset = support.StrToInt64(this.base.GetQuery("offset"))
-	page.Search = this.base.GetQuery("search")
-
 	return page
 }
