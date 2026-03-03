@@ -645,7 +645,6 @@ func (this *Json) LogAll() {
 	this.LogRaw()
 	this.LogData()
 }
-
 func Marshal(v interface{}) ([]byte, error) {
 	return json.Marshal(v)
 }

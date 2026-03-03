@@ -193,7 +193,6 @@ func (this *Session) SetError() *Session {
 	return this
 }
 
-
 // should be a *models.Tenant
 func (this *Session) RunWithTenant(tenant interface{}, runner func()) {
 
@@ -310,9 +309,9 @@ func (this *Session) beginTxWithOpts(opts *sql.TxOptions) (err error) {
 
 	if err = this.database.Begin(); err != nil {
 		this.openDbError = true
-		logs.Error("****************************************************************")
-		logs.Error("************************ db begin error: %v", err.Error())
-		logs.Error("****************************************************************")
+		logs.Error("begin transaction error: %v", err)
+		debug.PrintStack()
+
 	}
 
 	return err
@@ -326,9 +325,9 @@ func (this *Session) Commit() (err error) {
 
 	if this.database != nil {
 		if err = this.database.Commit(); err != nil {
-			logs.Error("****************************************************************")
-			logs.Error("************************ db commit error: %v", err.Error())
-			logs.Error("****************************************************************")
+			logs.Error("commit transaction error: %v", err)
+			debug.PrintStack()
+
 			this.Rollback()
 		}
 		this.database = nil
@@ -347,9 +346,9 @@ func (this *Session) Rollback() (err error) {
 
 	if this.database != nil {
 		if err = this.database.Rollback(); err != nil {
-			logs.Error("****************************************************************")
-			logs.Error("************************ db roolback error: %v", err.Error())
-			logs.Error("****************************************************************")
+			logs.Error("rollback transaction error: %v", err)
+			debug.PrintStack()
+
 		}
 		this.database = nil
 	}
@@ -389,7 +388,8 @@ func (this *Session) Save(entity interface{}) error {
 	}
 
 	if err != nil {
-		logs.Debug("## Session: error on save: %v", err.Error())
+		logs.Error("save error: %v", err)
+		debug.PrintStack()
 		this.SetError()
 		return err
 	}
@@ -431,7 +431,8 @@ func (this *Session) Update(entity interface{}) error {
 	}
 
 	if err != nil {
-		logs.Debug("## Session: error on update: %v", err.Error())
+		logs.Error("update error: %v", err)
+		debug.PrintStack()
 		this.SetError()
 		return err
 	}
@@ -461,7 +462,8 @@ func (this *Session) Remove(entity interface{}) error {
 	_, err := this.GetDb().Delete(entity)
 
 	if err != nil {
-		logs.Debug("## Session: error on remove: %v", err.Error())
+		logs.Error("remove error: %v", err)
+		debug.PrintStack()
 		this.SetError()
 		return err
 	}
@@ -534,7 +536,7 @@ func (this *Session) Get(entity interface{}) (bool, error) {
 		if model.IsPersisted() {
 
 			if !this.checkIsAuthorizedTenant(model, "Session.Get") {
-				return false, errors.New("Tenant not authorized for entity data access. Operation: Session.Get.")
+				return false, errors.New("tenant is not authorized for access this entity. Operation: Session.Get.")
 			}
 
 			return true, nil
@@ -1369,10 +1371,6 @@ func (this *Session) setTenant(reply interface{}) {
 	fullValue := refValue.Elem()
 	fullType := fullValue.Type()
 
-	if this.Debug {
-		logs.Debug("## set Tenant to ", fullType)
-	}
-
 	for i := 0; i < fullType.NumField(); i++ {
 		field := fullType.Field(i)
 
@@ -1385,10 +1383,6 @@ func (this *Session) setTenant(reply interface{}) {
 		if this.hasTag(tags, "tenant") {
 
 			value := reflect.ValueOf(this.Tenant)
-
-			if this.Debug {
-				logs.Debug("## field %v is tenant set tenant %v", field.Name, value)
-			}
 
 			// check is null
 			//logs.Debug("## set Tenant to ", fullType)
@@ -1403,10 +1397,6 @@ func (this *Session) setTenant(reply interface{}) {
 				//logs.Debug("==== auto set tenant: tenant already")
 			}
 
-		} else {
-			if this.Debug {
-				logs.Debug("## field %v not is tenant ", field.Name)
-			}
 		}
 
 	}
@@ -1668,4 +1658,28 @@ func RunWithNewTransaction[T any](f func(session *Session) (T, error)) (T, error
 		session.Commit()
 		return t, err
 	}
+}
+
+func (this *Session) UpdateResult(entity interface{}) result.ResultOfUnit {
+	return result.TryUnit(func() error {
+		return this.Update(entity)
+	})
+}
+
+func (this *Session) SaveResult(entity interface{}) result.ResultOfUnit {
+	return result.TryUnit(func() error {
+		return this.Save(entity)
+	})
+}
+
+func (this *Session) RemoveResult(entity interface{}) result.ResultOfUnit {
+	return result.TryUnit(func() error {
+		return this.Remove(entity)
+	})
+}
+
+func (this *Session) SeveOrUpdateResult(entity interface{}) result.ResultOfUnit {
+	return result.TryUnit(func() error {
+		return this.SaveOrUpdateCascade(entity)
+	})
 }

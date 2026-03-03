@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"strings"
+
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/core/validation"
 	"github.com/beego/i18n"
@@ -13,7 +15,6 @@ import (
 	"github.com/mobilemindtech/go-utils/support"
 	"github.com/mobilemindtech/go-utils/v2/maps"
 	"github.com/mobilemindtech/go-utils/v2/optional"
-	"strings"
 )
 
 type ValidationError struct {
@@ -78,21 +79,29 @@ func NewEntityValidatorResult() *EntityValidatorResult {
 }
 
 type EntityValidator struct {
-	Lang              string
-	ViewPath          string
 	valActionsFuncs   []FuncValidation
 	valActionsForType []*ValidatorForType
 	values            []interface{}
+	config            *EntityValidatorConfig
+}
+
+type EntityValidatorConfig struct {
+	Lang     string
+	ViewPath string
+}
+
+func NewEntityValidatorWithConfig(config *EntityValidatorConfig) *EntityValidator {
+	return &EntityValidator{config: config}
 }
 
 func NewEntityValidator(lang string, viewPath string) *EntityValidator {
-	return &EntityValidator{Lang: lang, ViewPath: viewPath}
+	return &EntityValidator{config: &EntityValidatorConfig{Lang: lang, ViewPath: viewPath}}
 }
 
 // New Create new validator with default lang pt-BR
 func New() *EntityValidator {
 	return &EntityValidator{
-		Lang:   "pt-BR",
+		config: &EntityValidatorConfig{Lang: "pt-BR"},
 		values: []interface{}{}}
 	//valActions: []CustomValidation{}}
 }
@@ -101,7 +110,7 @@ func New() *EntityValidator {
 // path = tenant and error on field Name
 // so search by message tenant.Name
 func (this *EntityValidator) WithPath(path string) *EntityValidator {
-	this.ViewPath = path
+	this.config.ViewPath = path
 	return this
 }
 
@@ -298,7 +307,7 @@ func (this *EntityValidator) Valid(entity interface{}, action CustomAction) (*En
 		if !ok {
 			for _, err := range localValid.Errors {
 
-				lbl := this.ViewPath
+				lbl := this.config.ViewPath
 
 				if lbl == "" {
 					lbl = typeName
@@ -330,7 +339,7 @@ func (this *EntityValidator) Valid(entity interface{}, action CustomAction) (*En
 			label := this.GetMessage(fmt.Sprintf("%s.%s", typeName, err.Field))
 
 			if label == "" {
-				label = this.GetMessage(fmt.Sprintf("%s.%s", this.ViewPath, err.Field))
+				label = this.GetMessage(fmt.Sprintf("%s.%s", this.config.ViewPath, err.Field))
 			}
 
 			if label != "" {
@@ -395,5 +404,5 @@ func (this *EntityValidator) CopyErrorsToView(result *EntityValidatorResult, dat
 }
 
 func (this *EntityValidator) GetMessage(key string, args ...interface{}) string {
-	return i18n.Tr(this.Lang, key, args)
+	return i18n.Tr(this.config.Lang, key, args)
 }

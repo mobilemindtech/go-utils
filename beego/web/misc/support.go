@@ -1,7 +1,11 @@
-package web
+package misc
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/beego/beego/v2/core/logs"
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/beego/i18n"
@@ -10,9 +14,6 @@ import (
 	"github.com/mobilemindtech/go-utils/beego/filters"
 	"github.com/mobilemindtech/go-utils/support"
 	"github.com/satori/go.uuid"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var (
