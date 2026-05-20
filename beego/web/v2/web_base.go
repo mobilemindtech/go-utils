@@ -1,6 +1,7 @@
-package features
+package v2
 
 import (
+	"fmt"
 	"time"
 
 	beego "github.com/beego/beego/v2/server/web"
@@ -8,43 +9,46 @@ import (
 	"github.com/mobilemindtech/go-utils/app/models"
 	"github.com/mobilemindtech/go-utils/beego/db"
 	"github.com/mobilemindtech/go-utils/beego/validator"
+	"github.com/mobilemindtech/go-utils/beego/web/features"
+	"github.com/mobilemindtech/go-utils/beego/web/features/v2"
+	"github.com/mobilemindtech/go-utils/beego/web/resps"
 	"github.com/mobilemindtech/go-utils/beego/web/trait"
 	"github.com/mobilemindtech/go-utils/cache"
 	"github.com/mobilemindtech/go-utils/support"
+	"github.com/mobilemindtech/go-utils/v2/criteria"
+	"github.com/mobilemindtech/go-utils/v2/maps"
 )
 
 type WebBase struct {
-	WebAudit
-	WebAuth
-	WebDbSession
-	WebJson
-	WebJsonRender
-	WebJsonRenderV2
-	WebMessages
-	WebMisc
-	WebModels
-	WebPagination
-	WebParser
-	WebRespUtil
-	WebTemplateRender
-	WebUpload
-	WebValidation
+	features.WebAudit
+	features.WebAuth
+	features.WebDbSession
+	v2.WebJsonRenderV2
+	features.WebMessages
+	features.WebMisc
+	features.WebModels
+	features.WebPagination
+	v2.WebParser
+	v2.WebRespUtil
+	v2.WebTemplateRender
+	features.WebValidation
 	CacheService          *cache.CacheService
 	Character             *support.Character
 	BeegoController       *beego.Controller
 	InheritedController   interface{}
 	Configs               *trait.WebConfigs
 	entityValidatorConfig *validator.EntityValidatorConfig
+	DefaultLocation       *time.Location
 }
 
 func (this *WebBase) InitWebBase(ctrl *beego.Controller) {
 	this.BeegoController = ctrl
 
+	this.DefaultLocation, _ = time.LoadLocation("America/Sao_Paulo")
+
 	this.InitWebAudit(this)
 	this.InitWebAuth(this)
 	this.InitWebDbSession(this)
-	this.InitWebJson(this)
-	this.InitWebJsonRender(this)
 	this.InitWebJsonRenderV2(this)
 	this.InitWebMessages(this)
 	this.InitWebMisc(this)
@@ -53,7 +57,6 @@ func (this *WebBase) InitWebBase(ctrl *beego.Controller) {
 	this.InitWebParser(this)
 	this.IniWebRespUtil(this)
 	this.InitWebTemplateRender(this)
-	this.InitWebUpload(this)
 	this.InitWebValidation(this)
 
 	this.CacheService = cache.New()
@@ -170,23 +173,27 @@ func (this *WebBase) SetTemplateName(name string) {
 }
 
 func (this *WebBase) RenderJsonWithValidationError() {
-	this.OnJsonValidationError()
+	this.WebJsonRenderV2.RenderJsonWithValidationError()
 }
 
 func (this *WebBase) RenderJsonError(format string, v ...interface{}) {
-	this.OnJsonError(format, v...)
+	this.RenderJson(resps.NewBadRequest(fmt.Sprintf(format, v...)))
 }
 
 func (this *WebBase) RenderJsonOk(format string, v ...interface{}) {
-	this.OnJsonOk(format, v...)
+	this.RenderJson(resps.NewOk(maps.JSON("message", fmt.Sprintf(format, v...))))
+}
+
+func (this *WebBase) RenderJsonServerError(format string, v ...interface{}) {
+	this.RenderJson(resps.NewServerError(fmt.Sprintf(format, v...)))
 }
 
 func (this *WebBase) RenderJson(result interface{}) {
 	this.WebJsonRenderV2.RenderJson(result)
 }
 
-func (this *WebBase) RenderJsonWithStatusCode(result interface{}, statusCode int) {
-	this.WebJsonRender.RenderJsonWithStatusCode(result, statusCode)
+func (this *WebBase) RenderJsonWithStatusCode(body interface{}, statusCode int) {
+	this.WebJsonRenderV2.RenderJson(resps.NewResponse(statusCode, body))
 }
 
 func (this *WebBase) GetViewPath() string {
@@ -214,40 +221,52 @@ func (this *WebBase) GetDefaultLocation() *time.Location {
 	return this.DefaultLocation
 }
 
-func (this *WebBase) RenderResults(tplName string, results interface{}, totalCount ...int64) {
+// RenderJsonWithResults RenderJsonResults RenderResults Deprecated
+func (this *WebBase) RenderJsonWithResults(results interface{}, totalCount ...int64) {
 	if len(totalCount) > 0 {
-		this.OnResultsWithTotalCount(tplName, results, totalCount[0])
+		this.RenderJson(&criteria.Page{Data: results, TotalCount: int(totalCount[0])})
 	} else {
-		this.OnResults(tplName, results)
+		this.RenderJson(results)
 	}
-}
-func (this *WebBase) RenderResult(tplName string, result interface{}) {
-	this.OnResult(tplName, result)
 }
 
-func (this *WebBase) RenderJsonResults(results interface{}, totalCount ...int64) {
-	if len(totalCount) > 0 {
-		this.OnJsonResultsWithTotalCount(results, totalCount[0])
-	} else {
-		this.OnJsonResults(results)
-	}
+// RenderJsonWithResult RenderJsonResult RenderResults Deprecated
+func (this *WebBase) RenderJsonWithResult(result interface{}) {
+	this.RenderJson(result)
 }
-func (this *WebBase) RenderJsonResult(result interface{}) {
-	this.OnJsonResult(result)
-}
+
+// RenderJsonResultWithMessage RenderResults Deprecated
 func (this *WebBase) RenderJsonResultWithMessage(result interface{}, msg string) {
-	this.OnJsonResultWithMessage(result, msg)
+	this.RenderJson(
+		resps.NewResponse(200, maps.JSON("message", msg, "data", result)))
+
 }
 
-func (this *WebBase) RenderEntity(tplName string, result interface{}) {
-	this.OnEntity(tplName, result)
-}
-func (this *WebBase) RenderEntities(tplName string, result interface{}, totalCount ...int64) {
+// RenderResults Deprecated
+func (this *WebBase) RenderTemplateWithResults(tplName string, results interface{}, totalCount ...int64) {
 	if len(totalCount) > 0 {
-		this.OnEntitiesWithTotalCount(tplName, result, totalCount[0])
-	} else {
-		this.OnEntities(tplName, result)
+		this.SetViewData("totalCount", totalCount[0])
 	}
+	this.RenderTemplate(tplName, "results", results)
+}
+
+// RenderTemplateWithResult RenderResults Deprecated
+func (this *WebBase) RenderTemplateWithResult(tplName string, result interface{}) {
+	this.RenderTemplate(tplName, "result", result)
+
+}
+
+// RenderTemplateWithEntity RenderEntity RenderResults Deprecated
+func (this *WebBase) RenderTemplateWithEntity(tplName string, result interface{}) {
+	this.RenderTemplate(tplName, "entity", result)
+}
+
+// RenderTemplateWithEntities RenderEntities RenderResults Deprecated
+func (this *WebBase) RenderTemplateWithEntities(tplName string, result interface{}, totalCount ...int64) {
+	if len(totalCount) > 0 {
+		this.SetViewData("totalCount", totalCount[0])
+	}
+	this.RenderTemplate(tplName, "entities", result)
 }
 
 func (this *WebBase) ReleaseCacheService() {
@@ -271,29 +290,43 @@ func (this *WebBase) GetHeaderByNames(names ...string) string {
 	return this.WebMisc.GetHeaderByNames(names...)
 }
 
-// RenderJsonValidationError
+// RenderJsonWithBadRequest RenderResults Deprecated
 func (this *WebBase) RenderJsonWithBadRequest(msg string) {
-	this.WebJsonRender.RenderJsonValidationError(msg)
+	this.RenderJson(resps.NewBadRequest(msg))
 }
 
-// RenderJsonForbidenError
+// RenderJsonWithForbidden RenderResults Deprecated
 func (this *WebBase) RenderJsonWithForbidden(msg string, abort bool) {
-	this.WebJsonRender.RenderJsonForbidenError(msg, abort)
+	this.RenderJson(resps.NewForbidden(msg))
+	if abort {
+		this.BeegoController.Abort("403")
+	}
 }
 
 // RenderJsonUnauthorizedError
 func (this *WebBase) RenderJsonWithUnauthorized(msg string, abort bool) {
-	this.WebJsonRender.RenderJsonUnauthorizedError(msg, abort)
+	this.RenderJson(resps.NewForbidden(msg))
+	if abort {
+		this.BeegoController.Abort("401")
+	}
 }
 
-// OnErrorAny
+// RenderJsonOrRedirect RenderResults Deprecated
 func (this *WebBase) RenderJsonOrRedirect(path string, msg string, args ...interface{}) {
-	this.WebRespUtil.OnErrorAny(path, msg, args...)
+	if this.IsJson() {
+		this.RenderJsonWithBadRequest(msg)
+	} else {
+		this.RedirectWithError(path, msg, args...)
+	}
+}
+
+func (this *WebBase) RenderTemplate(tplName string, data ...interface{}) {
+	this.WebTemplateRender.RenderTemplate(tplName, data...)
 }
 
 // OnRedirectError
 func (this *WebBase) RedirectWithError(path string, msg string, args ...interface{}) {
-	this.WebRespUtil.OnRedirectError(path, msg, args...)
+	this.WebRespUtil.RedirectWithError(path, msg, args...)
 }
 
 func (this *WebBase) GetRawBody() []byte {

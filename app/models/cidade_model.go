@@ -6,8 +6,8 @@ import (
 
 type Cidade struct {
 	Id     int64   `form:"-" json:",string,omitempty"`
-	Nome   string  `orm:"size(100)"  valid:"Required;MaxSize(100)" form:""`
-	Estado *Estado `orm:"rel(fk);on_delete(do_nothing)" valid:"Required;" form:""`
+	Nome   string  `orm:"size(100)"  valid:"Required;MaxSize(100)" form:"" json:""`
+	Estado *Estado `orm:"rel(fk);on_delete(do_nothing)" valid:"Required;" form:"" json:""`
 
 	Session *db.Session `orm:"-" json:"-" inject:""`
 }

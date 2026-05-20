@@ -91,12 +91,6 @@ type WebBaseInterface interface {
 
 	SetTemplateName(name string)
 
-	RenderJsonWithValidationError()
-	RenderJsonError(format string, v ...interface{})
-	RenderJsonOk(format string, v ...interface{})
-	RenderJson(result interface{})
-	RenderJsonWithStatusCode(result interface{}, statusCode int)
-
 	GetViewPath() string
 	SetViewPath(path string)
 
@@ -106,15 +100,22 @@ type WebBaseInterface interface {
 	GetInheritedController() interface{}
 	GetDefaultLocation() *time.Location
 
-	RenderResults(tplName string, results interface{}, totalCount ...int64)
-	RenderResult(tplName string, result interface{})
+	RenderJsonWithValidationError()
+	RenderJsonError(format string, v ...interface{})
+	RenderJsonOk(format string, v ...interface{})
+	RenderJson(result interface{})
+	RenderJsonWithStatusCode(result interface{}, statusCode int)
 
-	RenderJsonResults(results interface{}, totalCount ...int64)
-	RenderJsonResult(result interface{})
+	RenderJsonWithResults(results interface{}, totalCount ...int64)
+	RenderJsonWithResult(result interface{})
 	RenderJsonResultWithMessage(result interface{}, msg string)
 
-	RenderEntity(tplName string, result interface{})
-	RenderEntities(tplName string, result interface{}, totalCount ...int64)
+	RenderTemplateWithResults(tplName string, results interface{}, totalCount ...int64)
+	RenderTemplateWithResult(tplName string, result interface{})
+	RenderTemplateWithEntity(tplName string, result interface{})
+	RenderTemplateWithEntities(tplName string, result interface{}, totalCount ...int64)
+
+	RenderTemplate(tplName string, data ...interface{})
 
 	ReleaseCacheService()
 	ReleaseDbSession()
@@ -140,4 +141,7 @@ type WebBaseInterface interface {
 
 	GetQuery(key string) string
 	GetParam(key string) string
+
+	GetCurrentTimeUnix() int64
+	GetCurrentTime() time.Time
 }

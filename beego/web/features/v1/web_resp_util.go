@@ -1,4 +1,4 @@
-package features
+package v1
 
 import (
 	"fmt"
@@ -88,7 +88,7 @@ func (this *WebRespUtil) OnValidationErrorAny(view string, entity interface{}) {
 		this.base.RenderJsonWithValidationError()
 	} else {
 		this.base.SetErrorState()
-		this.base.RenderEntity(view, entity)
+		this.base.RenderTemplateWithEntity(view, entity)
 	}
 
 }
@@ -101,7 +101,7 @@ func (this *WebRespUtil) OnEntityErrorAny(view string, entity interface{}, forma
 	} else {
 		this.base.SetErrorState()
 		this.base.FlashError(message)
-		this.base.RenderEntity(view, entity)
+		this.base.RenderTemplateWithEntity(view, entity)
 	}
 
 }
@@ -113,7 +113,7 @@ func (this *WebRespUtil) OnEntityAny(view string, entity interface{}, format str
 		this.base.RenderJsonResultWithMessage(entity, message)
 	} else {
 		this.base.FlashSuccess(message)
-		this.base.RenderEntity(view, entity)
+		this.base.RenderTemplateWithEntity(view, entity)
 	}
 
 }
@@ -122,9 +122,9 @@ func (this *WebRespUtil) OnEntityAny(view string, entity interface{}, format str
 func (this *WebRespUtil) OnResultsAny(viewName string, results interface{}) {
 
 	if this.base.IsJson() {
-		this.base.RenderJsonResults(results)
+		this.base.RenderJsonWithResults(results)
 	} else {
-		this.base.RenderResults(viewName, results)
+		this.base.RenderTemplateWithResults(viewName, results)
 	}
 
 }
@@ -133,9 +133,9 @@ func (this *WebRespUtil) OnResultsAny(viewName string, results interface{}) {
 func (this *WebRespUtil) OnResultsWithTotalCountAny(viewName string, results interface{}, totalCount int64) {
 
 	if this.base.IsJson() {
-		this.base.RenderJsonResults(results, totalCount)
+		this.base.RenderJsonWithResults(results, totalCount)
 	} else {
-		this.base.RenderResults(viewName, results, totalCount)
+		this.base.RenderTemplateWithResults(viewName, results, totalCount)
 	}
 }
 

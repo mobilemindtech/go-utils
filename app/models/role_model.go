@@ -12,8 +12,8 @@ type Role struct {
 	CreatedAt time.Time `orm:"auto_now_add;type(datetime)" json:"-"`
 	UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"-"`
 
-	Authority   string `orm:"size(50)"`
-	Description string `orm:"size(100)"`
+	Authority   string `orm:"size(50)" json:""`
+	Description string `orm:"size(100)" json:""`
 
 	Session *db.Session `orm:"-" inject:""`
 }

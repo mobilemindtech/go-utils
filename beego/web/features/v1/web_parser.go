@@ -1,4 +1,4 @@
-package features
+package v1
 
 import (
 	"fmt"
@@ -24,9 +24,7 @@ func (this *WebParser) InitWebParser(base trait.WebBaseInterface) {
 
 func (this *WebParser) OnParseForm(entity interface{}) {
 	if err := this.base.GetBeegoController().ParseForm(entity); err != nil {
-		logs.Error("*******************************************")
-		logs.Error("***** ERROR parse FORM to JSON: %v", err.Error())
-		logs.Error("*******************************************")
+		logs.Error("error on FORM to JSON: %v", err.Error())
 		this.base.GetBeegoController().Abort("500")
 	}
 }

@@ -1678,7 +1678,7 @@ func (this *Session) RemoveResult(entity interface{}) result.ResultOfUnit {
 	})
 }
 
-func (this *Session) SeveOrUpdateResult(entity interface{}) result.ResultOfUnit {
+func (this *Session) SaveOrUpdateResult(entity interface{}) result.ResultOfUnit {
 	return result.TryUnit(func() error {
 		return this.SaveOrUpdateCascade(entity)
 	})

@@ -1,8 +1,7 @@
-package features
+package v1
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/mobilemindtech/go-utils/beego/web/response"
@@ -14,11 +13,11 @@ import (
 )
 
 // WebResponses Deprecated.
-type WebJsonRender struct {
+type WebJsonRenderV1 struct {
 	base trait.WebBaseInterface
 }
 
-func (this *WebJsonRender) InitWebJsonRender(base trait.WebBaseInterface) {
+func (this *WebJsonRenderV1) InitWebJsonRenderV1(base trait.WebBaseInterface) {
 	this.base = base
 }
 
@@ -48,7 +47,7 @@ func (this *WebResponses) SetResult(result interface{}) *WebController {
 }
 */
 
-func (this *WebJsonRender) RenderJsonResult(opt interface{}) {
+func (this *WebJsonRenderV1) RenderJsonResult(opt interface{}) {
 
 	//logs.Debug("RenderJsonResult = %v type of %v", opt, reflect.TypeOf(opt).Kind())
 
@@ -128,19 +127,19 @@ func (this *WebJsonRender) RenderJsonResult(opt interface{}) {
 	}
 }
 
-func (this *WebJsonRender) OnJsonResultNil() {
+func (this *WebJsonRenderV1) OnJsonResultNil() {
 	this.OnJsonResult(nil)
 }
 
-func (this *WebJsonRender) OnJsonResult(result interface{}) {
+func (this *WebJsonRenderV1) OnJsonResult(result interface{}) {
 	this.renderDadaAsJson(&response.JsonResult{
 		Result:          result,
 		Error:           false,
-		CurrentUnixTime: this.GetCurrentTimeUnix(),
+		CurrentUnixTime: this.base.GetCurrentTimeUnix(),
 	})
 }
 
-func (this *WebJsonRender) GetJsonResult() (*response.JsonResult, bool) {
+func (this *WebJsonRenderV1) GetJsonResult() (*response.JsonResult, bool) {
 	if this.base.GetData()["json"] != nil {
 		if j, ok := this.base.GetData()["json"].(*response.JsonResult); ok {
 			return j, ok
@@ -149,120 +148,120 @@ func (this *WebJsonRender) GetJsonResult() (*response.JsonResult, bool) {
 	return nil, false
 }
 
-func (this *WebJsonRender) OnJsonMessage(format string, v ...interface{}) {
+func (this *WebJsonRenderV1) OnJsonMessage(format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
 	this.renderDadaAsJson(&response.JsonResult{
 		Message:         message,
 		Error:           false,
-		CurrentUnixTime: this.GetCurrentTimeUnix(),
+		CurrentUnixTime: this.base.GetCurrentTimeUnix(),
 	})
 }
 
-func (this *WebJsonRender) OnJsonResultError(result interface{}, format string, v ...interface{}) {
+func (this *WebJsonRenderV1) OnJsonResultError(result interface{}, format string, v ...interface{}) {
 	this.base.SetErrorState()
 	message := fmt.Sprintf(format, v...)
 	this.renderDadaAsJson(&response.JsonResult{
 		Result:          result,
 		Message:         message,
 		Error:           true,
-		CurrentUnixTime: this.GetCurrentTimeUnix(),
+		CurrentUnixTime: this.base.GetCurrentTimeUnix(),
 	})
 }
 
-func (this *WebJsonRender) OnJsonResultWithMessage(result interface{}, format string, v ...interface{}) {
+func (this *WebJsonRenderV1) OnJsonResultWithMessage(result interface{}, format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
 	this.renderDadaAsJson(&response.JsonResult{
 		Result:          result,
 		Error:           false,
 		Message:         message,
-		CurrentUnixTime: this.GetCurrentTimeUnix(),
+		CurrentUnixTime: this.base.GetCurrentTimeUnix(),
 	})
 }
 
-func (this *WebJsonRender) OnJsonResults(results interface{}) {
+func (this *WebJsonRenderV1) OnJsonResults(results interface{}) {
 	this.renderDadaAsJson(&response.JsonResult{
 		Results:         results,
 		Error:           false,
-		CurrentUnixTime: this.GetCurrentTimeUnix(),
+		CurrentUnixTime: this.base.GetCurrentTimeUnix(),
 	})
 }
 
-func (this *WebJsonRender) OnJsonResultAndResults(result interface{}, results interface{}) {
+func (this *WebJsonRenderV1) OnJsonResultAndResults(result interface{}, results interface{}) {
 	this.renderDadaAsJson(&response.JsonResult{
 		Result:          result,
 		Results:         results,
 		Error:           false,
-		CurrentUnixTime: this.GetCurrentTimeUnix(),
+		CurrentUnixTime: this.base.GetCurrentTimeUnix(),
 	})
 }
 
-func (this *WebJsonRender) OnJsonResultsWithTotalCount(results interface{}, totalCount int64) {
+func (this *WebJsonRenderV1) OnJsonResultsWithTotalCount(results interface{}, totalCount int64) {
 	this.renderDadaAsJson(&response.JsonResult{
 		Results:         results,
 		Error:           false,
-		CurrentUnixTime: this.GetCurrentTimeUnix(),
+		CurrentUnixTime: this.base.GetCurrentTimeUnix(),
 		TotalCount:      totalCount,
 	})
 }
 
-func (this *WebJsonRender) OnJsonPage(page *criteria.Page) {
+func (this *WebJsonRenderV1) OnJsonPage(page *criteria.Page) {
 	this.renderDadaAsJson(&response.JsonResult{
 		Results:         page.Data,
 		Error:           false,
-		CurrentUnixTime: this.GetCurrentTimeUnix(),
+		CurrentUnixTime: this.base.GetCurrentTimeUnix(),
 		TotalCount:      int64(page.TotalCount),
 	})
 }
 
-func (this *WebJsonRender) OnJsonResultAndResultsWithTotalCount(result interface{}, results interface{}, totalCount int64) {
+func (this *WebJsonRenderV1) OnJsonResultAndResultsWithTotalCount(result interface{}, results interface{}, totalCount int64) {
 	this.renderDadaAsJson(&response.JsonResult{
 		Result:          result,
 		Results:         results,
 		Error:           false,
-		CurrentUnixTime: this.GetCurrentTimeUnix(),
+		CurrentUnixTime: this.base.GetCurrentTimeUnix(),
 		TotalCount:      totalCount,
 	})
 }
 
-func (this *WebJsonRender) OnJsonResultsError(results interface{}, format string, v ...interface{}) {
+func (this *WebJsonRenderV1) OnJsonResultsError(results interface{}, format string, v ...interface{}) {
 	this.base.SetErrorState()
 	message := fmt.Sprintf(format, v...)
 	this.renderDadaAsJson(&response.JsonResult{
 		Results:         results,
 		Message:         message,
 		Error:           true,
-		CurrentUnixTime: this.GetCurrentTimeUnix(),
+		CurrentUnixTime: this.base.GetCurrentTimeUnix(),
 	})
 }
 
-func (this *WebJsonRender) RenderJsonWithStatusCode(data interface{}, status int) {
+func (this *WebJsonRenderV1) RenderJsonWithStatusCode(data interface{}, status int) {
 	this.base.SetViewData("json", data)
 	this.base.GetBeegoController().Ctx.Output.SetStatus(status)
 	this.ServeJSON()
 }
 
-func (this *WebJsonRender) OnJson(json *response.JsonResult) {
+func (this *WebJsonRenderV1) OnJson(json *response.JsonResult) {
 	this.base.SetViewData("json", json)
 	this.ServeJSON()
 }
 
-func (this *WebJsonRender) OnJsonMap(jsonMap map[string]interface{}) {
+func (this *WebJsonRenderV1) OnJsonMap(jsonMap map[string]interface{}) {
 	this.base.SetViewData("json", jsonMap)
 	this.ServeJSON()
 }
 
-func (this *WebJsonRender) OnJsonError(format string, v ...interface{}) {
+func (this *WebJsonRenderV1) OnJsonError(format string, v ...interface{}) {
 	this.base.SetErrorState()
 	message := fmt.Sprintf(format, v...)
 	result := &response.JsonResult{
 		Message:         message,
 		Error:           true,
-		CurrentUnixTime: this.GetCurrentTimeUnix(),
+		CurrentUnixTime: this.base.GetCurrentTimeUnix(),
 	}
 	this.OnJson(result)
 }
 
-func (this *WebJsonRender) ServeJSON() {
+func (this *WebJsonRenderV1) ServeJSON() {
 
 	cgf := this.base.GetWebConfigs()
 
@@ -273,7 +272,7 @@ func (this *WebJsonRender) ServeJSON() {
 			this.base.SetViewData("json", &response.JsonResult{
 				Message:         fmt.Sprintf("Error json.Encode: %v", err),
 				Error:           true,
-				CurrentUnixTime: this.GetCurrentTimeUnix(),
+				CurrentUnixTime: this.base.GetCurrentTimeUnix(),
 			})
 			this.base.GetBeegoController().ServeJSON()
 		} else {
@@ -294,7 +293,7 @@ func (this *WebJsonRender) ServeJSON() {
 		if err != nil {
 			this.base.SetViewData("json", &response.JsonResult{
 				Message: fmt.Sprintf("Error json.Encode: %v", err),
-				Error:   true, CurrentUnixTime: this.GetCurrentTimeUnix(),
+				Error:   true, CurrentUnixTime: this.base.GetCurrentTimeUnix(),
 			})
 			this.base.GetBeegoController().ServeJSON()
 		} else {
@@ -306,12 +305,12 @@ func (this *WebJsonRender) ServeJSON() {
 	}
 }
 
-func (this *WebJsonRender) RenderJsonMap(jsonMap map[string]interface{}) {
+func (this *WebJsonRenderV1) RenderJsonMap(jsonMap map[string]interface{}) {
 	this.OnJsonMap(jsonMap)
 }
 
 /*
-func (this *WebJsonRender) OnRender(data interface{}) {
+func (this *WebJsonRenderV1) OnRender(data interface{}) {
 	switch data.(type) {
 	case string:
 		this.OnTemplate(data.(string))
@@ -327,63 +326,63 @@ func (this *WebJsonRender) OnRender(data interface{}) {
 	}
 }*/
 
-func (this *WebJsonRender) RenderJsonError(format string, v ...interface{}) {
+func (this *WebJsonRenderV1) RenderJsonError(format string, v ...interface{}) {
 	this.OnJsonError(format, v...)
 }
 
-func (this *WebJsonRender) OnJsonErrorNotRollback(format string, v ...interface{}) {
+func (this *WebJsonRenderV1) OnJsonErrorNotRollback(format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
-	this.OnJson(&response.JsonResult{Message: message, Error: true, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(&response.JsonResult{Message: message, Error: true, CurrentUnixTime: this.base.GetCurrentTimeUnix()})
 }
 
-func (this *WebJsonRender) OnJsonOk(format string, v ...interface{}) {
+func (this *WebJsonRenderV1) OnJsonOk(format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
-	this.OnJson(&response.JsonResult{Message: message, Error: false, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(&response.JsonResult{Message: message, Error: false, CurrentUnixTime: this.base.GetCurrentTimeUnix()})
 }
 
-func (this *WebJsonRender) OnJson200() {
-	this.OnJson(&response.JsonResult{CurrentUnixTime: this.GetCurrentTimeUnix()})
+func (this *WebJsonRenderV1) OnJson200() {
+	this.OnJson(&response.JsonResult{CurrentUnixTime: this.base.GetCurrentTimeUnix()})
 }
 
-func (this *WebJsonRender) NotFoundAsJson() {
+func (this *WebJsonRenderV1) NotFoundAsJson() {
 	this.base.SetViewData("json", maps.JSON("message", "not found"))
 	this.base.GetBeegoController().Ctx.Output.SetStatus(404)
 	this.ServeJSON()
 
 }
 
-func (this *WebJsonRender) OkAsJson(format string, v ...interface{}) {
+func (this *WebJsonRenderV1) OkAsJson(format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
-	this.OnJson(&response.JsonResult{CurrentUnixTime: this.GetCurrentTimeUnix(), Message: message})
+	this.OnJson(&response.JsonResult{CurrentUnixTime: this.base.GetCurrentTimeUnix(), Message: message})
 }
 
-func (this *WebJsonRender) OnJsonValidationError() {
+func (this *WebJsonRenderV1) OnJsonValidationError() {
 	this.base.SetErrorState()
 	errors := this.base.GetData()["errors"].(map[string]string)
-	this.OnJson(&response.JsonResult{Message: this.base.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(&response.JsonResult{Message: this.base.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.base.GetCurrentTimeUnix()})
 }
 
-func (this *WebJsonRender) OnJsonValidationWithErrors(errors map[string]string) {
+func (this *WebJsonRenderV1) OnJsonValidationWithErrors(errors map[string]string) {
 	this.base.SetErrorState()
-	this.OnJson(&response.JsonResult{Message: this.base.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(&response.JsonResult{Message: this.base.GetMessage("cadastros.validacao"), Error: true, Errors: errors, CurrentUnixTime: this.base.GetCurrentTimeUnix()})
 }
 
-func (this *WebJsonRender) OnJsonValidationMessageWithErrors(message string, errors map[string]string) {
+func (this *WebJsonRenderV1) OnJsonValidationMessageWithErrors(message string, errors map[string]string) {
 	this.base.SetErrorState()
-	this.OnJson(&response.JsonResult{Message: message, Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(&response.JsonResult{Message: message, Error: true, Errors: errors, CurrentUnixTime: this.base.GetCurrentTimeUnix()})
 }
 
-func (this *WebJsonRender) OnJsonValidationWithResultAndMessageAndErrors(result interface{}, message string, errors map[string]string) {
+func (this *WebJsonRenderV1) OnJsonValidationWithResultAndMessageAndErrors(result interface{}, message string, errors map[string]string) {
 	this.base.SetErrorState()
-	this.OnJson(&response.JsonResult{Message: message, Result: result, Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(&response.JsonResult{Message: message, Result: result, Error: true, Errors: errors, CurrentUnixTime: this.base.GetCurrentTimeUnix()})
 }
 
-func (this *WebJsonRender) OnJsonValidationWithResultsAndMessageAndErrors(results interface{}, message string, errors map[string]string) {
+func (this *WebJsonRenderV1) OnJsonValidationWithResultsAndMessageAndErrors(results interface{}, message string, errors map[string]string) {
 	this.base.SetErrorState()
-	this.OnJson(&response.JsonResult{Message: message, Results: results, Error: true, Errors: errors, CurrentUnixTime: this.GetCurrentTimeUnix()})
+	this.OnJson(&response.JsonResult{Message: message, Results: results, Error: true, Errors: errors, CurrentUnixTime: this.base.GetCurrentTimeUnix()})
 }
 
-func (this *WebJsonRender) RenderJsonValidationError(message string) {
+func (this *WebJsonRenderV1) RenderJsonValidationError(message string) {
 	if this.base.GetWebConfigs().ExitWithHttpCode {
 		this.RenderJsonWithStatusCode(maps.JSON("message", message), 400)
 	} else {
@@ -392,7 +391,7 @@ func (this *WebJsonRender) RenderJsonValidationError(message string) {
 }
 
 // permission error
-func (this *WebJsonRender) RenderJsonForbidenError(message string, abort bool) {
+func (this *WebJsonRenderV1) RenderJsonForbidenError(message string, abort bool) {
 	if this.base.GetWebConfigs().ExitWithHttpCode {
 		this.RenderJsonWithStatusCode(maps.JSON("message", message), 403)
 	} else {
@@ -404,7 +403,7 @@ func (this *WebJsonRender) RenderJsonForbidenError(message string, abort bool) {
 }
 
 // logion error
-func (this *WebJsonRender) RenderJsonUnauthorizedError(message string, abort bool) {
+func (this *WebJsonRenderV1) RenderJsonUnauthorizedError(message string, abort bool) {
 	if this.base.GetWebConfigs().ExitWithHttpCode {
 		this.RenderJsonWithStatusCode(maps.JSON("message", message), 401)
 	} else {
@@ -415,15 +414,7 @@ func (this *WebJsonRender) RenderJsonUnauthorizedError(message string, abort boo
 	}
 }
 
-func (this *WebJsonRender) GetCurrentTimeUnix() int64 {
-	return this.GetCurrentTime().Unix()
-}
-
-func (this *WebJsonRender) GetCurrentTime() time.Time {
-	return time.Now().In(this.base.GetDefaultLocation())
-}
-
-func (this *WebJsonRender) renderDadaAsJson(data interface{}) {
+func (this *WebJsonRenderV1) renderDadaAsJson(data interface{}) {
 	this.base.SetViewData("json", data)
 	this.ServeJSON()
 }

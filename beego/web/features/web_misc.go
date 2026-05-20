@@ -37,14 +37,14 @@ func (this *WebMisc) DisableXSRF(pathList []string) {
 	}
 }
 
-func (this *WebBase) SetDefaultValuesInDataModel() {
+func (this *WebMisc) SetDefaultValuesInDataModel() {
 	this.SetViewData(
-		"Lang", this.Lang,
-		"xsrfdata", template.HTML(this.GetBeegoController().XSRFFormHTML()),
+		"Lang", this.base.GetLang(),
+		"xsrfdata", template.HTML(this.base.GetBeegoController().XSRFFormHTML()),
 		"dateLayout", util.DateBrLayout,
 		"datetimeLayout", util.DateTimeBrLayout,
 		"timeLayout", util.TimeMinutesLayout,
-		"today", time.Now().In(this.DefaultLocation).Format("02.01.2006"),
+		"today", time.Now().In(this.base.GetDefaultLocation()).Format("02.01.2006"),
 	)
 }
 
@@ -60,22 +60,22 @@ func (this *WebMisc) GetBodyAsJsonResult() *result.Result[*json.Json] {
 	return result.Try(this.GetBodyAsJson)
 }
 
-func (this *WebMisc) NotFound() {
+func (this *WebMisc) RenderNotFound() {
 	this.base.GetBeegoController().Ctx.Output.SetStatus(404)
 }
 
-func (this *WebMisc) ServerError() {
+func (this *WebMisc) RenderServerError() {
 	this.base.GetBeegoController().Ctx.Output.SetStatus(500)
 }
-func (this *WebMisc) BadRequest() {
+func (this *WebMisc) RenderBadRequest() {
 	this.base.GetBeegoController().Ctx.Output.SetStatus(400)
 }
 
-func (this *WebMisc) Unauthorized() {
+func (this *WebMisc) RenderUnauthorized() {
 	this.base.GetBeegoController().Ctx.Output.SetStatus(401)
 }
 
-func (this *WebMisc) Forbidden() {
+func (this *WebMisc) RenderForbidden() {
 	this.base.GetBeegoController().Ctx.Output.SetStatus(403)
 }
 
@@ -147,4 +147,12 @@ func (this *WebMisc) SetViewData(values ...interface{}) *WebMisc {
 	}
 
 	return this
+}
+
+func (this *WebMisc) GetCurrentTimeUnix() int64 {
+	return this.GetCurrentTime().Unix()
+}
+
+func (this *WebMisc) GetCurrentTime() time.Time {
+	return time.Now().In(this.base.GetDefaultLocation())
 }

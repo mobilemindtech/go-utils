@@ -6,8 +6,8 @@ import (
 
 type Estado struct {
 	Id   int64  `form:"-" json:",string,omitempty"`
-	Nome string `orm:"size(100)"  valid:"Required;MaxSize(100)" form:""`
-	Uf   string `orm:"size(2)" valid:"Required;MaxSize(2)" form:""`
+	Nome string `orm:"size(100)"  valid:"Required;MaxSize(100)" form:"" json:""`
+	Uf   string `orm:"size(2)" valid:"Required;MaxSize(2)" form:"" json:""`
 
 	Session *db.Session `orm:"-" json:"-" inject:""`
 }

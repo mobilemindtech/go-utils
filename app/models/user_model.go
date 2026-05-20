@@ -24,10 +24,10 @@ type User struct {
 	UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"-"`
 
 	Name      string    `orm:"size(100)"  valid:"Required;MaxSize(100)" form:"" json:""`
-	UserName  string    `orm:"size(100);unique" valid:"Required;MaxSize(100);Email" form:""`
+	UserName  string    `orm:"size(100);unique" valid:"Required;MaxSize(100);Email" form:"" json:""`
 	Password  string    `orm:"size(100)" valid:"MaxSize(100)" form:"" json:"-"`
 	Enabled   bool      `orm:"" valid:"Required;" form:"" json:""`
-	LastLogin time.Time `orm:"null;type(datetime)"`
+	LastLogin time.Time `orm:"null;type(datetime)" json:""`
 
 	ExpirationDate time.Time `orm:"type(datetime);null" form:"-" json:"-"`
 	Token          string    `orm:"type(text);null"  valid:"" form:"-" json:"-"`
@@ -39,8 +39,8 @@ type User struct {
 
 	Tenant *Tenant `orm:"rel(fk);on_delete(do_nothing)" valid:"" form:"" goutils:"no_set_tenant;no_filter_tenant"`
 
-	Role  *Role    `orm:"-"`
-	Roles *[]*Role `orm:"-"`
+	Role  *Role    `orm:"-" json:""`
+	Roles *[]*Role `orm:"-" json:""`
 
 	Session *db.Session `orm:"-" json:"-" inject:""`
 }

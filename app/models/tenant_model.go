@@ -12,13 +12,13 @@ type Tenant struct {
 	CreatedAt time.Time `orm:"auto_now_add;type(datetime)" json:"-"`
 	UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"-"`
 
-	Name      string `orm:"size(100)"  valid:"Required;MaxSize(100)" form:""`
-	Documento string `orm:"size(20)"  valid:"Required;MaxSize(14);MinSize(11)" form:""`
+	Name      string `orm:"size(100)"  valid:"Required;MaxSize(100)" form:"" json:""`
+	Documento string `orm:"size(20)"  valid:"Required;MaxSize(14);MinSize(11)" form:"" json:""`
 
 	Enabled bool   `orm:""  form:"" json:",string"`
 	Uuid    string `orm:"size(100);unique"  valid:"MaxSize(100)" form:"-" json:""`
 
-	Cidade *Cidade `orm:"rel(fk);on_delete(do_nothing)" valid:"RequiredRel" form:""`
+	Cidade *Cidade `orm:"rel(fk);on_delete(do_nothing)" valid:"RequiredRel" form:"" json:""`
 
 	Session *db.Session `orm:"-" json:"-" inject:""`
 }

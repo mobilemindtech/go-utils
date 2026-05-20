@@ -6,13 +6,12 @@ import (
 
 	"github.com/beego/beego/v2/core/logs"
 	beego "github.com/beego/beego/v2/server/web"
-	"github.com/mobilemindtech/go-utils/beego/web/features"
 	"github.com/mobilemindtech/go-utils/beego/web/misc"
 )
 
 type WebController struct {
 	beego.Controller
-	features.WebBase
+	WebBase
 	// Deprecated, use GetWebConfigs().SetViewPath() instead.
 	ViewPath string
 }
@@ -48,4 +47,8 @@ func (this *WebController) Recover(info interface{}) {
 		info := &misc.RecoverInfo{Error: fmt.Sprintf("%v", info), StackTrace: string(debug.Stack())}
 		app.NextOnRecover(info)
 	}
+}
+
+func (this *WebController) PreRender() {
+	this.WebMisc.PreRender(this.Data)
 }

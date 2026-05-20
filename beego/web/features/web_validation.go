@@ -23,15 +23,14 @@ func (this *WebValidation) Validate(entity interface{}, f ...func(validator *val
 		fn = f[0]
 	}
 
-	result, _ := this.EntityValidator.IsValid(entity, fn)
+	r, _ := this.EntityValidator.IsValid(entity, fn)
 
-	if result.HasError {
+	if r.HasError {
 		this.base.GetFlash().Error(this.base.GetMessage("cadastros.validacao"))
-		this.EntityValidator.CopyErrorsToView(result, this.base.GetData())
+		this.EntityValidator.CopyErrorsToView(r, this.base.GetData())
 	}
 
-	return result.HasError == false
-
+	return r.HasError == false
 }
 
 // Deprecated: use Validate

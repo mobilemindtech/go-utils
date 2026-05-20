@@ -2,7 +2,6 @@ package services
 
 import (
 	"errors"
-	"fmt"
 	"github.com/beego/beego/v2/core/logs"
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/golang-jwt/jwt/v5"
@@ -11,6 +10,7 @@ import (
 	"github.com/mobilemindtech/go-io/rio"
 	"github.com/mobilemindtech/go-utils/app/models"
 	"github.com/mobilemindtech/go-utils/app/util"
+	"github.com/mobilemindtech/go-utils/fault"
 	"github.com/mobilemindtech/go-utils/beego/db"
 	"github.com/mobilemindtech/go-utils/beego/validator"
 	"github.com/mobilemindtech/go-utils/json"
@@ -34,6 +34,7 @@ type AuthUser struct {
 type AuthResult struct {
 	Token     string `json:"token"`
 	ExpiresAt int64  `json:"expires_at"`
+	Type string `json:"type"`
 }
 
 type AuthService struct {
@@ -182,11 +183,11 @@ func (this *AuthService) Auth(body []byte, allowedRoles []string) *rio.IO[*AuthR
 
 	login := rio.AttemptThen(entityValidator, func(auth *AuthData) *result.Result[*AuthUser] {
 
-		encoded := support.TextToSha1(auth.Password)
+		encodedPassword := support.TextToSha1(auth.Password)
+
 
 		user := criteria.New[*models.User](this.Session).
 			Eq("UserName", auth.UserName).
-			Eq("Password", encoded).
 			Eq("Enabled", true).
 			GetFirst()
 
@@ -195,10 +196,17 @@ func (this *AuthService) Auth(body []byte, allowedRoles []string) *rio.IO[*AuthR
 			func(opt *option.Option[*models.User]) *result.Result[*AuthUser] {
 
 				if opt.IsNone() {
-					return result.OfError[*AuthUser](fmt.Errorf("user not found"))
+					return result.OfError[*AuthUser](fault.NewUserNotFoundError())
 				}
+
+				user := opt.Get()
+				
+				if user.Password != encodedPassword {
+					return result.OfError[*AuthUser](fault.NewUserUnauthorizedError("wrong password"))
+				}
+
 				return result.OfValue(&AuthUser{
-					auth, opt.Get(),
+					auth, user,
 				})
 			})
 	})
@@ -214,7 +222,7 @@ func (this *AuthService) Auth(body []byte, allowedRoles []string) *rio.IO[*AuthR
 			}, secret)
 
 			return result.Map(token, func(token string) *AuthResult {
-				return &AuthResult{token, expiresAt}
+				return &AuthResult{token, expiresAt, "bearer"}
 			})
 		})
 }
@@ -229,7 +237,7 @@ func (this *AuthService) checkPermissions(allowedRoles []string) func(*AuthUser)
 				GetAny()
 		}).AttemptThen(func(b bool) *result.Result[bool] {
 			if !b {
-				return result.OfError[bool](fmt.Errorf("user not authorized for tenant"))
+				return result.OfError[bool](fault.NewUserUnauthorizedError("wrong tenant"))
 			}
 			return result.OfValue(true)
 		})
@@ -247,7 +255,7 @@ func (this *AuthService) checkPermissions(allowedRoles []string) func(*AuthUser)
 			return c.GetAny()
 		}).AttemptThen(func(b bool) *result.Result[bool] {
 			if !b {
-				return result.OfError[bool](fmt.Errorf("user not authorized"))
+				return result.OfError[bool](fault.NewUserUnauthorizedError("wrong role"))
 			}
 			return result.OfValue(true)
 		})
