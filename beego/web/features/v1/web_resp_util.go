@@ -24,6 +24,11 @@ func (this *WebRespUtil) OkAsText(message string) {
 	this.base.GetBeegoController().Ctx.Output.Body([]byte(message))
 }
 
+func (this *WebRespUtil) OkAsHtml(message string) {
+	this.base.GetBeegoController().Ctx.Output.Header("Content-Type", "text/html")
+	this.base.GetBeegoController().Ctx.Output.Body([]byte(message))
+}
+
 func (this *WebRespUtil) OnRedirect(action string, args ...interface{}) {
 	this.base.FlashEnd(true)
 	if this.base.GetBeegoController().Ctx.Input.URL() == action {
