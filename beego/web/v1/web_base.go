@@ -318,5 +318,6 @@ func (this *WebBase) GetQuery(key string) string {
 
 // GetParam Get url param, use :key
 func (this *WebBase) GetParam(key string) string {
-	return this.BeegoController.Ctx.Input.Param(key)
+	return this.WebParser.GetParam(key)
+	//return this.BeegoController.Ctx.Input.Param(key)
 }
