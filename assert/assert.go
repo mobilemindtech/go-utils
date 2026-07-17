@@ -6,10 +6,20 @@ import (
 	"strings"
 )
 
-func Assert(a bool, msg string, args ...interface{}) {
+func True(a bool, msg string, args ...interface{}) {
 	if !a {
 		panic(fmt.Sprintf(msg, args...))
 	}
+}
+
+func False(a bool, msg string, args ...interface{}) {
+	if a {
+		panic(fmt.Sprintf(msg, args...))
+	}
+}
+
+func Assert(a bool, msg string, args ...interface{}) {
+	True(a, msg, args...)
 }
 
 func Assertf(f func() bool, msg string, args ...interface{}) {
@@ -18,10 +28,26 @@ func Assertf(f func() bool, msg string, args ...interface{}) {
 	}
 }
 
+func NotEmpty(a string, msg string, args ...interface{}) {
+	True(len(strings.TrimSpace(a)) > 0, msg, args...)
+}
+
+func Empty(a string, msg string, args ...interface{}) {
+	True(len(strings.TrimSpace(a)) == 0, msg, args...)
+}
+
 func AssertNotEmpty(a string, msg string, args ...interface{}) {
-	Assert(len(strings.TrimSpace(a)) > 0, msg, args...)
+	NotEmpty(a, msg, args...)
+}
+
+func NotNil(a any, msg string, args ...interface{}) {
+	True(util.IsNotNil(a), msg, args...)
+}
+
+func Nil(a any, msg string, args ...interface{}) {
+	True(util.IsNil(a), msg, args...)
 }
 
 func AssertNotNil(a any, msg string, args ...interface{}) {
-	Assert(util.IsNotNil(a), msg, args...)
+	NotNil(a, msg, args...)
 }

@@ -20,6 +20,10 @@ import (
 
 type SessionState int
 
+const (
+	DatabaseDefault = "default"
+)
+
 type Row struct {
 	data map[string]interface{}
 }
@@ -86,15 +90,16 @@ type Session struct {
 }
 
 func NewSession() *Session {
-	return &Session{State: SessionStateOk, Debug: false, database: NewDataBase("default"), IgnoreAuthorizedTenantCheck: true}
+	return &Session{State: SessionStateOk, Debug: false, database: NewDataBase(DatabaseDefault), IgnoreAuthorizedTenantCheck: true}
 }
+
 
 func NewSessionWithDbName(dbName string) *Session {
 	return &Session{State: SessionStateOk, Debug: false, database: NewDataBase(dbName), IgnoreAuthorizedTenantCheck: true}
 }
 
 func NewSessionWithTenant(tenant interface{}) *Session {
-	return &Session{State: SessionStateOk, Tenant: tenant, Debug: false, database: NewDataBase("default"), IgnoreAuthorizedTenantCheck: true}
+	return &Session{State: SessionStateOk, Tenant: tenant, Debug: false, database: NewDataBase(DatabaseDefault), IgnoreAuthorizedTenantCheck: true}
 }
 
 func NewSessionWithTenantAndDbName(tenant interface{}, dbName string) *Session {

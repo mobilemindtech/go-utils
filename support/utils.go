@@ -2,16 +2,17 @@ package support
 
 import (
 	"fmt"
-	"github.com/beego/beego/v2/server/web/context"
-	"github.com/leekchan/accounting"
-	"github.com/mobilemindtech/go-io/util"
-	"github.com/mobilemindtech/go-utils/v2/maps"
 	"math"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/beego/beego/v2/server/web/context"
+	"github.com/leekchan/accounting"
+	"github.com/mobilemindtech/go-io/util"
+	"github.com/mobilemindtech/go-utils/v2/maps"
 )
 
 func FilterNumber(text string) string {
@@ -236,6 +237,9 @@ func StrToFloat(s string) float32 {
 
 func StrToFloat64(s string) float64 {
 	i, _ := strconv.ParseFloat(s, 32)
+	return i
+}
+func ToInterface(i interface{}) interface{} {
 	return i
 }
 

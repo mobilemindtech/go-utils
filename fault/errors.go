@@ -33,7 +33,7 @@ func NewUserUnauthorizedError(msg ...string) *UserUnauthorizedError {
 }
 
 type ValidationError struct {
-	Errors []string
+	Errors  []string
 	Message string
 }
 

@@ -35,6 +35,10 @@ func NewTenantWithId(id int64) *Tenant {
 	return &Tenant{Id: id}
 }
 
+func NewTenantWithIdAndName(id int64, name string) *Tenant {
+	return &Tenant{Id: id, Name: name}
+}
+
 func (this *Tenant) IsPersisted() bool {
 	return this.Id > 0
 }

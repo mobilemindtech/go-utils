@@ -250,6 +250,10 @@ func (this *WebJsonRenderV1) OnJsonMap(jsonMap map[string]interface{}) {
 	this.ServeJSON()
 }
 
+func (this *WebJsonRenderV1) OnJsonErr(err error){
+	this.OnJsonError(err.Error())
+}
+
 func (this *WebJsonRenderV1) OnJsonError(format string, v ...interface{}) {
 	this.base.SetErrorState()
 	message := fmt.Sprintf(format, v...)
