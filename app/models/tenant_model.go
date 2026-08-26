@@ -2,7 +2,7 @@ package models
 
 import (
 	"time"
-
+	"fmt"
 	"github.com/mobilemindtech/go-utils/beego/db"
 	uuid "github.com/satori/go.uuid"
 )
@@ -122,4 +122,8 @@ func (this *Tenant) LoadRelated(entity *Tenant) {
 	this.Session.Load(entity.Cidade)
 	this.Session.Load(entity.Cidade.Estado)
 
+}
+
+func (this *Tenant) String() string {
+	return fmt.Sprintf("Tenant(%v - %v)", this.Id, this.Name)
 }
