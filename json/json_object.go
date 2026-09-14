@@ -11,6 +11,7 @@ import (
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/mobilemindtech/go-io/result"
+	"github.com/mobilemindtech/go-io/unsafe"
 	goioutil "github.com/mobilemindtech/go-io/util"
 	ioutil "github.com/mobilemindtech/go-io/util"
 	"github.com/mobilemindtech/go-utils/app/util"
@@ -665,7 +666,9 @@ func Unmarshal(data []byte, m interface{}) error {
 }
 
 func UnmarshalResult[T any](data []byte) *result.Result[T] {
-	val := ioutil.NewOf[T]()
-	err := json.Unmarshal(data, val)
-	return result.OfErrorOrValue(err, val)
+	return unsafe.RunOrErr(func() (T, error) {
+		val := ioutil.NewOf[T]()
+		err := json.Unmarshal(data, val)
+		return val, err
+	})
 }

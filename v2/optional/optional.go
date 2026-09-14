@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/mobilemindtech/go-io/option"
 	"github.com/mobilemindtech/go-io/result"
+	"github.com/mobilemindtech/go-io/types/unit"
 	"github.com/mobilemindtech/go-utils/v2/inline"
 	"reflect"
 	"strings"
@@ -271,6 +272,8 @@ func (this *Optional[T]) Val() interface{} {
 		return NewNone()
 	}
 }
+
+
 
 func (this *Optional[T]) IfFail(cb func(error)) *Optional[T] {
 	if this.IsFail() {
@@ -545,10 +548,22 @@ func (this *Optional[T]) MapOption(f func(T) interface{}, orElse func(interface{
 }
 
 // Map map Some to another thing
-func (this *Optional[T]) Map(fn func(T) interface{}) interface{} {
+func (this *Optional[T]) Map[A any](f func(T) A) *Optional[A] {
 	if this.IsSome() {
 		v := GetItem[T](this.some)
-		r := fn(v)
+		return Of[A](f(v))
+	}else if this.IsNone() {
+		return OfNone[A]()
+	} else {
+		return OfFail[A](this.GetFail())
+	}
+}
+
+// Deprecated
+func (this *Optional[T]) MapToOptional(f func(T) interface{}) interface{} {
+	if this.IsSome() {
+		v := GetItem[T](this.some)
+		r := f(v)
 
 		switch r.(type) {
 		case *Some, *None, *Fail:
@@ -556,8 +571,33 @@ func (this *Optional[T]) Map(fn func(T) interface{}) interface{} {
 		default:
 			return Make(r)
 		}
+		
+	}else if this.IsNone() {
+		return OfNone[interface{}]()
+	} else {
+		return OfFail[interface{}](this.GetFail())
 	}
-	return NewNone()
+}
+
+func (this *Optional[T]) FlatMap[A any](f func(T) *Optional[A]) *Optional[A] {
+	if this.IsSome() {
+		v := GetItem[T](this.some)
+		return f(v)
+	} else if this.IsNone() {
+		return OfNone[A]()
+	} else {
+		return OfFail[A](this.GetFail())
+	}
+}
+
+func (this *Optional[T]) AndThan[A any](other *Optional[A]) *Optional[A] {
+	if this.IsSome() {
+		return other
+	} else if this.IsNone() {
+		return OfNone[A]()
+	} else {
+		return OfFail[A](this.GetFail())
+	}
 }
 
 // MapTo map Some to same thing
@@ -576,6 +616,24 @@ func (this *Optional[T]) MapToBool() *Optional[bool] {
 		return Of[bool](true)
 	}
 	return Of[bool](this.Val())
+}
+
+func (this *Optional[T]) MapToValue[A any](value A) *Optional[A] {
+	if this.IsSome() {
+		return Of[A](value)
+	}
+	return Of[A](this.Val())
+}
+
+func (this *Optional[T]) MapToUnit() *Optional[*unit.Unit] {
+	if this.IsSome() {
+		return Of[*unit.Unit](unit.OfUnit())
+	} else if this.IsNone() {
+		return OfNone[*unit.Unit]()
+	} else {
+		return OfFail[*unit.Unit](this.GetFail())
+	}
+	
 }
 
 func (this *Optional[T]) MapToOk() *Optional[T] {
@@ -657,10 +715,6 @@ func (this *Optional[T]) If(cbSome func(T), cbNone func(), cbError func(err erro
 	this.IfNonEmpty(cbSome)
 	this.IfNone(cbNone)
 	return this
-}
-
-func (this *Optional[T]) ValTo(f func(interface{})) *Optional[T] {
-	return this.UnwrapTo(f)
 }
 
 func (this *Optional[T]) UnwrapTo(f func(interface{})) *Optional[T] {

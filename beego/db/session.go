@@ -13,6 +13,8 @@ import (
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/mobilemindtech/go-io/option"
 	"github.com/mobilemindtech/go-io/result"
+	"github.com/mobilemindtech/go-io/types/unit"
+	"github.com/mobilemindtech/go-io/unsafe"
 	"github.com/mobilemindtech/go-utils/support"
 	"github.com/mobilemindtech/go-utils/v2/lists"
 	"github.com/mobilemindtech/go-utils/v2/optional"
@@ -92,7 +94,6 @@ type Session struct {
 func NewSession() *Session {
 	return &Session{State: SessionStateOk, Debug: false, database: NewDataBase(DatabaseDefault), IgnoreAuthorizedTenantCheck: true}
 }
-
 
 func NewSessionWithDbName(dbName string) *Session {
 	return &Session{State: SessionStateOk, Debug: false, database: NewDataBase(dbName), IgnoreAuthorizedTenantCheck: true}
@@ -1564,7 +1565,9 @@ func (this *Session) checkIsAuthorizedTenant(reply interface{}, action string) b
 						}
 
 					} else {
-						logs.Warn("current Tenant id empty for entity type = ", fullType, " content = ", reply, ", action = ", action)
+						if !ignoreAuthorizedTenantCheckError {
+							logs.Warn("current Tenant id empty for entity type = ", fullType, " content = ", reply, ", action = ", action)
+						}
 					}
 
 				}
@@ -1665,26 +1668,18 @@ func RunWithNewTransaction[T any](f func(session *Session) (T, error)) (T, error
 	}
 }
 
-func (this *Session) UpdateResult(entity interface{}) result.ResultOfUnit {
-	return result.TryUnit(func() error {
-		return this.Update(entity)
-	})
+func (this *Session) UpdateResult(entity interface{}) *result.Result[*unit.Unit] {
+	return unsafe.ApplyAny1(this.Update, entity)
 }
 
-func (this *Session) SaveResult(entity interface{}) result.ResultOfUnit {
-	return result.TryUnit(func() error {
-		return this.Save(entity)
-	})
+func (this *Session) SaveResult(entity interface{}) *result.Result[*unit.Unit] {
+	return unsafe.ApplyAny1(this.Save, entity)
 }
 
-func (this *Session) RemoveResult(entity interface{}) result.ResultOfUnit {
-	return result.TryUnit(func() error {
-		return this.Remove(entity)
-	})
+func (this *Session) RemoveResult(entity interface{}) *result.Result[*unit.Unit] {
+	return unsafe.ApplyAny1(this.Remove, entity)
 }
 
-func (this *Session) SaveOrUpdateResult(entity interface{}) result.ResultOfUnit {
-	return result.TryUnit(func() error {
-		return this.SaveOrUpdateCascade(entity)
-	})
+func (this *Session) SaveOrUpdateResult(entity interface{}) *result.Result[*unit.Unit] {
+	return unsafe.ApplyAny1(this.SaveOrUpdateCascade, entity)
 }

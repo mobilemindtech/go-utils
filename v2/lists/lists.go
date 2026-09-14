@@ -393,7 +393,7 @@ func Flatten[T any](vs [][]T) []T {
 }
 
 func GroupBy[A any, B comparable](vs []A, f func(A) B) map[B][]A {
-	var data map[B][]A
+	data := make(map[B][]A)
 
 	for _, it := range vs {
 		k := f(it)

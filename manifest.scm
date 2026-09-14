@@ -11,14 +11,14 @@
              (ice-9 eval-string)
              (system base compile))
 
-(define-public go-1.26
+(define-public go-1.27
   (package
     (name "go")
-    (version "1.26.0")
+    (version "1.27.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://go.dev/dl/go" version ".linux-amd64.tar.gz"))
-              (sha256 (base32 "0dc2z11cv46yx502xmm3qpgha2qqb5xynnsmq6ky1i5h1y5b1hda"))))
+              (sha256 (base32 "118651c3pyw3la2zs9j3yqb6xbmvxbhhsrbl9g18zcfb9722cp37"))))
     (build-system trivial-build-system) ; apenas extrai sem compilar
     (inputs (list coreutils)) ; general require
     (native-inputs (list coreutils tar gzip)) ; require by "build"
@@ -56,7 +56,7 @@
   (specification->package "git")
   (specification->package "coreutils")
   (specification->package "node@22")
-  go-1.26))
+  go-1.27))
 
 
 

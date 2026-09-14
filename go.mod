@@ -1,11 +1,12 @@
 module github.com/mobilemindtech/go-utils
 
-go 1.26.0
+go 1.27.0
 
 require (
 	github.com/beego/beego/v2 v2.3.8
 	github.com/beego/i18n v0.0.0-20161101132742-e9308947f407
 	github.com/go-redis/redis/v7 v7.4.1
+	github.com/go-sql-driver/mysql v1.8.1
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/leekchan/accounting v1.0.0
 	github.com/mobilemindtech/go-io v0.0.0-20250914174532-f74450d8e6a5
@@ -15,6 +16,7 @@ require (
 )
 
 require (
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/Unknwon/goconfig v1.0.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
