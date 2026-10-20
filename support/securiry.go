@@ -72,11 +72,10 @@ func NewBearerToken(data jwt.MapClaims, secret string) *result.Result[string] {
 	})
 }
 
-func GenereteApiToken(id int64, uuid string, password string, expirationDate time.Time) (string, error) {
+func GenereteApiToken(id int64, uuid string, expirationDate time.Time) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id":         id,
 		"user_uuid":       uuid,
-		"user_password":   password,
 		"expiration_date": expirationDate.Unix(),
 	})
 
@@ -85,16 +84,16 @@ func GenereteApiToken(id int64, uuid string, password string, expirationDate tim
 	return token.SignedString(hmacSampleSecret)
 }
 
-func GenereteToken(password string, expirationDate time.Time) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"password":        password,
-		"expiration_date": expirationDate.Unix(),
-	})
-
-	secret, _ := beego.AppConfig.String("jwt_token_secret")
-	hmacSampleSecret := []byte(secret)
-	return token.SignedString(hmacSampleSecret)
-}
+//func GenereteToken(password string, expirationDate time.Time) (string, error) {
+//	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+//		"password":        password,
+//		"expiration_date": expirationDate.Unix(),
+//	})
+//
+//	secret, _ := beego.AppConfig.String("jwt_token_secret")
+//	hmacSampleSecret := []byte(secret)
+//	return token.SignedString(hmacSampleSecret)
+//}
 
 func GenerateCode(min int, max int) int {
 	return min + rand.Intn(max-min)

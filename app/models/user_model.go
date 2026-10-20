@@ -220,7 +220,7 @@ func (this *User) GenerateToken(password string) {
 	this.ExpirationDate = time.Now().In(util.GetDefaultLocation()).AddDate(50, 0, 0)
 
 	var err error
-	if this.Token, err = support.GenereteApiToken(this.Id, this.Uuid, password, this.ExpirationDate); err != nil {
+	if this.Token, err = support.GenereteApiToken(this.Id, this.Uuid, this.ExpirationDate); err != nil {
 		fmt.Println("** error on generete api token: %v", err)
 	}
 

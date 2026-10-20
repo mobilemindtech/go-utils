@@ -10,6 +10,8 @@ import (
 	"github.com/mobilemindtech/go-utils/v2/criteria"
 	"github.com/mobilemindtech/go-utils/v2/maps"
 	"github.com/mobilemindtech/go-utils/v2/optional"
+	"github.com/mobilemindtech/go-io/result"
+	"github.com/mobilemindtech/go-io/option"
 )
 
 // WebResponses Deprecated.
@@ -111,6 +113,24 @@ func (this *WebJsonRenderV1) RenderJsonResult(opt interface{}) {
 
 		if val, ok := criteria.TryExtractPageIfPegeOf(opt); ok {
 			this.RenderJsonResult(val)
+			return
+		}
+
+		if res, ok := opt.(result.IResult); ok {
+			if res.HasError() {
+				this.RenderJsonError(res.Error())
+			} else {
+				resVal := res.GetValue()
+				if o, ok := resVal.(option.IOption); ok {
+					if o.IsEmpty() {
+						this.NotFoundAsJson()
+					} else {
+						resVal = o.GetValue()
+					}
+				}
+
+				this.RenderJsonResult(resVal)
+			}
 			return
 		}
 

@@ -40,6 +40,11 @@ func (this *WebAuth) SetUpAuth() {
 	this.AuthPrepare()
 }
 
+// tryAppAuthenticate Busca um models.App pelo Token. Caso encontre ele usa o CustomAppAuthenticator em WebConfigs
+// para descobrir qual usuário está associado ao models.App. Sempre deve ter um usuário associado, pq
+// apenas usuário podem autenticar. A regra de criação de usuário e associação de usuário com models.App é definida
+// pelo consumidor dessa api. No MOBLOJA, por exemplo, é criado um models.App para um sistema de terceiros e criado
+// um usuário com determinada Authority. Então no gancho CustomAppAuthenticator esse usuário é pesquisado.
 func (this *WebAuth) tryAppAuthenticate(token string) (*models.User, error) {
 
 	customAppAuthFn := this.base.GetWebConfigs().CustomAppAuthenticator
