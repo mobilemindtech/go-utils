@@ -35,6 +35,8 @@ type AuthResult struct {
 	Token     string `json:"token"`
 	ExpiresAt int64  `json:"expires_at"`
 	Type string `json:"type"`
+	RefreshToken     string `json:"refresh_token,omitempty"`
+	RefreshExpiresAt int64  `json:"refresh_expires_at,omitempty"`
 }
 
 type AuthService struct {
@@ -133,7 +135,7 @@ func (this *AuthService) CheckBearerToken(bearerToken string) (*models.User, err
 	jwtToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		secret, err := beego.AppConfig.String("jwt_token_secret")
 		return []byte(secret), err
-	})
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 
 	if err != nil {
 		logs.Error("jwt error:", err)
@@ -141,8 +143,13 @@ func (this *AuthService) CheckBearerToken(bearerToken string) (*models.User, err
 	}
 
 	mapClaims := jwtToken.Claims.(jwt.MapClaims)
-	uuid := mapClaims["user"].(string)
+	uuid, _ := mapClaims["user"].(string)
 	expiresAt := support.AnyToInt64(mapClaims["expires_at"])
+
+	// sem uuid a busca abaixo casaria com qualquer usuário de uuid vazio
+	if len(strings.TrimSpace(uuid)) == 0 {
+		return nil, errors.New("invalid token: empty user")
+	}
 
 	logs.Debug("expires_at = %v, now %v", expiresAt, util.DateNow().Unix())
 
@@ -169,6 +176,34 @@ func (this *AuthService) AuthRootOrAdmin(body []byte) *rio.IO[*AuthResult] {
 
 // Auth by bearer token
 func (this *AuthService) Auth(body []byte, allowedRoles []string) *rio.IO[*AuthResult] {
+	return rio.AttemptThen(
+		rio.AttemptThenOfIO(this.authenticate(body), this.checkPermissions(allowedRoles, true)),
+		func(auth *AuthUser) *result.Result[*AuthResult] {
+			return this.IssueTokens(auth.User, "", "")
+		})
+}
+
+// newAccessToken gera o bearer token (JWT) do usuário com validade ttl
+func (this *AuthService) newAccessToken(user *models.User, ttl time.Duration) *result.Result[*AuthResult] {
+
+	if len(strings.TrimSpace(user.Uuid)) == 0 {
+		return result.OfError[*AuthResult](fault.NewUserUnauthorizedError("user without uuid"))
+	}
+
+	secret, _ := beego.AppConfig.String("jwt_token_secret")
+	expiresAt := util.DateNow().Add(ttl).Unix()
+	token := support.NewBearerToken(jwt.MapClaims{
+		"user":       user.Uuid,
+		"expires_at": expiresAt,
+	}, secret)
+
+	return result.Map(token, func(token string) *AuthResult {
+		return &AuthResult{Token: token, ExpiresAt: expiresAt, Type: "bearer"}
+	})
+}
+
+// authenticate valida usuário/senha do body (AuthData)
+func (this *AuthService) authenticate(body []byte) *rio.IO[*AuthUser] {
 
 	jsonParser := rio.Attempt(func() *result.Result[*AuthData] {
 		return json.UnmarshalResult[*AuthData](body)
@@ -181,10 +216,7 @@ func (this *AuthService) Auth(body []byte, allowedRoles []string) *rio.IO[*AuthR
 		return result.MapToValue(res, auth)
 	})
 
-	login := rio.AttemptThen(entityValidator, func(auth *AuthData) *result.Result[*AuthUser] {
-
-		encodedPassword := support.TextToSha1(auth.Password)
-
+	return rio.AttemptThen(entityValidator, func(auth *AuthData) *result.Result[*AuthUser] {
 
 		user := criteria.New[*models.User](this.Session).
 			Eq("UserName", auth.UserName).
@@ -201,7 +233,7 @@ func (this *AuthService) Auth(body []byte, allowedRoles []string) *rio.IO[*AuthR
 
 				user := opt.Get()
 				
-				if user.Password != encodedPassword {
+				if !user.IsSamePassword(auth.Password) {
 					return result.OfError[*AuthUser](fault.NewUserUnauthorizedError("wrong password"))
 				}
 
@@ -210,31 +242,22 @@ func (this *AuthService) Auth(body []byte, allowedRoles []string) *rio.IO[*AuthR
 				})
 			})
 	})
-
-	return rio.AttemptThen(
-		rio.AttemptThenOfIO(login, this.checkPermissions(allowedRoles)),
-		func(auth *AuthUser) *result.Result[*AuthResult] {
-			secret, _ := beego.AppConfig.String("jwt_token_secret")
-			expiresAt := util.DateNow().Add(time.Hour * 3).Unix()
-			token := support.NewBearerToken(jwt.MapClaims{
-				"user":       auth.User.Uuid,
-				"expires_at": expiresAt,
-			}, secret)
-
-			return result.Map(token, func(token string) *AuthResult {
-				return &AuthResult{token, expiresAt, "bearer"}
-			})
-		})
 }
 
-func (this *AuthService) checkPermissions(allowedRoles []string) func(*AuthUser) *rio.IO[*AuthUser] {
+// checkPermissions valida as roles do usuário e, quando TenantUUID é informado,
+// o vínculo dele com a tenant. requireAdmin exige que o vínculo seja de admin
+// (clientes de loja são vinculados à tenant sem admin).
+func (this *AuthService) checkPermissions(allowedRoles []string, requireAdmin bool) func(*AuthUser) *rio.IO[*AuthUser] {
 	return func(auth *AuthUser) *rio.IO[*AuthUser] {
 		tenantChecker := rio.Attempt(func() *result.Result[bool] {
-			return criteria.New[*models.TenantUser](this.Session).
+			c := criteria.New[*models.TenantUser](this.Session).
 				Eq("User", auth.User).
-				Eq("Uuid", auth.Data.TenantUUID).
-				Eq("Admin", true).
-				GetAny()
+				Eq("Tenant__Uuid", auth.Data.TenantUUID).
+				Eq("Enabled", true)
+			if requireAdmin {
+				c.Eq("Admin", true)
+			}
+			return c.GetAny()
 		}).AttemptThen(func(b bool) *result.Result[bool] {
 			if !b {
 				return result.OfError[bool](fault.NewUserUnauthorizedError("wrong tenant"))

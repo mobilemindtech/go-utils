@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/client/orm"
+	"github.com/beego/beego/v2/core/logs"
 	"github.com/mobilemindtech/go-utils/app/util"
 	"github.com/mobilemindtech/go-utils/beego/db"
 	"github.com/mobilemindtech/go-utils/support"
@@ -121,7 +122,7 @@ func (this *User) GetByToken(token string) (*User, error) {
 }
 
 func (this *User) EncodePassword() {
-	this.GenerateToken(this.Password)
+	this.GenerateToken()
 	if UserHexPassword {
 		this.Password = support.TextToSha1Hex(this.Password)
 	} else {
@@ -129,10 +130,10 @@ func (this *User) EncodePassword() {
 	}
 }
 
-func (this *User) ChangePassword(newPassword string) {
+func (this *User) ChangePassword(newPassword string) error {
 	this.Password = newPassword
-	this.GenerateToken(this.Password)
 	this.EncodePassword()
+	return this.GenerateToken()
 }
 
 func (this *User) GenereteUuid() string {
@@ -215,15 +216,16 @@ func (this *User) PageByTenant(tenant Tenant, page *db.Page) (*[]*User, error) {
 	return &results, err
 }
 
-func (this *User) GenerateToken(password string) {
-
+func (this *User) GenerateToken() error {
 	this.ExpirationDate = time.Now().In(util.GetDefaultLocation()).AddDate(0, 0, 15) // 15 dias
-
 	var err error
-	if this.Token, err = support.GenereteApiToken(this.Id, this.Uuid, this.ExpirationDate); err != nil {
-		fmt.Println("** error on generete api token: %v", err)
+	this.Token, err = support.GenereteApiToken()
+
+	if err != nil {
+		logs.Error("error to generate token: %v", err.Error())
 	}
 
+	return err
 }
 
 func (this *User) GetByChangePwdToken(token string) (*User, error) {
@@ -262,15 +264,15 @@ func (this *User) GetByUuidAndEnabled(uuid string) (*User, error) {
 	return entity, criteria.Error
 }
 
-func (this *User) UpdateLastLogin(userId int64) {
+func (this *User) UpdateLastLogin(userId int64) error {
 	query := "update users set last_login = now() where id = ?"
 	_, err := db.NewRawQueryArgs(this.Session, query, userId).Execute()
 
 	if err != nil {
-		fmt.Println("erro ao atualizar last logn user")
-	} else {
-		fmt.Println("last login update success")
+		logs.Error("error to update user last login: %v", err.Error())
 	}
+
+	return err
 }
 func (this *User) FirstName() string {
 	sp := strings.Split(this.Name, " ")
@@ -278,6 +280,10 @@ func (this *User) FirstName() string {
 		return sp[0]
 	}
 	return this.Name
+}
+
+func (this *User) IsTokenExpired() bool {
+	return !this.ExpirationDate.IsZero() && time.Now().In(util.GetDefaultLocation()).Unix() > this.ExpirationDate.Unix()
 }
 
 func (this *User) String() string {

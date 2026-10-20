@@ -47,3 +47,15 @@ func LoginTenantNotFound(msg string) *LoginErrorTenantNotFound {
 func (e *LoginErrorTenantNotFound) Error() string {
 	return e.Message
 }
+
+type LoginErrorTokenExpired struct {
+	Message string
+}
+
+func LoginTokenExpired(msg string) *LoginErrorTokenExpired {
+	return &LoginErrorTokenExpired{msg}
+}
+
+func (e *LoginErrorTokenExpired) Error() string {
+	return e.Message
+}

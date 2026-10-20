@@ -12,10 +12,11 @@ const (
 	DateTimeLayout    = "2006-01-02 15:04:05"
 	DateBrLayout      = "02/01/2006"
 	DateTimeBrLayout  = "02/01/2006 15:04:05"
+	DefaultLocation = "America/Sao_Paulo"
 )
 
 func GetDefaultLocation() *time.Location {
-	location, _ := time.LoadLocation("America/Sao_Paulo")
+	location, _ := time.LoadLocation(DefaultLocation)
 	return location
 }
 

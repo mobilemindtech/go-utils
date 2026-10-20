@@ -2,11 +2,12 @@ package services
 
 import (
 	"errors"
+	_ "time"
+
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/i18n"
 	"github.com/mobilemindtech/go-utils/app/models"
 	"github.com/mobilemindtech/go-utils/beego/db"
-	_ "time"
 )
 
 type LoginService struct {
@@ -41,16 +42,22 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 
 	} else if user == nil || user.Id < 1 {
 
-		logs.Error("### user not found %v", user)
+		logs.Error("user not found %v", user)
 		return user, LoginUserNotFound(this.GetMessage("login.invalid"))
 
 	} else if !user.Enabled {
 
-		logs.Error("### user not enabled ")
+		logs.Error("user not enabled ")
 		return user, LoginUserInactive(this.GetMessage("login.inactiveMsg"))
 
+	} else if byToken && user.IsTokenExpired() {
+
+		// token legado (X-Auth-Token) vencido: o cliente precisa fazer login, que gera um novo
+		logs.Error("token expired ")
+		return user, LoginTokenExpired(this.GetMessage("login.tokenExpired"))
+
 	} else if !byToken && !user.IsSamePassword(password) {
-		logs.Error("### password not match ")
+		logs.Error("password not match ")
 		// No matched password
 		return user, LoginWrongPassword(this.GetMessage("login.invalid"))
 
@@ -59,16 +66,18 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 		tenant, err := this.ModelTenantUser.GetFirstTenant(user)
 
 		if err != nil {
-			logs.Error("### error on get user tenant %v", err)
+			logs.Error("error on get user tenant %v", err)
 			return user, errors.New(this.GetMessage("login.error", err.Error()))
 		}
 
 		if tenant == nil {
-			logs.Error("### error does not have tenant")
+			logs.Error("error does not have tenant")
 			return user, LoginTenantNotFound(this.GetMessage("login.tenantNotFound"))
 		}
 
-		models.NewUser(this.Session).UpdateLastLogin(user.Id)
+		if err := models.NewUser(this.Session).UpdateLastLogin(user.Id); err != nil {
+			logs.Error("error to update user last login date: %v", err)
+		}
 
 		return user, nil
 

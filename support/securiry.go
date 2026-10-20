@@ -1,15 +1,14 @@
 package support
 
 import (
+	crand "crypto/rand"
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	beego "github.com/beego/beego/v2/server/web"
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/mobilemindtech/go-io/result"
 	"math/rand"
-	"time"
 )
 
 func TextToSha1(text string) string {
@@ -72,16 +71,15 @@ func NewBearerToken(data jwt.MapClaims, secret string) *result.Result[string] {
 	})
 }
 
-func GenereteApiToken(id int64, uuid string, expirationDate time.Time) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id":         id,
-		"user_uuid":       uuid,
-		"expiration_date": expirationDate.Unix(),
-	})
-
-	secret, _ := beego.AppConfig.String("jwt_token_secret")
-	hmacSampleSecret := []byte(secret)
-	return token.SignedString(hmacSampleSecret)
+// GenereteApiToken gera um token opaco aleatório. O token serve apenas para
+// encontrar o usuário no banco, por isso não carrega nenhum dado e não pode
+// ser aceito como bearer token (JWT)
+func GenereteApiToken() (string, error) {
+	b := make([]byte, 32)
+	if _, err := crand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
 //func GenereteToken(password string, expirationDate time.Time) (string, error) {

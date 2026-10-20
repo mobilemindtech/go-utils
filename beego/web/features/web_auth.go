@@ -195,9 +195,15 @@ func (this *WebAuth) IsWebOrTokenLoggerIn() bool {
 }
 
 func (this *WebAuth) GetHeaderToken() string {
+	// bearer token tem prioridade: clientes enviam X-Auth-Token (api key da
+	// loja) junto com o Authorization
+	authorization := this.base.GetHeaderByName("Authorization")
+	if this.Auth.IsBearerToken(authorization) {
+		return authorization
+	}
 	token := this.base.GetHeaderByName("X-Auth-Token")
 	if len(token) == 0 {
-		token = this.base.GetHeaderByName("Authorization")
+		token = authorization
 	}
 	return token
 }
