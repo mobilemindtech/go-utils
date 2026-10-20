@@ -217,7 +217,7 @@ func (this *User) PageByTenant(tenant Tenant, page *db.Page) (*[]*User, error) {
 
 func (this *User) GenerateToken(password string) {
 
-	this.ExpirationDate = time.Now().In(util.GetDefaultLocation()).AddDate(50, 0, 0)
+	this.ExpirationDate = time.Now().In(util.GetDefaultLocation()).AddDate(0, 0, 15) // 15 dias
 
 	var err error
 	if this.Token, err = support.GenereteApiToken(this.Id, this.Uuid, this.ExpirationDate); err != nil {
