@@ -532,11 +532,8 @@ func (this *WebAuth) HasTenantAuth(tenant *models.Tenant) bool {
 			item, _ := ModelTenantUser.FindByUserAndTenant(this.GetAuthUser(), tenant)
 			return item != nil && item.IsPersisted()
 		}
-		parser := func(v string) bool {
-			return v == "true"
-		}
 		cacheKey := cache.CacheKey("has_user", this.GetAuthUser().Id, "tenant", tenant.Id)
-		return cache.MemoizeVal(this.base.GetCacheService(), cacheKey, parser, loader)
+		return cache.MemoizeVal(this.base.GetCacheService(), cacheKey, loader)
 
 	}
 	return true

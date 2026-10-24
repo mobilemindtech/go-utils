@@ -134,9 +134,14 @@ func (this *CacheService) Get(key string, value interface{}) interface{} {
 	return optional.MakeTry(value, err)
 }
 
+// GetVal valor do cache decodificado do JSON (bool, float64, string, map...)
 func (this *CacheService) GetVal(key string) interface{} {
 	var value interface{}
-	return this.Get(key, value)
+	res := this.Get(key, &value)
+	if _, ok := res.(*optional.Some); ok {
+		return optional.MakeTry(value, nil)
+	}
+	return res
 }
 
 func (this *CacheService) Memoize(key string, value interface{}, cacheable func() interface{}) (interface{}, error) {
@@ -261,40 +266,20 @@ func MemoizeOpt[T any](srv *CacheService, key string, value interface{}, cacheab
 	return r.(*optional.Optional[T])
 }
 
-func MemoizeVal[T any](srv *CacheService, key string, parser func(string) T, cacheable func() T) T {
-	v := srv.GetVal(key)
-
-	switch v.(type) {
-	case *optional.Some:
-
-		//logs.Debug("CACHE: get key %v from cache", key)
-
-		raw := v.(*optional.Some).Item.(string)
-		return parser(raw)
-
-	default:
-		value := cacheable()
-		srv.Put(key, value)
-		return value
+// MemoizeVal valor do cache (decodificado em T) ou o resultado de cacheable,
+// que é guardado no cache
+func MemoizeVal[T any](srv *CacheService, key string, cacheable func() T) T {
+	var cached T
+	if _, ok := srv.Get(key, &cached).(*optional.Some); ok {
+		return cached
 	}
+	value := cacheable()
+	srv.Put(key, value)
+	return value
 }
 
 func MemoizeStr(srv *CacheService, key string, cacheable func() string) string {
-	v := srv.GetVal(key)
-
-	switch v.(type) {
-	case *optional.Some:
-
-		raw := v.(*optional.Some).Item.(string)
-		//logs.Debug("CACHE: get key %v from cache: %v", key, raw)
-
-		return raw
-
-	default:
-		value := cacheable()
-		srv.Put(key, value)
-		return value
-	}
+	return MemoizeVal(srv, key, cacheable)
 }
 
 func TryGet[T any](srv *CacheService, key string, value interface{}) (T, bool) {

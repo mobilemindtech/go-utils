@@ -6,6 +6,7 @@ import (
 
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/core/logs"
+	beego "github.com/beego/beego/v2/server/web"
 	"github.com/mobilemindtech/go-utils/app/util"
 	"github.com/mobilemindtech/go-utils/beego/db"
 	"github.com/mobilemindtech/go-utils/support"
@@ -216,8 +217,51 @@ func (this *User) PageByTenant(tenant Tenant, page *db.Page) (*[]*User, error) {
 	return &results, err
 }
 
+// LegacyTokenDays validade do token legado (users.token / X-Auth-Token), em dias:
+// app.conf legacy_token_days (padrão 15)
+func LegacyTokenDays() int {
+	days, err := beego.AppConfig.Int("legacy_token_days")
+	if err != nil || days <= 0 {
+		return 15
+	}
+	return days
+}
+
+// LegacyTokenSliding app.conf legacy_token_sliding (padrão false): renova a validade
+// do token legado enquanto ele é usado, para clientes que não sabem renovar o token
+// (app legado). Desligar quando não houver mais cliente legado em uso.
+func LegacyTokenSliding() bool {
+	enabled, err := beego.AppConfig.Bool("legacy_token_sliding")
+	return err == nil && enabled
+}
+
+// RenewTokenExpiration com legacy_token_sliding, estende a validade do token para
+// legacy_token_days a partir de agora quando falta menos de 1/3 dela. Token sem
+// validade (usuários de API) não é alterado.
+func (this *User) RenewTokenExpiration(user *User) error {
+	if !LegacyTokenSliding() || user.ExpirationDate.IsZero() {
+		return nil
+	}
+
+	days := LegacyTokenDays()
+	now := time.Now().In(util.GetDefaultLocation())
+	if user.ExpirationDate.Sub(now) >= time.Duration(days)*24*time.Hour/3 {
+		return nil
+	}
+
+	user.ExpirationDate = now.AddDate(0, 0, days)
+	query := "update users set expiration_date = ? where id = ?"
+	_, err := db.NewRawQueryArgs(this.Session, query, user.ExpirationDate.Format(time.DateTime), user.Id).Execute()
+
+	if err != nil {
+		logs.Error("error to renew user token expiration: %v", err.Error())
+	}
+
+	return err
+}
+
 func (this *User) GenerateToken() error {
-	this.ExpirationDate = time.Now().In(util.GetDefaultLocation()).AddDate(0, 0, 15) // 15 dias
+	this.ExpirationDate = time.Now().In(util.GetDefaultLocation()).AddDate(0, 0, LegacyTokenDays())
 	var err error
 	this.Token, err = support.GenereteApiToken()
 

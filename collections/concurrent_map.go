@@ -75,18 +75,18 @@ func (this *ConcurrentMap[K, V]) TryGet(k K) *optional.Optional[V] {
 	this.lock.Lock()
 	defer this.lock.Unlock()
 	if v, ok := this.data[k]; ok {
-		return optional.WithSome[V](v)
+		return optional.OfSome[V](v)
 	}
-	return optional.WithNone[V]()
+	return optional.OfNone[V]()
 }
 
 func (this *ConcurrentMap[K, V]) First() *optional.Optional[*KeyVal[K, V]] {
 	this.lock.Lock()
 	defer this.lock.Unlock()
 	for k, v := range this.data {
-		return optional.WithSome[*KeyVal[K, V]](NewKeyVal[K, V](k, v))
+		return optional.OfSome[*KeyVal[K, V]](NewKeyVal[K, V](k, v))
 	}
-	return optional.WithNone[*KeyVal[K, V]]()
+	return optional.OfNone[*KeyVal[K, V]]()
 }
 
 func (this *ConcurrentMap[K, V]) Del(kv KeyVal[K, V]) bool {

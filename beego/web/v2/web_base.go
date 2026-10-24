@@ -61,7 +61,9 @@ func (this *WebBase) InitWebBase(ctrl *beego.Controller) {
 
 	this.CacheService = cache.New()
 	this.Character = support.NewCharacter()
-	this.Configs = new(trait.WebConfigs)
+	// pode já ter sido configurado no Prepare do controller antes do InitWebBase
+	// (ex.: SetCustomAppAuthenticator), não sobrescrever
+	this.GetWebConfigs()
 
 	// lang exists only after InitWebMessages
 	this.entityValidatorConfig = &validator.EntityValidatorConfig{Lang: this.Lang, ViewPath: ctrl.ViewPath}
@@ -210,6 +212,9 @@ func (this *WebBase) SetWebConfigs(configs *trait.WebConfigs) {
 }
 
 func (this *WebBase) GetWebConfigs() *trait.WebConfigs {
+	if this.Configs == nil {
+		this.Configs = new(trait.WebConfigs)
+	}
 	return this.Configs
 }
 

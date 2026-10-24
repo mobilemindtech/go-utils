@@ -79,6 +79,11 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 			logs.Error("error to update user last login date: %v", err)
 		}
 
+		if byToken {
+			// erro já logado: não impede o login, o token ainda é válido
+			_ = models.NewUser(this.Session).RenewTokenExpiration(user)
+		}
+
 		return user, nil
 
 	}
