@@ -17,7 +17,7 @@ type UserRefreshToken struct {
 	UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"-"`
 
 	TokenHash string    `orm:"size(64);unique" json:"-"`
-	Family    string    `orm:"size(100);index" json:"-"`
+	Family    string    `orm:"size(100)" json:"-"`
 	ExpiresAt time.Time `orm:"type(datetime)" json:"-"`
 	RevokedAt time.Time `orm:"type(datetime);null" json:"-"`
 	UserAgent string    `orm:"size(255);null" json:"-"`
