@@ -75,7 +75,7 @@ func (this *LoginService) Login(user *models.User, password string, byToken bool
 			return user, LoginTenantNotFound(this.GetMessage("login.tenantNotFound"))
 		}
 
-		if err := models.NewUser(this.Session).UpdateLastLogin(user.Id); err != nil {
+		if err := models.NewUser(this.Session).UpdateLastLogin(user); err != nil {
 			logs.Error("error to update user last login date: %v", err)
 		}
 

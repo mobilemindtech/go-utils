@@ -308,9 +308,37 @@ func (this *User) GetByUuidAndEnabled(uuid string) (*User, error) {
 	return entity, criteria.Error
 }
 
-func (this *User) UpdateLastLogin(userId int64) error {
-	query := "update users set last_login = now() where id = ?"
-	_, err := db.NewRawQueryArgs(this.Session, query, userId).Execute()
+// Intervalo mínimo entre atualizações de users.last_login do mesmo usuário.
+var LastLoginUpdateInterval = 5 * time.Minute
+
+// UpdateLastLogin atualiza users.last_login numa transação própria (não na
+// sessão do request), para que o lock da linha dure só o UPDATE e não o
+// request inteiro. Usuários compartilhados (ex.: anônimo do app, usado por
+// todos os clientes de um tenant) faziam requests concorrentes esperarem o
+// lock até o fim do request que atualizou primeiro — Error 1205 (lock wait
+// timeout). Também pula o UPDATE se last_login foi atualizado há menos de
+// LastLoginUpdateInterval.
+func (this *User) UpdateLastLogin(user *User) error {
+	if user == nil || user.Id < 1 {
+		return nil
+	}
+
+	// elapsed < 0 (last_login "no futuro", ex.: fuso do MySQL diferente do
+	// loc da conexão) cai no UPDATE, para não travar a atualização.
+	if !user.LastLogin.IsZero() {
+		if elapsed := time.Since(user.LastLogin); elapsed >= 0 && elapsed < LastLoginUpdateInterval {
+			return nil
+		}
+	}
+
+	err := db.RunTx(nil, func(session *db.Session) error {
+		query := "update users set last_login = now() where id = ?"
+		_, err := db.NewRawQueryArgs(session, query, user.Id).Execute()
+		if err != nil {
+			session.OnError()
+		}
+		return err
+	})
 
 	if err != nil {
 		logs.Error("error to update user last login: %v", err.Error())
